@@ -172,7 +172,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                         ExceptionDispatchInfo.Capture(ex).Throw();
                         throw;
                 }
-                ConnectionStatus = EConnectionStatus.IsDisconnected;
                 onConnectionEstablished?.Invoke(false);
                 Dispose();
                 return;
@@ -1065,7 +1064,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             return newClient;
         }
 
-        // TODO : add reason
         /// <summary>
         /// Removes Client from all relevant collections and notifies the Manager and other connected Clients.
         /// </summary>
