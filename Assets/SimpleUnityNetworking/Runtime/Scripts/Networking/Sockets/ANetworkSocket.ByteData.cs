@@ -45,7 +45,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             callbacks.Remove(callback.GetHashCode(), out _);
         }
 
-        internal void ReceiveByteData(uint byteID, byte clientID, byte[] data)
+        internal protected void ReceiveByteData(uint byteID, byte clientID, byte[] data)
         {
             if (!_registeredByteDataCallbacks.TryGetValue(byteID, out Dictionary<int, ByteDataCallback> callbacks))
                 return;

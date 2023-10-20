@@ -50,7 +50,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
         private readonly ConcurrentDictionary<byte, ClientInformation> _connectedClients = new();
 
-        private readonly ConcurrentQueue<DataPacketContainer> _packetsToSend = new();
+        private readonly ConcurrentQueue<SequencedPacketContainer> _packetsToSend = new();
 
         private readonly ConcurrentDictionary<ushort, (PacketHeader, byte[])> _receivedPacketsBuffer = new();
         private readonly ConcurrentDictionary<ushort, ConcurrentDictionary<ushort, byte[]>> _receivedChunksBuffer = new();
@@ -217,7 +217,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         {
             if (receiverID == ClientInformation.ID)
             {
-                Messaging.DebugMessage("The Receiver ID is the same as the local Clients ID!");
+                Messaging.DebugMessage("The Receiver ID is the same as the local Client's ID!");
                 onDataSend?.Invoke(false);
                 return;
             }
@@ -234,7 +234,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         {
             if (receiverID == ClientInformation.ID)
             {
-                Messaging.DebugMessage("The Receiver ID is the same as the local Clients ID!");
+                Messaging.DebugMessage("The Receiver ID is the same as the local Client's ID!");
                 onDataSend?.Invoke(false);
                 return;
             }
@@ -329,9 +329,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                         case EPacketType.ClientInfo:
                             {
                                 if (header.IsChunkedPacket)
-                                    HandleChunkedDataPacket(header, reader);
+                                    HandleChunkedSequencedPacket(header, reader);
                                 else
-                                    HandleDataPacket(header, reader);
+									HandleSequencedPacket(header, reader);
                                 break;
                             }
                         default: break;
@@ -428,6 +428,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 case DeniedReason.NoSpace:
                     Messaging.SystemMessage("Connection has been denied because server has no space available!");
                     break;
+				default:
+					Messaging.SystemMessage("Something went wrong. Try again later!");
+					break;
 			}
         }
 
@@ -473,7 +476,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             Messaging.SystemMessage($"Client {client} disconnected!");
         }
 
-        private void HandleDataPacket(PacketHeader header, Reader reader)
+        private void HandleSequencedPacket(PacketHeader header, Reader reader)
         {
             ushort sequence = reader.ReadUInt16();
 
@@ -510,7 +513,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 _reliableRemoteSequence = sequence;
                 ConsumeSequencedPacket(header, reader.ReadRemainingBytes());
 
-                // apply all packets from that senders buffer that are now next in the sequence
+                // apply all packets from that sender's buffer that are now next in the sequence
                 while (_receivedPacketsBuffer.Count > 0)
                 {
                     sequence++;
@@ -524,7 +527,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             }
         }
 
-        private void HandleChunkedDataPacket(PacketHeader header, Reader reader)
+        private void HandleChunkedSequencedPacket(PacketHeader header, Reader reader)
         {
             if (!IsReliableChannel(header.NetworkChannel))
             {
@@ -630,7 +633,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             {
                 try
                 {
-                    if (_packetsToSend.Count == 0 || !_packetsToSend.TryDequeue(out DataPacketContainer packet))
+                    if (_packetsToSend.Count == 0 || !_packetsToSend.TryDequeue(out SequencedPacketContainer packet))
                         continue;
 
                     if (IsReliableChannel(packet.NetworkChannel))
@@ -647,7 +650,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             }
         }
 
-        private void SendUnreliablePacket(DataPacketContainer packet)
+        private void SendUnreliablePacket(SequencedPacketContainer packet)
 		{
             try
             {
@@ -697,7 +700,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             }
         }
 
-        private void SendReliablePacket(DataPacketContainer packet)
+        private void SendReliablePacket(SequencedPacketContainer packet)
 		{
             try
             {
