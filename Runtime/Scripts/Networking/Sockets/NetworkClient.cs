@@ -578,7 +578,19 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             // update sequence and consume packet
             _reliableRemoteSequence = sequence;
             ConsumeSequencedPacket(header, chunkData);
-        }
+
+			// apply all packets from that sender's buffer that are now next in the sequence
+			while (_receivedPacketsBuffer.Count > 0)
+			{
+				sequence++;
+				if (!_receivedPacketsBuffer.TryRemove(sequence, out (PacketHeader, byte[]) bufferedPacket))
+					break;
+
+				// update sequence and consume packet
+				_reliableRemoteSequence = sequence;
+				ConsumeSequencedPacket(bufferedPacket.Item1, bufferedPacket.Item2);
+			}
+		}
 
         private void ConsumeSequencedPacket(PacketHeader header, byte[] data)
         {
