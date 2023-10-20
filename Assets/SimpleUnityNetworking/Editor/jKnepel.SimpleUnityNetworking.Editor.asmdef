@@ -1,0 +1,16 @@
+{
+    "name": "jKnepel.SimpleUnityNetworking.Editor",
+    "rootNamespace": "jKnepel.SimpleUnityNetworking",
+    "references": [
+        "GUID:dfcb7f6461fc4ee45ba5810ea2790d02"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

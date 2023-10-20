@@ -1,0 +1,14 @@
+{
+    "name": "jKnepel.SimpleUnityNetworking.Runtime",
+    "rootNamespace": "jKnepel.SimpleUnityNetworking",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
