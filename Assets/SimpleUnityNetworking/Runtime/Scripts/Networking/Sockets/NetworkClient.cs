@@ -158,7 +158,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                         ExceptionDispatchInfo.Capture(ex).Throw();
                         throw;
                 }
-                ConnectionStatus = EConnectionStatus.IsDisconnected;
                 onConnectionEstablished?.Invoke(false);
                 Dispose();
             }
@@ -389,8 +388,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 return;
 
             SHA256 h = SHA256.Create();
-            byte[] hashedChallenge = h.ComputeHash(BitConverter.GetBytes(packet.Challenge));
             Writer writer = new();
+            writer.WriteUInt64(packet.Challenge);
+            byte[] hashedChallenge = h.ComputeHash(writer.GetBuffer());
+            writer.Clear();
             writer.Write(new ChallengeAnswerPacket(hashedChallenge, _config.Username, _config.Color));
             SendConnectionPacket(EPacketType.ChallengeAnswer, writer.GetBuffer());
         }
@@ -445,7 +446,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 			{
                 case ClosedReason.Unknown:
                     Messaging.SystemMessage("Client was disconnected from the host!");
-                    OnServerWasClosed?.Invoke();
                     break;
                 case ClosedReason.ServerWasClosed:
                     Messaging.SystemMessage("Server was closed by the host!");
@@ -453,11 +453,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                     break;
                 case ClosedReason.FailedACK:
                     Messaging.SystemMessage("Client dropped too many packets!");
-                    OnServerWasClosed?.Invoke();
                     break;
                 default:
                     Messaging.SystemMessage("Something went wrong. Try again later!");
-                    OnServerWasClosed?.Invoke();
                     break;
             }
         }
