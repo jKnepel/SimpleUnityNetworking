@@ -30,7 +30,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         static Writer()
         {   // caches all implemented type handlers during compilation
-            // TODO : call this during compilation instead of on first writer mention
             CreateTypeHandlerDelegate(typeof(bool));
             CreateTypeHandlerDelegate(typeof(byte));
             CreateTypeHandlerDelegate(typeof(sbyte));
@@ -53,6 +52,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             CreateTypeHandlerDelegate(typeof(Color32));
             CreateTypeHandlerDelegate(typeof(DateTime));
         }
+
+		internal static void Init() { }
 
 		#endregion
 
