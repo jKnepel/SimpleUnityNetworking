@@ -47,7 +47,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             callbacks.Remove(callback.GetHashCode(), out _);
         }
 
-        internal void ReceiveStructData(uint structHash, byte clientID, byte[] data)
+        internal protected void ReceiveStructData(uint structHash, byte clientID, byte[] data)
 		{
             if (!_registeredStructDataCallbacks.TryGetValue(structHash, out Dictionary<int, StructDataCallback> callbacks))
                 return;

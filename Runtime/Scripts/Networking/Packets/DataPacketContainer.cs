@@ -2,7 +2,7 @@ using System;
 
 namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 {
-	internal struct DataPacketContainer
+	internal struct SequencedPacketContainer
 	{
 		public byte ReceiverID;
 		public byte ExemptIDs; // TODO : change to list
@@ -11,7 +11,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 		public byte[] Body;
 		public Action<bool> OnPacketSend;
 
-		public DataPacketContainer(byte receiverID, ENetworkChannel networkChannel, EPacketType packetType, 
+		public SequencedPacketContainer(byte receiverID, ENetworkChannel networkChannel, EPacketType packetType, 
 			byte[] body, byte exemptIDs, Action<bool> onPacketSend = null)
 		{
 			ReceiverID = receiverID;
@@ -22,7 +22,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 			OnPacketSend = onPacketSend;
 		}
 
-		public DataPacketContainer(byte receiverID, ENetworkChannel networkChannel, EPacketType packetType,
+		public SequencedPacketContainer(byte receiverID, ENetworkChannel networkChannel, EPacketType packetType,
 			byte[] body, Action<bool> onPacketSend = null)
 			: this(receiverID, networkChannel, packetType, body, 0, onPacketSend) { }
 	}

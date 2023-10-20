@@ -15,7 +15,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
         ConnectionClosed = 8,
         ClientDisconnected = 9,
         IsStillActive = 10,
-        // data packets
+        // sequenced packets
         ClientInfo = 16,
         Data = 17,
     }

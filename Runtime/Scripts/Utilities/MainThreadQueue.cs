@@ -63,9 +63,8 @@ namespace jKnepel.SimpleUnityNetworking.Utilities
 
                     if (_instance == null)
                     {
-                        GameObject singletonObject = new();
-                        singletonObject.hideFlags = HideFlags.HideInHierarchy;
-                        DontDestroyOnLoad(singletonObject);
+						GameObject singletonObject = new() { hideFlags = HideFlags.HideInHierarchy };
+						DontDestroyOnLoad(singletonObject);
                         _instance = singletonObject.AddComponent<MainThreadQueueRuntime>();
                     }
                 }

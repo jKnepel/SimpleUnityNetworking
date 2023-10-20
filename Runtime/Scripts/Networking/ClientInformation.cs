@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Net;
 using UnityEngine;
 using jKnepel.SimpleUnityNetworking.Networking.Packets;
-using jKnepel.SimpleUnityNetworking.Serialisation;
 
 namespace jKnepel.SimpleUnityNetworking.Networking
 {

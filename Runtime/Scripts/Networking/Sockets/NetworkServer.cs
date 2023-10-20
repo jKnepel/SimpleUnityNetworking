@@ -57,7 +57,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         private readonly ConcurrentDictionary<byte, IPEndPoint> _idIpTable = new();
         private readonly ConcurrentDictionary<IPEndPoint, ClientInformationSocket> _connectedClients = new();
 
-        private readonly ConcurrentQueue<DataPacketContainer> _packetsToSend = new();
+        private readonly ConcurrentQueue<SequencedPacketContainer> _packetsToSend = new();
 
         #endregion
 
@@ -245,7 +245,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         {
             if (receiverID == ClientInformation.ID)
 			{
-                Messaging.DebugMessage("The Receiver ID is the same as the local Clients ID!");
+                Messaging.DebugMessage("The Receiver ID is the same as the local Client's ID!");
                 onDataSend?.Invoke(false);
                 return;
             }
@@ -269,7 +269,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         {
             if (receiverID == ClientInformation.ID)
             {
-                Messaging.DebugMessage("The Receiver ID is the same as the local Clients ID!");
+                Messaging.DebugMessage("The Receiver ID is the same as the local Client's ID!");
                 onDataSend?.Invoke(false);
                 return;
             }
@@ -366,9 +366,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                                 client.LastHeartbeat = DateTime.Now;
 
                                 if (header.IsChunkedPacket)
-                                    HandleChunkedDataPacket(client, header, reader);
+                                    HandleChunkedSequencedPacket(client, header, reader);
                                 else
-                                    HandleDataPacket(client, header, reader);
+                                    HandleSequencedPacket(client, header, reader);
                                 break;
                             }
                         default: break;
@@ -475,7 +475,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             Messaging.SystemMessage($"Client {client} disconnected!");
         }
 
-        private void HandleDataPacket(ClientInformationSocket sender, PacketHeader header, Reader reader)
+        private void HandleSequencedPacket(ClientInformationSocket sender, PacketHeader header, Reader reader)
         {
             ushort sequence = reader.ReadUInt16();
 
@@ -511,7 +511,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             sender.ReliableRemoteSequence = sequence;
             ConsumeSequencedPacket(sender, header, reader.ReadRemainingBytes());
 
-            // apply all packets from that senders buffer that are now next in the sequence
+            // apply all packets from that sender's buffer that are now next in the sequence
             while (sender.ReceivedPacketsBuffer.Count > 0)
             {
                 sequence++;
@@ -524,11 +524,11 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             }
         }
 
-        private void HandleChunkedDataPacket(ClientInformationSocket sender, PacketHeader header, Reader reader)
+        private void HandleChunkedSequencedPacket(ClientInformationSocket sender, PacketHeader header, Reader reader)
         {
             if (!IsReliableChannel(header.NetworkChannel))
             {
-                Messaging.DebugMessage("A unreliable chunked packet has been received. Make sure the client is legit!");
+                Messaging.DebugMessage("An unreliable chunked packet has been received. Make sure the client is legit!");
                 return;
             }
 
@@ -610,7 +610,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                                 DataPacket forwardedPacket = new(packet.IsStructData, packet.DataID, sender.ID, packet.Data);
                                 Writer writer = new();
                                 writer.Write(forwardedPacket);
-                                DataPacketContainer forwardedPacketContainer = new(packet.ClientID, packetHeader.NetworkChannel, packetHeader.PacketType, writer.GetBuffer());
+                                SequencedPacketContainer forwardedPacketContainer = new(packet.ClientID, packetHeader.NetworkChannel, packetHeader.PacketType, writer.GetBuffer());
                                 _packetsToSend.Enqueue(forwardedPacketContainer);
 							}
                             else
@@ -705,7 +705,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             {
                 try
                 {
-                    if (_packetsToSend.Count == 0 || !_packetsToSend.TryDequeue(out DataPacketContainer packet))
+                    if (_packetsToSend.Count == 0 || !_packetsToSend.TryDequeue(out SequencedPacketContainer packet))
                         continue;
 
                     if (IsReliableChannel(packet.NetworkChannel))
@@ -722,7 +722,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             }
         }
 
-        private void SendUnreliablePacket(DataPacketContainer packet)
+        private void SendUnreliablePacket(SequencedPacketContainer packet)
 		{
             try
 			{
@@ -754,7 +754,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 }
                 else if (packet.ReceiverID == 0)
                 {   // target all clients
-                    targetClients.AddRange(_connectedClients.Values);
+					targetClients = (List<ClientInformationSocket>)_connectedClients.Values;
                 }
 
                 foreach (ClientInformationSocket client in _connectedClients.Values)
@@ -762,7 +762,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                     if (client.ID == packet.ExemptIDs)
                         continue;
 
-                    // write clients sequence number and crc32 to the buffer
+                    // write client's sequence number and crc32 to the buffer
                     writer.Position = 5;
                     writer.WriteUInt16((ushort)(client.UnreliableLocalSequence + 1));
                     writer.Position = 0;
@@ -797,7 +797,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 			}
         }
 
-        private void SendReliablePacket(DataPacketContainer packet)
+        private void SendReliablePacket(SequencedPacketContainer packet)
 		{
             try
 			{
@@ -1040,13 +1040,13 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             writer.Write(serverInfo);
             _packetsToSend.Enqueue(new(newID, ENetworkChannel.ReliableUnordered, EPacketType.ClientInfo, writer.GetBuffer()));
 
-            // send new clients info to other clients
-            // TODO : make sure to buffer these on receiving client if accept is late
+            // send new client's info to other clients
             ClientInfoPacket newClientInfo = new(newID, newClient.Username, newClient.Color);
             writer.Clear();
             writer.Write(newClientInfo);
             _packetsToSend.Enqueue(new(0, ENetworkChannel.ReliableUnordered, EPacketType.ClientInfo, writer.GetBuffer(), newID));
             
+            // TODO : make sure to buffer these on receiving client if accept is late
             foreach (ClientInformationSocket client in _connectedClients.Values)
             {   // send data of all other clients to new client
                 if (client.ID == newID)
@@ -1101,9 +1101,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
         private void SendConnectionPacket(IPEndPoint target, EPacketType packetType, byte[] data)
         {
-            List<IPEndPoint> targets = new();
-            targets.Add(target);
-            SendConnectionPacket(targets, packetType, data);
+			List<IPEndPoint> targets = new() { target };
+			SendConnectionPacket(targets, packetType, data);
         }
 
         private void SendConnectionPacket(List<IPEndPoint> targets, EPacketType packetType, byte[] data)
