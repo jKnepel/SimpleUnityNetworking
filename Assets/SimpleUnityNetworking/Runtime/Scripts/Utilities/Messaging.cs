@@ -43,7 +43,16 @@ namespace jKnepel.SimpleUnityNetworking.Utilities
             Debug.Log(msg);
         }
 
-        public static void SystemMessage(string text, EMessageSeverity severity = EMessageSeverity.Log)
+		public static void DebugByteMessage(byte bytes, string msg, bool inBinary = false)
+		{   // TODO : add alternative message system to unity
+			if (!ShowDebugMessages)
+				return;
+
+			msg += Convert.ToString(bytes, inBinary ? 2 : 16).PadLeft(inBinary ? 8 : 2, '0') + " ";
+            Debug.Log(msg);
+		}
+
+		public static void SystemMessage(string text, EMessageSeverity severity = EMessageSeverity.Log)
 		{
             string formattedTime = DateTime.Now.ToString("H:mm:ss");
             _messages.Add(new($"[{formattedTime}] {text}", severity));
