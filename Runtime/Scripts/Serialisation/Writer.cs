@@ -13,9 +13,32 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
     {
         #region fields
 
+        /// <summary>
+        /// The current position of the writer header within the buffer.
+        /// This position will refer to the bit position if the bit serialiser mode is active and byte position if not. 
+        /// </summary>
+        /// <remarks>
+        /// IMPORTANT! Do not use this position unless you know what you are doing! 
+        /// Setting the position manually will not check for buffer bounds or update the length of the written buffer.
+        /// </remarks>
         public int Position;
-        public int Length { get; private set; }
-        public int Capacity => _buffer.Length;
+		/// <summary>
+		/// The highest position to which the writer has written a value.
+		/// </summary>
+		public int Length { get; private set; }
+		/// <summary>
+		/// The max capacity of the internal buffer.
+        /// This capacity will refer to the bit capacity if the bit serialiser mode is active and byte capacity if not.
+		/// </summary>
+		public int Capacity => IsBitSerialiserModeActive ? _buffer.Length * 8 : _buffer.Length;
+        /// <summary>
+        /// The set serialiser option flags of the writer.
+        /// </summary>
+        public readonly ESerialiserOptions SerialiserOptions;
+        /// <summary>
+        /// Wether the bit serialiser mode for this writer is active or not.
+        /// </summary>
+        public readonly bool IsBitSerialiserModeActive;
 
         private byte[] _buffer = new byte[32];
 
@@ -26,7 +49,11 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region lifecycle
 
-        public Writer() {}
+        public Writer(ESerialiserOptions serialiserOptions = ESerialiserOptions.EnableBitSerialiserMode)
+        {
+            SerialiserOptions = serialiserOptions;
+            IsBitSerialiserModeActive = SerialiserHelper.IsBitSerialiserEnabled(serialiserOptions);
+        }
 
         static Writer()
         {   // caches all implemented type handlers during compilation
@@ -102,7 +129,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             FieldInfo[] fieldInfos = type.GetFields();               
             if (fieldInfos.Length == 0 || fieldInfos.Where(x => x.FieldType == type).Any())
 			{
-                string typeName = GetTypeName(type);
+                string typeName = SerialiserHelper.GetTypeName(type);
                 throw new SerialiseNotImplemented($"No write method implemented for the type {typeName}!"
                     + $" Implement a Write{typeName} method or use an extension method in the parent type!");
 			}
@@ -110,18 +137,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             foreach (FieldInfo fieldInfo in fieldInfos)
                 Write(fieldInfo.GetValue(val), fieldInfo.FieldType);
         }
-
-        private static string GetTypeName(Type type)
-		{
-            if (type.IsArray)
-                return "Array";
-
-            if (!type.IsGenericType)
-                return type.Name;
-
-            int index = type.Name.IndexOf("`");
-            return type.Name.Substring(0, index);
-		}
 
         /// <summary>
         /// Constructs and caches pre-compiled expression delegate of type handlers.
@@ -135,8 +150,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         private static Action<Writer, object> CreateTypeHandlerDelegate(Type type, bool useCustomWriter = false)
         {   // find implemented or custom write method
             var writerMethod = useCustomWriter
-                ?           type.GetMethod($"Write{GetTypeName(type)}", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
-                : typeof(Writer).GetMethod($"Write{GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+                ?           type.GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                : typeof(Writer).GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (writerMethod == null)
                 return null;
 
@@ -174,18 +189,86 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region helpers
 
-        public void AdjustBufferSize(int size)
+        private void AdjustBufferSize(int size)
 		{
-            if (Position + size > _buffer.Length)
-                Array.Resize(ref _buffer, (_buffer.Length * 2) + size);
+            if (Position + size > Capacity)
+                Array.Resize(ref _buffer, (Capacity * 2) + size);
 		}
 
-        public void Skip(int val)
+        private void AdjustBitBufferSize(int bitSize)
+        {
+            if (Position + bitSize > Capacity)
+            { 
+                float remainingBits = bitSize - 8 - Position;
+                int requiredBytes = (int)Mathf.Ceil(remainingBits / 8);
+                Array.Resize(ref _buffer, (Capacity * 2) + requiredBytes);
+            }
+        }
+
+        public void SkipBytes(int bytes)
 		{
-            AdjustBufferSize(val);
-            Position += val;
-            Length = Math.Max(Length, Position);
+            if (IsBitSerialiserModeActive)
+            {
+                AdjustBitBufferSize(bytes * 8);
+                Position += bytes * 8;
+			    Length = Math.Max(Length, Position);
+            }
+            else
+            {
+                AdjustBufferSize(bytes);
+			    Position += bytes;
+			    Length = Math.Max(Length, Position);
+            }
 		}
+
+        public void SkipBits(int bits)
+        {
+			if (IsBitSerialiserModeActive)
+			{
+				AdjustBitBufferSize(bits);
+				Position += bits;
+				Length = Math.Max(Length, Position);
+			}
+			else
+			{
+				AdjustBufferSize(bits / 8);
+				Position += bits / 8;
+				Length = Math.Max(Length, Position);
+			}
+		}
+
+        public void RevertBytes(int bytes)
+        {
+            if (IsBitSerialiserModeActive)
+            {
+                Position -= bytes * 8;
+                Position = Math.Max(Position, 0);
+            }
+            else
+            {
+				Position -= bytes;
+				Position = Math.Max(Position, 0);
+			}
+        }
+
+        public void RevertBits(int bits)
+        {
+			if (IsBitSerialiserModeActive)
+			{
+				Position -= bits;
+				Position = Math.Max(Position, 0);
+			}
+			else
+			{
+				Position -= bits / 8;
+				Position = Math.Max(Position, 0);
+			}
+		}
+
+        public void RevertToStart()
+        {
+            Position = 0;
+        }
 
         public void Clear()
 		{
@@ -195,22 +278,46 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         public byte[] GetBuffer()
         {
-            byte[] result = new byte[Length];
-            Array.Copy(_buffer, 0, result, 0, Length);
-            return result;
-        }
+            int bufferLength = IsBitSerialiserModeActive
+                ? (int)Mathf.Ceil((float)Length / 8)
+                : Length;
+
+			byte[] result = new byte[bufferLength];
+			Array.Copy(_buffer, 0, result, 0, bufferLength);
+			return result;
+		}
 
         public byte[] GetFullBuffer()
         {
             return _buffer;
         }
 
+        // TODO : replace this
         public void BlockCopy(ref byte[] src, int srcOffset, int count)
         {
             AdjustBufferSize(count);
             Buffer.BlockCopy(src, srcOffset, _buffer, Position, count);
             Position += count;
-            Length = Math.Max(Length, Position);
+			Length = Math.Max(Length, Position);
+		}
+
+        private void WriteBits(ulong val, byte bits)
+        {
+            AdjustBitBufferSize(bits);
+
+            int bytePosition = Position / 8;
+            int valueOffset = bits + (Position % 8) - 8;
+			for (int i = 0; i <= bits / 8; i++)
+			{
+                int bufferOffset = valueOffset - 8 * i;
+				if (bufferOffset > 0)
+			        _buffer[bytePosition + i] |= (byte)(val >> bufferOffset);
+                else
+			        _buffer[bytePosition + i] |= (byte)(val << Math.Abs(bufferOffset));
+			}
+
+			Position += bits;
+			Length = Math.Max(Length, Position);
         }
 
         #endregion
@@ -219,32 +326,51 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         public void WriteBoolean(bool val)
 		{
-            AdjustBufferSize(1);
-            _buffer[Position++] = (byte)(val ? 1 : 0);
-            Length = Math.Max(Length, Position);
+            if (IsBitSerialiserModeActive)
+            {
+                WriteBits((ulong)(val ? 1 : 0), 1);
+            }
+            else
+            {
+			    AdjustBufferSize(1);
+			    _buffer[Position++] = (byte)(val ? 1 : 0);
+				Length = Math.Max(Length, Position);
+			}
 		}
 
         public void WriteByte(byte val)
         {
-            AdjustBufferSize(1);
-            _buffer[Position++] = val;
-            Length = Math.Max(Length, Position);
-        }
+            if (IsBitSerialiserModeActive) 
+            {
+                WriteBits(val, 8);
+            }
+            else
+            {
+                AdjustBufferSize(1);
+                _buffer[Position++] = val;
+			    Length = Math.Max(Length, Position);
+            }
+		}
 
         public void WriteSByte(sbyte val)
         {
-            AdjustBufferSize(1);
-            _buffer[Position++] = (byte)val;
-            Length = Math.Max(Length, Position);
-        }
+            WriteByte((byte)val);
+		}
 
         public void WriteUInt16(ushort val)
         {
-            AdjustBufferSize(2);
-            _buffer[Position++] = (byte)val;
-            _buffer[Position++] = (byte)(val >> 8);
-            Length = Math.Max(Length, Position);
-        }
+            if (IsBitSerialiserModeActive)
+            {
+                WriteBits(val, 16);
+            }
+            else
+            {
+                AdjustBufferSize(2);
+                _buffer[Position++] = (byte)val;
+                _buffer[Position++] = (byte)(val >> 8);
+                Length = Math.Max(Length, Position);
+            }
+		}
 
         public void WriteInt16(short val)
         {
@@ -253,13 +379,20 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         public void WriteUInt32(uint val)
         {
-            AdjustBufferSize(4);
-            _buffer[Position++] = (byte)val;
-            _buffer[Position++] = (byte)(val >> 8);
-            _buffer[Position++] = (byte)(val >> 16);
-            _buffer[Position++] = (byte)(val >> 24);
-            Length = Math.Max(Length, Position);
-        }
+            if (IsBitSerialiserModeActive)
+            {
+                WriteBits(val, 32);
+            }
+            else
+            {
+                AdjustBufferSize(4);
+                _buffer[Position++] = (byte)val;
+                _buffer[Position++] = (byte)(val >> 8);
+                _buffer[Position++] = (byte)(val >> 16);
+                _buffer[Position++] = (byte)(val >> 24);
+                Length = Math.Max(Length, Position);
+            }
+		}
 
         public void WriteInt32(int val)
         {
@@ -268,17 +401,24 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         public void WriteUInt64(ulong val)
         {
-            AdjustBufferSize(8);
-            _buffer[Position++] = (byte)val;
-            _buffer[Position++] = (byte)(val >> 8);
-            _buffer[Position++] = (byte)(val >> 16);
-            _buffer[Position++] = (byte)(val >> 24);
-            _buffer[Position++] = (byte)(val >> 32);
-            _buffer[Position++] = (byte)(val >> 40);
-            _buffer[Position++] = (byte)(val >> 48);
-            _buffer[Position++] = (byte)(val >> 56);
-            Length = Math.Max(Length, Position);
-        }
+            if (IsBitSerialiserModeActive)
+            {
+                WriteBits(val, 64);
+            }
+            else
+            {
+                AdjustBufferSize(8);
+                _buffer[Position++] = (byte)val;
+                _buffer[Position++] = (byte)(val >> 8);
+                _buffer[Position++] = (byte)(val >> 16);
+                _buffer[Position++] = (byte)(val >> 24);
+                _buffer[Position++] = (byte)(val >> 32);
+                _buffer[Position++] = (byte)(val >> 40);
+                _buffer[Position++] = (byte)(val >> 48);
+                _buffer[Position++] = (byte)(val >> 56);
+                Length = Math.Max(Length, Position);
+            }
+		}
 
         public void WriteInt64(long val)
         {
@@ -406,7 +546,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteUInt16((ushort)val.Length);
             byte[] bytes = Encoding.ASCII.GetBytes(val);
             BlockCopy(ref bytes, 0, bytes.Length);
-            Length = Math.Max(Length, Position);
         }
 
         public void WriteStringWithoutFlag(string val)
@@ -422,7 +561,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
             byte[] bytes = Encoding.ASCII.GetBytes(val);
             BlockCopy(ref bytes, 0, bytes.Length);
-            Length = Math.Max(Length, Position);
         }
 
         public void WriteArray<T>(T[] val)
