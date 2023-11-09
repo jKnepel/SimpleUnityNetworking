@@ -10,22 +10,26 @@ using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Serialisation
 {
-    public class Reader
+    public class BitReader
     {
 		#region fields
 
 		/// <summary>
-		/// The current byte position of the writer header within the buffer.
+		/// The current bit position of the writer header within the buffer.
 		/// </summary>
 		/// <remarks>
 		/// IMPORTANT! Do not use this position unless you know what you are doing! 
 		/// Setting the position manually will not check for buffer bounds.
 		/// </remarks>
 		public int Position;
+        /// <summary>
+        /// The length of the given buffer in bits.
+        /// </summary>
+        public int Length => _buffer.Length * 8;
 		/// <summary>
 		/// The length of the given buffer in bytes.
 		/// </summary>
-		public int Length => _buffer.Length;
+		public int ByteLength => _buffer.Length; 
 		/// <summary>
 		/// The remaining positions until the full length of the buffer.
 		/// </summary>
@@ -37,17 +41,17 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 		private readonly byte[] _buffer;
 
-        private static readonly ConcurrentDictionary<Type, Func<Reader, object>> _typeHandlerCache = new();
+		private static readonly ConcurrentDictionary<Type, Func<BitReader, object>> _typeHandlerCache = new();
         private static readonly HashSet<Type> _unknownTypes = new();
 
         #endregion
 
         #region lifecycle
 
-        public Reader(byte[] bytes, ESerialiserOptions serialiserOptions = ESerialiserOptions.None) 
+        public BitReader(byte[] bytes, ESerialiserOptions serialiserOptions = ESerialiserOptions.None) 
             : this(new ArraySegment<byte>(bytes), serialiserOptions) { }
 
-        public Reader(ArraySegment<byte> bytes, ESerialiserOptions serialiserOptions = ESerialiserOptions.None)
+        public BitReader(ArraySegment<byte> bytes, ESerialiserOptions serialiserOptions = ESerialiserOptions.None)
 		{
             if (bytes.Array == null)
                 return;
@@ -57,7 +61,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             SerialiserOptions = serialiserOptions;
 		}
 
-        static Reader()
+        static BitReader()
         {   // caches all implemented type handlers during compilation
             CreateTypeHandlerDelegate(typeof(bool));
             CreateTypeHandlerDelegate(typeof(byte));
@@ -98,19 +102,19 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		{
             if (!_unknownTypes.Contains(type))
 			{
-                if (_typeHandlerCache.TryGetValue(type, out Func<Reader, object> handler))
+                if (_typeHandlerCache.TryGetValue(type, out Func<BitReader, object> handler))
                 {   // check for already cached type handler delegates
                     return handler(this);
                 }
 
-                Func<Reader, object> customHandler = CreateTypeHandlerDelegate(type, true);
+                Func<BitReader, object> customHandler = CreateTypeHandlerDelegate(type, true);
                 if (customHandler != null)
                 {   // use custom type handler if user defined method was found
                     return customHandler(this);
                 }
 
                 // TODO : remove this once pre-compile cached generic handlers are supported
-                Func<Reader, object> implementedHandler = CreateTypeHandlerDelegate(type, false);
+                Func<BitReader, object> implementedHandler = CreateTypeHandlerDelegate(type, false);
                 if (implementedHandler != null)
                 {   // use implemented type handler
                     return implementedHandler(this);
@@ -148,16 +152,16 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         /// <param name="type">The type of the variable for which the writer is defined</param>
         /// <param name="useCustomReader">Wether the reader method is an instance of the Reader class or a custom static method in the type</param>
         /// <returns></returns>
-        private static Func<Reader, object> CreateTypeHandlerDelegate(Type type, bool useCustomReader = false)
+        private static Func<BitReader, object> CreateTypeHandlerDelegate(Type type, bool useCustomReader = false)
         {   // find implemented or custom read method
             var readerMethod = useCustomReader
                 ?           type.GetMethod($"Read{SerialiserHelper.GetTypeName(type)}", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
-                : typeof(Reader).GetMethod($"Read{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+                : typeof(BitReader).GetMethod($"Read{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (readerMethod == null)
                 return null;
 
             // parameters
-            var instanceArg = Expression.Parameter(typeof(Reader), "instance");
+            var instanceArg = Expression.Parameter(typeof(BitReader), "instance");
 
             // construct handler call body
             MethodCallExpression call;
@@ -179,61 +183,89 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
             // cache delegate
             var castResult = Expression.Convert(call, typeof(object));
-            var lambda = Expression.Lambda<Func<Reader, object>>(castResult, instanceArg);
+            var lambda = Expression.Lambda<Func<BitReader, object>>(castResult, instanceArg);
             var action = lambda.Compile();
             _typeHandlerCache.TryAdd(type, action);
             return action;
         }
 
-		#endregion
+        #endregion
 
-		#region helpers
+        #region helpers
+
+        private ulong ReadBits(EPrimitiveBitLength bits)
+        {
+            int intBits = (int)bits;
+            int bytePosition = Position / 8;
+            int relevantBits = Mathf.Min(8 - Position % 8, intBits);
+            int resultOffset = 64 - relevantBits;
+
+            // get relevant bits from current byte
+			ulong result = _buffer[bytePosition];
+            result >>= 8 - relevantBits - Position % 8;
+            result <<= resultOffset;
+
+            // get remaining bits from remaining bytes
+            int remainingBytes = (int)Mathf.Ceil((float)(intBits - relevantBits) / 8);
+			for (int i = 1; i <= remainingBytes; i++)
+            {
+                int byteOffset = resultOffset - 8 * i;
+                if (byteOffset > 0)
+				    result |= (ulong)_buffer[bytePosition + i] << byteOffset;
+                else
+				    result |= (ulong)_buffer[bytePosition + i] >> Math.Abs(byteOffset);
+			}
+
+			Position += intBits;
+            result >>= 64 - intBits;
+			return result;
+        }
 
 		/// <summary>
-		/// Skips the reader header ahead by the given number of bytes.
+		/// Skips the reader header ahead by the given number of bits.
 		/// </summary>
-		/// <param name="bytes"></param>
-		public void Skip(int bytes)
+		/// <param name="bits"></param>
+		public void Skip(int bits)
 		{
-            if (bytes < 1 || bytes > Remaining)
+            if (bits < 1 || bits > Remaining)
                 return;
 
-            Position += bytes;
+            Position += bits;
 		}
 
 		/// <summary>
 		/// Skips the reader header ahead by the given primitives' lengths.
 		/// </summary>
 		/// <param name="val"></param>
-		public void Skip(params EPrimitiveLength[] val)
+		public void Skip(params EPrimitiveBitLength[] val)
         {
-			int bytes = 0;
-			foreach (EPrimitiveLength length in val)
-				bytes += (byte)length;
-			Skip(bytes);
+			int bits = 0;
+			foreach (EPrimitiveBitLength length in val)
+				bits += (byte)length;
+			Skip(bits);
 		}
 
 		/// <summary>
-		/// Reverts the reader header back by the given number of bytes.
+		/// Reverts the reader header back by the given number of bits.
 		/// </summary>
-		/// <param name="bytes"></param>
-		public void Revert(int bytes)
-        {
-            Position -= bytes; 
-            Position = Mathf.Max(Position, 0);
-        }
+		/// <param name="bits"></param>
+		public void Revert(int bits)
+		{
+			Position -= bits;
+			Position = Math.Max(Position, 0);
+		}
 
 		/// <summary>
 		/// Reverts the reader header back by the given primitives' lengths.
 		/// </summary>
 		/// <param name="val"></param>
-		public void Revert(params EPrimitiveLength[] val)
-        {
-            int bytes = 0;
-            foreach(EPrimitiveLength length in val)
-                bytes += (byte)length;
-            Revert(bytes);
-        }
+		public void Revert(params EPrimitiveBitLength[] val)
+		{
+			int bits = 0;
+			foreach (EPrimitiveBitLength length in val)
+				bits += (byte)length;
+			Revert(bits);
+		}
 
 		/// <summary>
 		/// Clears the writter buffer.
@@ -244,75 +276,71 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		}
 
 		/// <returns>The full internal buffer.</returns>
-		public byte[] ReadBuffer()
+		public byte[] GetFullBuffer()
 		{
             return _buffer;
 		}
 
 		/// <summary>
-		/// Reads a specified number of bytes from the internal buffer to a destination array starting at a particular offset.
+		/// Reads a specified number of bits.
 		/// </summary>
-		/// <param name="dst"></param>
-		/// <param name="dstOffset"></param>
 		/// <param name="count"></param>
-		public void BlockCopy(ref byte[] dst, int dstOffset, int count)
+		/// <returns>The read bits inside a byte array.</returns>
+		/// <exception cref="ArgumentException">If the count exceeds the buffer</exception>
+		public byte[] ReadBits(int count)
 		{
-            Buffer.BlockCopy(_buffer, Position, dst, dstOffset, count);
-            Position += count;
+			if (count > Remaining)
+                throw new ArgumentException("The count exceeds the remaining length!");
+
+            int numberOfBytes = (int)Mathf.Ceil((float)count / 8);
+			byte[] bytes = new byte[numberOfBytes];
+            for (int i = 0; i < numberOfBytes; i++)
+                bytes[i] = (byte)ReadBits(EPrimitiveBitLength.Byte);
+            return bytes;
 		}
 
-		/// <returns>The remaining unread bytes.</returns>
-		public byte[] ReadRemainingBytes()
-		{
-            byte[] remaining = new byte[Remaining];
-            BlockCopy(ref remaining, 0, Remaining);
-            return remaining;
-		}
-
-		/// <returns>Reads and returns a byte segment of the specified length.</returns>
-		public ArraySegment<byte> ReadByteSegment(int count)
-		{
-            if (count > Remaining)
-                throw new IndexOutOfRangeException("The count exceeds the remaining length!");
-
-            ArraySegment<byte> result = new(_buffer, Position, count);
-            Position += count;
-            return result;
-        }
-
-		/// <returns>Reads and returns a byte array of the specified length.</returns>
-        public byte[] ReadByteArray(int count)
+		/// <summary>
+		/// Reads bits equal to the given primitives' lengths.
+		/// </summary>
+		/// <param name="val"></param>
+		/// <returns>The read bits inside a byte array.</returns>
+		public byte[] ReadBits(params EPrimitiveBitLength[] val)
         {
-            return ReadByteSegment(count).ToArray();
-        }
+			int bits = 0;
+			foreach (EPrimitiveBitLength length in val)
+				bits += (byte)length;
+			return ReadBits(bits);
+		}
+
+
+		/// <returns>The remaining unread bits inside a byte array.</returns>
+		public byte[] ReadRemainingBits()
+		{
+            return ReadBits(Remaining);
+		}
 
 		#endregion
 
 		#region primitives
 
-        public bool ReadBoolean()
+		public bool ReadBoolean()
 		{
-            byte result = _buffer[Position++];
-            return result == 1;
-        }
+			return ReadBits(EPrimitiveBitLength.Boolean) == 1;
+		}
 
         public byte ReadByte()
 		{
-            byte result = _buffer[Position++];
-            return result;
+			return (byte)ReadBits(EPrimitiveBitLength.Byte);
 		}
 
         public sbyte ReadSByte()
 		{
-            sbyte result = (sbyte)_buffer[Position++];
-            return result;
+            return (sbyte)ReadByte();
 		}
 
         public ushort ReadUInt16()
 		{
-            ushort result = _buffer[Position++];
-            result |= (ushort)(_buffer[Position++] << 8);
-            return result;
+			return (ushort)ReadBits(EPrimitiveBitLength.Short);
 		}
 
         public short ReadInt16()
@@ -322,11 +350,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         public uint ReadUInt32()
 		{
-            uint result = _buffer[Position++];
-            result |= (uint)(_buffer[Position++] << 8);
-            result |= (uint)(_buffer[Position++] << 16);
-            result |= (uint)(_buffer[Position++] << 24);
-            return result;
+			return (uint)ReadBits(EPrimitiveBitLength.Int);
 		}
 
         public int ReadInt32()
@@ -336,16 +360,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         public ulong ReadUInt64()
 		{
-            ulong result = _buffer[Position++];
-            result |= (ulong)_buffer[Position++] << 8;
-            result |= (ulong)_buffer[Position++] << 16;
-            result |= (ulong)_buffer[Position++] << 24;
-            result |= (ulong)_buffer[Position++] << 32;
-            result |= (ulong)_buffer[Position++] << 40;
-            result |= (ulong)_buffer[Position++] << 48;
-            result |= (ulong)_buffer[Position++] << 56;
-            return result;
-        }
+			return ReadBits(EPrimitiveBitLength.Long);
+		}
 
         public long ReadInt64()
 		{
@@ -354,9 +370,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         public char ReadChar()
 		{
-            char result = (char)_buffer[Position++];
-            result |= (char)(_buffer[Position++] << 8);
-            return result;
+            return (char)ReadUInt16();
         }
 
         public float ReadSingle()
@@ -447,14 +461,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         public string ReadString()
 		{
             ushort length = ReadUInt16();
-            ArraySegment<byte> bytes = ReadByteSegment(length);
-            return Encoding.ASCII.GetString(bytes);
+            return Encoding.ASCII.GetString(ReadBits(length * 8));
 		}
 
         public string ReadStringWithoutFlag(int length)
         {
-            ArraySegment<byte> bytes = ReadByteSegment(length);
-            return Encoding.ASCII.GetString(bytes);
+            return Encoding.ASCII.GetString(ReadBits(length * 8));
         }
 
         public T[] ReadArray<T>()

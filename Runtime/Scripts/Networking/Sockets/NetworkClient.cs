@@ -666,7 +666,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             {
                 // write header, sequence and body to buffer 
                 Writer writer = new();
-                writer.SkipBytes(4); // skip crc32 
+                writer.Skip(EPrimitiveLength.Int); // skip crc32 
                 writer.Write(new PacketHeader(false, false, packet.NetworkChannel, packet.PacketType));
                 writer.WriteUInt16((ushort)(_unreliableLocalSequence + 1));
                 writer.BlockCopy(ref packet.Body, 0, packet.Body.Length);
@@ -718,7 +718,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 {   // send as complete packet
                     // write header and body to buffer
                     Writer writer = new();
-                    writer.SkipBytes(4); // skip crc32
+                    writer.Skip(EPrimitiveLength.Int); // skip crc32
                     writer.Write(new PacketHeader(false, false, packet.NetworkChannel, packet.PacketType));
                     writer.WriteUInt16((ushort)(_reliableLocalSequence + 1));
                     writer.BlockCopy(ref packet.Body, 0, packet.Body.Length);
@@ -754,7 +754,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
                     // write header, sequence and number of slices to buffer
                     Writer writer = new();
-                    writer.SkipBytes(4); // skip crc32
+                    writer.Skip(EPrimitiveLength.Int); // skip crc32
                     writer.Write(new PacketHeader(false, true, packet.NetworkChannel, packet.PacketType));
                     writer.WriteUInt16((ushort)(_reliableLocalSequence + 1));
                     writer.WriteUInt16(numberOfSlices);
@@ -871,7 +871,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         private void SendConnectionPacket(EPacketType packetType, byte[] data)
         {   // set packet type and packet bytes
             Writer writer = new();
-            writer.SkipBytes(4);
+            writer.Skip(EPrimitiveLength.Int);
             writer.Write<PacketHeader>(new(packetType));
             writer.BlockCopy(ref data, 0, data.Length);
 
@@ -879,7 +879,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             byte[] bytesToHash = new byte[writer.Length];
             Buffer.BlockCopy(NetworkConfiguration.ProtocolBytes, 0, bytesToHash, 0, 4);
             Buffer.BlockCopy(writer.GetBuffer(), 4, bytesToHash, 4, bytesToHash.Length - 4);
-            writer.RevertToStart();
+            writer.Position = 0;
 			writer.WriteUInt32(Hashing.GetCRC32Hash(bytesToHash));
 
             // send to server
