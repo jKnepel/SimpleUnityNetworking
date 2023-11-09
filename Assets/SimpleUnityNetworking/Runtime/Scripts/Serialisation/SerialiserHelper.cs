@@ -20,10 +20,5 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         {
             return ((byte)serialiserOptions & flag) != 0;
 		}
-
-        public static bool IsBitSerialiserEnabled(ESerialiserOptions serialiserOptions)
-        {
-            return IsFlagSet(serialiserOptions, 0x01);
-		}
     }
 }

@@ -10,7 +10,10 @@ public class BitPackingTest : MonoBehaviour
     {
         TestStruct test = new TestStruct()
         {
+            /*
+            */
             Value1 = true,
+            Value9 = "testing",
             Value2 = false,
             Value3 = true,
             Value4 = true,
@@ -20,21 +23,20 @@ public class BitPackingTest : MonoBehaviour
             Value8 = 12312312311,
         };
 
-        Writer writer = new Writer(ESerialiserOptions.EnableBitSerialiserMode);
+		BitWriter writer = new();
         writer.Write(test);
         Messaging.DebugByteMessage(writer.GetBuffer(), "BitPacking: ", true);
-        Reader reader = new Reader(writer.GetBuffer(), ESerialiserOptions.EnableBitSerialiserMode);
+		
+        BitReader reader = new(writer.GetBuffer());
         Debug.Log(reader.Read<TestStruct>());
-        /*
-        Writer writer2 = new Writer();
-		writer2.Write(test);
-        Messaging.DebugByteMessage(writer2.GetBuffer(), "Normal: ", true);
-        */
 	}
 
     private struct TestStruct
     {
+        /*
+        */
         public bool Value1;
+        public string Value9;
         public bool Value2;
         public bool Value3;
         public bool Value4;
@@ -45,7 +47,7 @@ public class BitPackingTest : MonoBehaviour
 
         public override readonly string ToString()
         {
-            return $"{Value1} {Value2} {Value3} {Value4} {Value5} {Value6} {Value7} {Value8}";
+            return $"{Value1} {Value9} {Value2} {Value3} {Value4} {Value5} {Value6} {Value7} {Value8}";
         }
     }
 }

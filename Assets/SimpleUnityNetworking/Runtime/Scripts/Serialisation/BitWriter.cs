@@ -9,46 +9,50 @@ using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Serialisation
 {
-    public class Writer
+    public class BitWriter
     {
-		#region fields
+        #region fields
 
+        /// <summary>
+        /// The current bit position of the writer header within the buffer.
+        /// </summary>
+        /// <remarks>
+        /// IMPORTANT! Do not use this position unless you know what you are doing! 
+        /// Setting the position manually will not check for buffer bounds or update the length of the written buffer.
+        /// </remarks>
+        public int Position { get; set; }
 		/// <summary>
-		/// The current byte position of the writer header within the buffer.
-		/// </summary>
-		/// <remarks>
-		/// IMPORTANT! Do not use this position unless you know what you are doing! 
-		/// Setting the position manually will not check for buffer bounds or update the length of the written buffer.
-		/// </remarks>
-		public int Position { get; set; }
-		/// <summary>
-		/// The highest byte position to which the writer has written a value.
+		/// The highest bit position to which the writer has written a value.
 		/// </summary>
 		public int Length { get; private set; }
+        /// <summary>
+        /// The amount of bytes which were written to.
+        /// </summary>
+        public int ByteLength => (int)Math.Ceiling((float)Length / 8);
 		/// <summary>
 		/// The max capacity of the internal buffer.
 		/// </summary>
-		public int Capacity => _buffer.Length;
-		/// <summary>
-		/// The set serialiser option flags of the writer.
-		/// </summary>
-		public ESerialiserOptions SerialiserOptions { get; }
+		public int Capacity => _buffer.Length * 8;
+        /// <summary>
+        /// The set serialiser option flags of the writer.
+        /// </summary>
+        public ESerialiserOptions SerialiserOptions { get; }
 
-		private byte[] _buffer = new byte[32];
+        private byte[] _buffer = new byte[32];
 
-        private static readonly ConcurrentDictionary<Type, Action<Writer, object>> _typeHandlerCache = new();
+        private static readonly ConcurrentDictionary<Type, Action<BitWriter, object>> _typeHandlerCache = new();
         private static readonly HashSet<Type> _unknownTypes = new();
 
-		#endregion
+        #endregion
 
-		#region lifecycle
+        #region lifecycle
 
-		public Writer(ESerialiserOptions serialiserOptions = ESerialiserOptions.None)
-		{
-			SerialiserOptions = serialiserOptions;
-		}
+        public BitWriter(ESerialiserOptions serialiserOptions = ESerialiserOptions.None)
+        {
+            SerialiserOptions = serialiserOptions;
+        }
 
-		static Writer()
+        static BitWriter()
         {   // caches all implemented type handlers during compilation
             CreateTypeHandlerDelegate(typeof(bool));
             CreateTypeHandlerDelegate(typeof(byte));
@@ -89,13 +93,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		{
             if (!_unknownTypes.Contains(type))
             {   
-                if (_typeHandlerCache.TryGetValue(type, out Action<Writer, object> handler))
+                if (_typeHandlerCache.TryGetValue(type, out Action<BitWriter, object> handler))
                 {   // check for already cached type handler delegates
                     handler(this, val);
                     return;
                 }
 
-                Action<Writer, object> customHandler = CreateTypeHandlerDelegate(type, true);
+                Action<BitWriter, object> customHandler = CreateTypeHandlerDelegate(type, true);
                 if (customHandler != null)
                 {   // use custom type handler if user defined method was found
                     customHandler(this, val);
@@ -103,7 +107,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 }
 
                 // TODO : remove this once pre-compile cached generic handlers are supported
-                Action<Writer, object> implementedHandler = CreateTypeHandlerDelegate(type);
+                Action<BitWriter, object> implementedHandler = CreateTypeHandlerDelegate(type);
                 if (implementedHandler != null)
                 {   // use implemented type handler
                     implementedHandler(this, val);
@@ -140,16 +144,16 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         /// <param name="type">The type of the variable for which the writer is defined</param>
         /// <param name="useCustomWriter">Wether the writer method is an instance of the Writer class or a custom static method in the type</param>
         /// <returns></returns>
-        private static Action<Writer, object> CreateTypeHandlerDelegate(Type type, bool useCustomWriter = false)
+        private static Action<BitWriter, object> CreateTypeHandlerDelegate(Type type, bool useCustomWriter = false)
         {   // find implemented or custom write method
             var writerMethod = useCustomWriter
                 ?           type.GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
-                : typeof(Writer).GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+                : typeof(BitWriter).GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (writerMethod == null)
                 return null;
 
             // parameters
-            var instanceArg = Expression.Parameter(typeof(Writer), "instance");
+            var instanceArg = Expression.Parameter(typeof(BitWriter), "instance");
             var objectArg = Expression.Parameter(typeof(object), "value");
             var castArg = Expression.Convert(objectArg, type);
 
@@ -172,7 +176,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			}
 
             // cache delegate
-            var lambda = Expression.Lambda<Action<Writer, object>>(call, instanceArg, objectArg);
+            var lambda = Expression.Lambda<Action<BitWriter, object>>(call, instanceArg, objectArg);
             var action = lambda.Compile();
             _typeHandlerCache.TryAdd(type, action);
             return action;
@@ -184,59 +188,83 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         private void AdjustBufferSize(int size)
 		{
-            if (Position + size > _buffer.Length)
-                Array.Resize(ref _buffer, (_buffer.Length * 2) + size);
+			if (Position + size > Capacity)
+			{
+				float remainingBits = size - 8 - Position;
+				int requiredBytes = (int)Mathf.Ceil(remainingBits / 8);
+				Array.Resize(ref _buffer, (Capacity * 2) + requiredBytes);
+			}
+		}
+
+		private void WriteBits(ulong val, EPrimitiveBitLength bits)
+		{
+            int intBits = (int)bits;
+			AdjustBufferSize(intBits);
+
+			int bytePosition = Position / 8;
+			int valueOffset = intBits + (Position % 8) - 8;
+			for (int i = 0; i <= intBits / 8; i++)
+			{
+				int bufferOffset = valueOffset - 8 * i;
+				if (bufferOffset > 0)
+					_buffer[bytePosition + i] |= (byte)(val >> bufferOffset);
+				else
+					_buffer[bytePosition + i] |= (byte)(val << Math.Abs(bufferOffset));
+			}
+
+			Position += intBits;
+			Length = Math.Max(Length, Position);
 		}
 
 		/// <summary>
-		/// Skips the writer header ahead by the given number of bytes.
+		/// Skips the writer header ahead by the given number of bits.
 		/// </summary>
-		/// <param name="bytes"></param>
-		public void Skip(int bytes)
-		{
-            AdjustBufferSize(bytes);
-            Position += bytes;
-            Length = Math.Max(Length, Position);
+		/// <param name="bits"></param>
+		public void Skip(int bits)
+        {
+			AdjustBufferSize(bits);
+			Position += bits;
+			Length = Math.Max(Length, Position);
 		}
 
 		/// <summary>
 		/// Skips the writer header ahead by the given primitives' lengths.
 		/// </summary>
 		/// <param name="val"></param>
-		public void Skip(params EPrimitiveLength[] val)
-        {
-			int bytes = 0;
-			foreach (EPrimitiveLength length in val)
-				bytes += (byte)length;
-			Skip(bytes);
-		}
-
-		/// <summary>
-		/// Reverts the writer header back by the given number of bytes.
-		/// </summary>
-		/// <param name="bytes"></param>
-		public void Revert(int bytes)
+		public void Skip(params EPrimitiveBitLength[] val)
 		{
-			Position -= bytes;
-			Position = Mathf.Max(Position, 0);
+			int bits = 0;
+			foreach (EPrimitiveBitLength length in val)
+				bits += (byte)length;
+            Skip(bits);
 		}
 
 		/// <summary>
-		/// Reverts the writer header back by the given primitives' lengths.
+		/// Reverts the writer header back by the given number of bits.
 		/// </summary>
 		/// <param name="val"></param>
-		public void Revert(params EPrimitiveLength[] val)
-		{
-			int bytes = 0;
-			foreach (EPrimitiveLength length in val)
-				bytes += (byte)length;
-			Revert(bytes);
+		public void Revert(int bits)
+        {
+			Position -= bits;
+			Position = Math.Max(Position, 0);
 		}
 
-		/// <summary>
-		/// Clears the writter buffer.
-		/// </summary>
-		public void Clear()
+        /// <summary>
+        /// Reverts the writer header back by the given primitives' lengths.
+        /// </summary>
+        /// <param name="val"></param>
+        public void Revert(params EPrimitiveBitLength[] val)
+        {
+			int bits = 0;
+			foreach (EPrimitiveBitLength length in val)
+				bits += (byte)length;
+            Revert(bits);
+		}
+
+        /// <summary>
+        /// Clears the writter buffer.
+        /// </summary>
+        public void Clear()
 		{
             Position = 0;
             Length = 0;
@@ -245,10 +273,10 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <returns>The written buffer.</returns>
 		public byte[] GetBuffer()
         {
-            byte[] result = new byte[Length];
-            Array.Copy(_buffer, 0, result, 0, Length);
-            return result;
-        }
+			byte[] result = new byte[ByteLength];
+			Array.Copy(_buffer, 0, result, 0, ByteLength);
+			return result;
+		}
 
 		/// <returns>The entire internal buffer.</returns>
 		public byte[] GetFullBuffer()
@@ -257,18 +285,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         }
 
 		/// <summary>
-		/// Writes a specified number of bytes from a source array starting at a particular offset to the writer.
+		/// Writes a source array to the writer.
 		/// </summary>
 		/// <param name="src"></param>
-		/// <param name="srcOffset"></param>
-		/// <param name="count"></param>
-		public void BlockCopy(ref byte[] src, int srcOffset, int count)
+		public void WriteBits(byte[] src)
         {
-			AdjustBufferSize(count);
-            Buffer.BlockCopy(src, srcOffset, _buffer, Position, count);
-            Position += count;
-            Length = Math.Max(Length, Position);
-        }
+            for (int i = 0; i < src.Length; i++)
+                WriteBits(src[i], EPrimitiveBitLength.Byte);
+		}
 
         #endregion
 
@@ -276,30 +300,23 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         public void WriteBoolean(bool val)
 		{
-            AdjustBufferSize(1);
-            _buffer[Position++] = (byte)(val ? 1 : 0);
-            Length = Math.Max(Length, Position);
+			WriteBits((ulong)(val ? 1 : 0), EPrimitiveBitLength.Boolean);
 		}
 
         public void WriteByte(byte val)
         {
-            AdjustBufferSize(1);
-            _buffer[Position++] = val;
-            Length = Math.Max(Length, Position);
-        }
+			WriteBits(val, EPrimitiveBitLength.Byte);
+		}
 
         public void WriteSByte(sbyte val)
         {
             WriteByte((byte)val);
-        }
+		}
 
         public void WriteUInt16(ushort val)
         {
-            AdjustBufferSize(2);
-            _buffer[Position++] = (byte)val;
-            _buffer[Position++] = (byte)(val >> 8);
-            Length = Math.Max(Length, Position);
-        }
+			WriteBits(val, EPrimitiveBitLength.Short);
+		}
 
         public void WriteInt16(short val)
         {
@@ -308,13 +325,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         public void WriteUInt32(uint val)
         {
-            AdjustBufferSize(4);
-            _buffer[Position++] = (byte)val;
-            _buffer[Position++] = (byte)(val >> 8);
-            _buffer[Position++] = (byte)(val >> 16);
-            _buffer[Position++] = (byte)(val >> 24);
-            Length = Math.Max(Length, Position);
-        }
+			WriteBits(val, EPrimitiveBitLength.Int);
+		}
 
         public void WriteInt32(int val)
         {
@@ -323,17 +335,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         public void WriteUInt64(ulong val)
         {
-            AdjustBufferSize(8);
-            _buffer[Position++] = (byte)val;
-            _buffer[Position++] = (byte)(val >> 8);
-            _buffer[Position++] = (byte)(val >> 16);
-            _buffer[Position++] = (byte)(val >> 24);
-            _buffer[Position++] = (byte)(val >> 32);
-            _buffer[Position++] = (byte)(val >> 40);
-            _buffer[Position++] = (byte)(val >> 48);
-            _buffer[Position++] = (byte)(val >> 56);
-            Length = Math.Max(Length, Position);
-        }
+			WriteBits(val, EPrimitiveBitLength.Long);
+		}
 
         public void WriteInt64(long val)
         {
@@ -459,9 +462,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 throw new FormatException($"The string can't be longer than {ushort.MaxValue}!");
 
             WriteUInt16((ushort)val.Length);
-            byte[] bytes = Encoding.ASCII.GetBytes(val);
-            BlockCopy(ref bytes, 0, bytes.Length);
-            Length = Math.Max(Length, Position);
+            WriteBits(Encoding.ASCII.GetBytes(val));
         }
 
         public void WriteStringWithoutFlag(string val)
@@ -475,10 +476,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             if (val.Length > ushort.MaxValue)
                 throw new FormatException($"The string can't be longer than {ushort.MaxValue}!");
 
-            byte[] bytes = Encoding.ASCII.GetBytes(val);
-            BlockCopy(ref bytes, 0, bytes.Length);
-            Length = Math.Max(Length, Position);
-        }
+			WriteBits(Encoding.ASCII.GetBytes(val));
+		}
 
         public void WriteArray<T>(T[] val)
 		{

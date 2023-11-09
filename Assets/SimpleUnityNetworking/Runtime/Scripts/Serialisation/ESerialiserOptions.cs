@@ -6,6 +6,5 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
     public enum ESerialiserOptions : byte
     {
         None = 0,
-        EnableBitSerialiserMode = 1
     }
 }
