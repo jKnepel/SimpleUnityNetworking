@@ -11,13 +11,27 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 {
     public class StaticNetworkManagerWindow : EditorWindow
     {
+        [SerializeField] private NetworkConfiguration _cachedNetworkConfiguration = null;
+        private NetworkConfiguration NetworkConfiguration
+        {
+            get => StaticNetworkManager.NetworkConfiguration;
+            set
+            {
+                if (_cachedNetworkConfiguration != value)
+                    _settingsEditor = null;
+
+                _cachedNetworkConfiguration = value;
+                StaticNetworkManager.NetworkConfiguration = _cachedNetworkConfiguration;
+            }
+        }
+
         private Editor _settingsEditor = null;
         public Editor SettingsEditor
         {
             get
             {
                 if (_settingsEditor == null)
-                    _settingsEditor = Editor.CreateEditor(StaticNetworkManager.NetworkConfiguration);
+                    _settingsEditor = Editor.CreateEditor(NetworkConfiguration);
                 return _settingsEditor;
             }
         }
@@ -85,8 +99,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             GUILayout.Label("Network Manager", EditorStyles.largeLabel);
 
-            StaticNetworkManager.NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(StaticNetworkManager.NetworkConfiguration, typeof(NetworkConfiguration), true);
-            if (StaticNetworkManager.NetworkConfiguration != null)
+            NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(_cachedNetworkConfiguration, typeof(NetworkConfiguration), true);
+            if (NetworkConfiguration != null)
                 SettingsEditor.OnInspectorGUI();
 
             EditorGUILayout.Space();
@@ -230,7 +244,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         }
 
         private void ShowSystemMessages()
-		{
+        {
             EditorGUILayout.BeginHorizontal();
             GUILayout.Label($"Network Messages:");
             GUILayout.FlexibleSpace();
