@@ -61,7 +61,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking
         }
 
         [SerializeField] private Color32 _color = new(255, 255, 255, 255);
-        public Color32 Color { get => _color; set { _color = value; } }
+        public Color32 Color { get => _color; set => _color = value; }
 
         #endregion
 
@@ -112,14 +112,19 @@ namespace jKnepel.SimpleUnityNetworking.Networking
 
         [SerializeField] private int _mtu = 1200;
         public int MTU { get => _mtu; set => _mtu = value; }
+
         [SerializeField] private int _rtt = 200;
         public int RTT { get => _rtt; set => _rtt = value; }
+
         [SerializeField] private int _serverConnectionTimeout = 5000;
         public int ServerConnectionTimeout { get => _serverConnectionTimeout; set => _serverConnectionTimeout = value; }
+
         [SerializeField] private int _serverHeartbeatDelay = 1000;
         public int ServerHeartbeatDelay { get => _serverHeartbeatDelay; set => _serverHeartbeatDelay = value; }
+
         [SerializeField] private int _serverDiscoveryTimeout = 3000;
         public int ServerDiscoveryTimeout { get => _serverDiscoveryTimeout; set => _serverDiscoveryTimeout = value; }
+
         [SerializeField] private int _maxNumberResendReliablePackets = 5;
         public int MaxNumberResendReliablePackets { get => _maxNumberResendReliablePackets; set => _maxNumberResendReliablePackets = value; }
 

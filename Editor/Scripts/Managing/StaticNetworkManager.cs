@@ -1,17 +1,15 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
+using UnityEditor;
 using UnityEngine;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery;
 using jKnepel.SimpleUnityNetworking.Networking.Sockets;
 using jKnepel.SimpleUnityNetworking.Utilities;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
-using System.IO;
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
@@ -150,10 +148,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="onConnectionEstablished">Will be called once the server was successfully or failed to be created</param>
         public static void CreateServer(string servername, byte maxNumberClients, Action<bool> onConnectionEstablished = null)
         {
-#if UNITY_EDITOR
             if (Application.isPlaying)
                 return;
-#endif
 
             if (IsConnected)
             {
@@ -173,10 +169,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             server.OnClientDisconnected += FireOnClientDisconnected;
             server.OnConnectedClientListUpdated += FireOnConnectedClientListUpdated;
 
-#if UNITY_EDITOR
-
             onConnectionEstablished += ListenForStateChange;
-#endif
 
             server.StartServer(NetworkConfiguration, servername, maxNumberClients, onConnectionEstablished);
         }
@@ -189,10 +182,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="onConnectionEstablished">Will be called once the connection to the server was successfully or failed to be created</param>
         public static void JoinServer(IPAddress serverIP, int serverPort, Action<bool> onConnectionEstablished = null)
         {
-#if UNITY_EDITOR
             if (Application.isPlaying)
                 return;
-#endif
 
             if (IsConnected)
             {
@@ -212,10 +203,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             client.OnClientDisconnected += FireOnClientDisconnected;
             client.OnConnectedClientListUpdated += FireOnConnectedClientListUpdated;
 
-#if UNITY_EDITOR
-
             onConnectionEstablished += ListenForStateChange;
-#endif
 
             client.ConnectToServer(NetworkConfiguration, serverIP, serverPort, onConnectionEstablished);
         }
@@ -256,9 +244,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             _networkSocket = null;
 
-#if UNITY_EDITOR
             ListenForStateChange(false);
-#endif
         }
 
         /// <summary>
@@ -478,7 +464,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             T configuration = Resources.Load<T>(Path.GetFileNameWithoutExtension(name));
 
-#if UNITY_EDITOR
             string fullPath = path + name + ".asset";
 
             if (!configuration)
@@ -514,16 +499,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 AssetDatabase.SaveAssets();
             }
 
-#else
 			if (!configuration)
 			{
 				configuration = ScriptableObject.CreateInstance<T>();
 			}
-#endif
+
             return configuration;
         }
 
-#if UNITY_EDITOR
         private static void ListenForStateChange(bool isActive)
         {
             if (isActive)
@@ -537,7 +520,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             if (state == PlayModeStateChange.ExitingEditMode)
                 EditorApplication.isPlaying = false;
         }
-#endif
 
         #endregion
 
