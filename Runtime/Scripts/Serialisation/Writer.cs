@@ -257,7 +257,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         }
 
 		/// <summary>
-		/// Writes a specified number of bytes from a source array starting at a particular offset to the writer.
+		/// Writes a specified number of bytes from a source array starting at a particular offset to the buffer.
 		/// </summary>
 		/// <param name="src"></param>
 		/// <param name="srcOffset"></param>
@@ -268,6 +268,25 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             Buffer.BlockCopy(src, srcOffset, _buffer, Position, count);
             Position += count;
             Length = Math.Max(Length, Position);
+        }
+
+		/// <summary>
+		/// Writes a source array to the buffer.
+		/// </summary>
+		/// <param name="src"></param>
+		public void WriteByteSegment(ArraySegment<byte> src)
+        {
+            byte[] srcArray = src.Array;
+            BlockCopy(ref srcArray, 0, src.Count);
+        }
+
+		/// <summary>
+		/// Writes a source array to the buffer.
+		/// </summary>
+		/// <param name="src"></param>
+		public void WriteByteArray(byte[] src)
+        {
+            BlockCopy(ref src, 0, src.Length);
         }
 
         #endregion

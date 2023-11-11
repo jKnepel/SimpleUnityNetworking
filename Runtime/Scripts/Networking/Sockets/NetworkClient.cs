@@ -263,6 +263,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
                     // check crc32
                     uint crc32 = reader.ReadUInt32();
+                    int typePosition = reader.Position;
                     byte[] bytesToHash = new byte[reader.Length];
                     Buffer.BlockCopy(NetworkConfiguration.ProtocolBytes, 0, bytesToHash, 0, 4);
                     reader.BlockCopy(ref bytesToHash, 4, reader.Remaining);
@@ -270,7 +271,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                         continue;
 
                     // check packet type
-                    reader.Position = 4;
+                    reader.Position = typePosition;
                     PacketHeader header = reader.Read<PacketHeader>();
 
                     // handle individual packet types
