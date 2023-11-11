@@ -34,10 +34,10 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// The remaining positions until the full length of the buffer.
 		/// </summary>
 		public int Remaining => Length - Position;
-		/// <summary>
-		/// The set serialiser option flags of the reader.
-		/// </summary>
-		public readonly ESerialiserOptions SerialiserOptions;
+        /// <summary>
+        /// The configuration of the bit reader.
+        /// </summary>
+        public SerialiserConfiguration SerialiserConfiguration { get; }
 
 		private readonly byte[] _buffer;
 
@@ -48,17 +48,17 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region lifecycle
 
-        public BitReader(byte[] bytes, ESerialiserOptions serialiserOptions = ESerialiserOptions.None) 
-            : this(new ArraySegment<byte>(bytes), serialiserOptions) { }
+        public BitReader(byte[] bytes, SerialiserConfiguration config = null)
+            : this(new ArraySegment<byte>(bytes), config) { }
 
-        public BitReader(ArraySegment<byte> bytes, ESerialiserOptions serialiserOptions = ESerialiserOptions.None)
+        public BitReader(ArraySegment<byte> bytes, SerialiserConfiguration config = null)
 		{
             if (bytes.Array == null)
                 return;
 
             Position = bytes.Offset;
             _buffer = bytes.Array;
-            SerialiserOptions = serialiserOptions;
+            SerialiserConfiguration = config ?? new();
 		}
 
         static BitReader()
@@ -399,11 +399,34 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         public float ReadSingle()
 		{
-            TypeConverter.UIntToFloat converter = new() { UInt = ReadUInt32() };
-            return converter.Float;
+            if (SerialiserConfiguration.CompressFloats)
+            {
+                return ReadCompressedSingle(
+                    SerialiserConfiguration.FloatMinValue,
+                    SerialiserConfiguration.FloatMaxValue,
+                    SerialiserConfiguration.FloatResolution);
+            }
+            else
+            {
+                TypeConverter.UIntToFloat converter = new() { UInt = ReadUInt32() };
+                return converter.Float;
+            }
         }
 
-        public double ReadDouble()
+		public float ReadCompressedSingle(float min, float max, float resolution)
+		{   // thanks to Glenn Fiedler https://gafferongames.com/post/serialization_strategies/
+			float delta = max - min;
+			float values = delta / resolution;
+
+			uint maxIntValue = (uint)Mathf.Ceil(values);
+			uint requiredBits = SerialiserHelper.BitsRequired(0, maxIntValue);
+			uint integerValue = (uint)ReadBits((int)requiredBits);
+
+			float normalizedValue = integerValue / (float)maxIntValue;
+            return normalizedValue * delta + min;
+		}
+
+		public double ReadDouble()
 		{
             TypeConverter.ULongToDouble converter = new() { ULong = ReadUInt64() };
             return converter.Double;
@@ -424,17 +447,40 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             return new Vector2(ReadSingle(), ReadSingle());
 		}
 
+        public Vector2 ReadCompressedVector2(float min, float max, float resolution)
+        {
+            return new Vector2(
+                ReadCompressedSingle(min, max, resolution), 
+                ReadCompressedSingle(min, max, resolution));
+        }
+
         public Vector3 ReadVector3()
 		{
             return new Vector3(ReadSingle(), ReadSingle(), ReadSingle());
 		}
 
-        public Vector4 ReadVector4()
+		public Vector3 ReadCompressedVector3(float min, float max, float resolution)
+		{
+			return new Vector3(
+                ReadCompressedSingle(min, max, resolution),
+                ReadCompressedSingle(min, max, resolution),
+				ReadCompressedSingle(min, max, resolution));
+		}
+
+		public Vector4 ReadVector4()
 		{
             return new Vector4(ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle());
 		}
 
-        public Quaternion ReadQuaternion()
+		public Vector4 ReadCompressedVector4(float min, float max, float resolution)
+		{
+			return new Vector4(
+				ReadCompressedSingle(min, max, resolution),
+				ReadCompressedSingle(min, max, resolution),
+				ReadCompressedSingle(min, max, resolution));
+		}
+
+		public Quaternion ReadQuaternion()
 		{
             return new Quaternion(ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle());
 		}
