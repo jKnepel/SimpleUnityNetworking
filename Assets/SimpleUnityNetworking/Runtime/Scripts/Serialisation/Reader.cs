@@ -261,14 +261,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             Position += count;
 		}
 
-		/// <returns>The remaining unread bytes.</returns>
-		public byte[] ReadRemainingBytes()
-		{
-            byte[] remaining = new byte[Remaining];
-            BlockCopy(ref remaining, 0, Remaining);
-            return remaining;
-		}
-
 		/// <returns>Reads and returns a byte segment of the specified length.</returns>
 		public ArraySegment<byte> ReadByteSegment(int count)
 		{
@@ -283,8 +275,16 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <returns>Reads and returns a byte array of the specified length.</returns>
         public byte[] ReadByteArray(int count)
         {
-            return ReadByteSegment(count).ToArray();
+            return ReadByteSegment(count).Array;
         }
+
+		/// <returns>The remaining bytes.</returns>
+		public byte[] ReadRemainingBytes()
+		{
+            byte[] remaining = new byte[Remaining];
+            BlockCopy(ref remaining, 0, Remaining);
+            return remaining;
+		}
 
 		#endregion
 
@@ -447,14 +447,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         public string ReadString()
 		{
             ushort length = ReadUInt16();
-            ArraySegment<byte> bytes = ReadByteSegment(length);
-            return Encoding.ASCII.GetString(bytes);
+            return Encoding.ASCII.GetString(ReadByteArray(length));
 		}
 
         public string ReadStringWithoutFlag(int length)
         {
-            ArraySegment<byte> bytes = ReadByteSegment(length);
-            return Encoding.ASCII.GetString(bytes);
+            return Encoding.ASCII.GetString(ReadByteArray(length));
         }
 
         public T[] ReadArray<T>()

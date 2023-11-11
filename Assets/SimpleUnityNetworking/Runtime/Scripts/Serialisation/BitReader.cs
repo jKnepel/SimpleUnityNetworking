@@ -282,41 +282,56 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		}
 
 		/// <summary>
-		/// Reads a specified number of bits.
+		/// Reads a specified number of bytes from the internal buffer to a destination array starting at a particular offset.
+		/// </summary>
+		/// <param name="dst"></param>
+		/// <param name="dstOffset"></param>
+		/// <param name="count"></param>
+		public void BlockCopy(ref byte[] dst, int dstOffset, int count)
+        {
+            byte[] bytes = ReadByteArray(count);
+            Buffer.BlockCopy(bytes, 0, dst, dstOffset, bytes.Length);
+        }
+
+		/// <summary>
+		/// Reads a specified number of bytes.
 		/// </summary>
 		/// <param name="count"></param>
 		/// <returns>The read bits inside a byte array.</returns>
 		/// <exception cref="ArgumentException">If the count exceeds the buffer</exception>
-		public byte[] ReadBits(int count)
+		public ArraySegment<byte> ReadByteSegment(int count)
+        {
+			if (count * 8 > Remaining)
+				throw new ArgumentException("The count exceeds the remaining length!");
+
+			byte[] bytes = new byte[count];
+			for (int i = 0; i < count; i++)
+				bytes[i] = (byte)ReadBits(EPrimitiveBitLength.Byte);
+			return new(bytes);
+		}
+
+		/// <summary>
+		/// Reads a specified number of bytes.
+		/// </summary>
+		/// <param name="count"></param>
+		/// <returns>The read bits inside a byte array.</returns>
+		/// <exception cref="ArgumentException">If the count exceeds the buffer</exception>
+		public byte[] ReadByteArray(int count)
 		{
-			if (count > Remaining)
+			if (count * 8 > Remaining)
                 throw new ArgumentException("The count exceeds the remaining length!");
 
-            int numberOfBytes = (int)Mathf.Ceil((float)count / 8);
-			byte[] bytes = new byte[numberOfBytes];
-            for (int i = 0; i < numberOfBytes; i++)
+			byte[] bytes = new byte[count];
+            for (int i = 0; i < count; i++)
                 bytes[i] = (byte)ReadBits(EPrimitiveBitLength.Byte);
             return bytes;
 		}
 
-		/// <summary>
-		/// Reads bits equal to the given primitives' lengths.
-		/// </summary>
-		/// <param name="val"></param>
-		/// <returns>The read bits inside a byte array.</returns>
-		public byte[] ReadBits(params EPrimitiveBitLength[] val)
-        {
-			int bits = 0;
-			foreach (EPrimitiveBitLength length in val)
-				bits += (byte)length;
-			return ReadBits(bits);
-		}
 
-
-		/// <returns>The remaining unread bits inside a byte array.</returns>
+		/// <returns>The remaining bits inside a byte array.</returns>
 		public byte[] ReadRemainingBits()
 		{
-            return ReadBits(Remaining);
+            return ReadByteArray(Remaining);
 		}
 
 		#endregion
@@ -461,12 +476,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         public string ReadString()
 		{
             ushort length = ReadUInt16();
-            return Encoding.ASCII.GetString(ReadBits(length * 8));
+            return Encoding.ASCII.GetString(ReadByteArray(length));
 		}
 
         public string ReadStringWithoutFlag(int length)
         {
-            return Encoding.ASCII.GetString(ReadBits(length * 8));
+            return Encoding.ASCII.GetString(ReadByteArray(length));
         }
 
         public T[] ReadArray<T>()

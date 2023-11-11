@@ -285,10 +285,42 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         }
 
 		/// <summary>
-		/// Writes a source array to the writer.
+		/// Writes a specified number of bytes from a source array starting at a particular byte offset to the buffer.
 		/// </summary>
 		/// <param name="src"></param>
-		public void WriteBits(byte[] src)
+		/// <param name="srcOffset"></param>
+		/// <param name="count"></param>
+		/// <exception cref="ArgumentNullException"></exception>
+		/// <exception cref="ArgumentException"></exception>
+		/// <exception cref="ArgumentOutOfRangeException"></exception>
+		public void BlockCopy(ref byte[] src, int srcOffset, int count)
+        {
+            if (src == null)
+                throw new ArgumentNullException(nameof(src));
+            if (srcOffset + count > src.Length)
+                throw new ArgumentException(nameof(count));
+            if (srcOffset < 0 || count <= 0)
+                throw new ArgumentOutOfRangeException();
+
+			for (int i = 0; i < count; i++)
+				WriteBits(src[srcOffset + i], EPrimitiveBitLength.Byte);
+		}
+
+		/// <summary>
+		/// Writes a source array to the buffer.
+		/// </summary>
+		/// <param name="src"></param>
+		public void WriteByteSegment(ArraySegment<byte> src)
+        {
+			for (int i = 0; i < src.Count; i++)
+				WriteBits(src[i], EPrimitiveBitLength.Byte);
+		}
+
+		/// <summary>
+		/// Writes a source array to the buffer.
+		/// </summary>
+		/// <param name="src"></param>
+		public void WriteByteArray(byte[] src)
         {
             for (int i = 0; i < src.Length; i++)
                 WriteBits(src[i], EPrimitiveBitLength.Byte);
