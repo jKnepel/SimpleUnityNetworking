@@ -494,7 +494,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 throw new FormatException($"The string can't be longer than {ushort.MaxValue}!");
 
             WriteUInt16((ushort)val.Length);
-            WriteBits(Encoding.ASCII.GetBytes(val));
+            WriteByteArray(Encoding.ASCII.GetBytes(val));
         }
 
         public void WriteStringWithoutFlag(string val)
@@ -508,7 +508,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             if (val.Length > ushort.MaxValue)
                 throw new FormatException($"The string can't be longer than {ushort.MaxValue}!");
 
-			WriteBits(Encoding.ASCII.GetBytes(val));
+			WriteByteArray(Encoding.ASCII.GetBytes(val));
 		}
 
         public void WriteArray<T>(T[] val)
