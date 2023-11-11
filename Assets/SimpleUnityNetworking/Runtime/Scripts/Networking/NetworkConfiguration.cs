@@ -87,11 +87,16 @@ namespace jKnepel.SimpleUnityNetworking.Networking
         private IPAddress[] _localIPAddresses = new IPAddress[0];
         public IPAddress[] LocalIPAddresses
         {
-            get => _localIPAddresses;
+            get
+            {
+                if (_localIPAddresses == null || _localIPAddresses.Length == 0)
+                    LocalIPAddresses = NetworkUtilities.GetLocalIPAddresses(_allowVirtualIPs);
+                return _localIPAddresses;
+            }
             internal set
             {
                 _localIPAddresses = value;
-                LocalIPAddressIndex = Math.Min(LocalIPAddressIndex, LocalIPAddresses.Length - 1);
+                LocalIPAddressIndex = Math.Min(LocalIPAddressIndex, _localIPAddresses.Length - 1);
                 LocalStringIPAddresses = value.Select(x => x.ToString()).ToArray();
             }
         }
