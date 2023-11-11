@@ -196,14 +196,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			}
 		}
 
-		private void WriteBits(ulong val, EPrimitiveBitLength bits)
+		private void WriteBits(ulong val, int bits)
 		{
-            int intBits = (int)bits;
-			AdjustBufferSize(intBits);
+			AdjustBufferSize(bits);
 
 			int bytePosition = Position / 8;
-			int valueOffset = intBits + (Position % 8) - 8;
-			for (int i = 0; i <= intBits / 8; i++)
+			int valueOffset = bits + (Position % 8) - 8;
+			for (int i = 0; i <= bits / 8; i++)
 			{
 				int bufferOffset = valueOffset - 8 * i;
 				if (bufferOffset > 0)
@@ -212,9 +211,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 					_buffer[bytePosition + i] |= (byte)(val << Math.Abs(bufferOffset));
 			}
 
-			Position += intBits;
+			Position += bits;
 			Length = Math.Max(Length, Position);
 		}
+
+        private void WriteBits(ulong val, EPrimitiveBitLength bits)
+        {
+            WriteBits(val, (int)bits);
+        }
 
 		/// <summary>
 		/// Skips the writer header ahead by the given number of bits.

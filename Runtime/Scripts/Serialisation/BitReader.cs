@@ -193,11 +193,10 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region helpers
 
-        private ulong ReadBits(EPrimitiveBitLength bits)
+        private ulong ReadBits(int bits)
         {
-            int intBits = (int)bits;
             int bytePosition = Position / 8;
-            int relevantBits = Mathf.Min(8 - Position % 8, intBits);
+            int relevantBits = Mathf.Min(8 - Position % 8, bits);
             int resultOffset = 64 - relevantBits;
 
             // get relevant bits from current byte
@@ -206,7 +205,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             result <<= resultOffset;
 
             // get remaining bits from remaining bytes
-            int remainingBytes = (int)Mathf.Ceil((float)(intBits - relevantBits) / 8);
+            int remainingBytes = (int)Mathf.Ceil((float)(bits - relevantBits) / 8);
 			for (int i = 1; i <= remainingBytes; i++)
             {
                 int byteOffset = resultOffset - 8 * i;
@@ -216,9 +215,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 				    result |= (ulong)_buffer[bytePosition + i] >> Math.Abs(byteOffset);
 			}
 
-			Position += intBits;
-            result >>= 64 - intBits;
+			Position += bits;
+            result >>= 64 - bits;
 			return result;
+        }
+
+        private ulong ReadBits(EPrimitiveBitLength bits)
+        {
+            return ReadBits((int)bits);
         }
 
 		/// <summary>
@@ -331,7 +335,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <returns>The remaining bits inside a byte array.</returns>
 		public byte[] ReadRemainingBits()
 		{
-            return ReadByteArray(Remaining);
+            int numberBytes = (int)Mathf.Ceil((float)Remaining / 8);
+            byte[] bytes = new byte[numberBytes];
+            for (int i = 0; i < numberBytes - 1; i++)
+                bytes[i] = (byte)ReadBits(EPrimitiveBitLength.Byte);
+            bytes[^1] = (byte)ReadBits(Remaining);
+            return bytes;
 		}
 
 		#endregion
