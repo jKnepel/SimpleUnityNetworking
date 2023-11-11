@@ -768,7 +768,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 					targetClients = _connectedClients.Values.ToList();
                 }
 
-                foreach (ClientInformationSocket client in _connectedClients.Values)
+                foreach (ClientInformationSocket client in targetClients)
                 {
                     if (client.ID == packet.ExemptIDs)
                         continue;
@@ -838,7 +838,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                     writer.Skip(2); // skip sequence
                     writer.BlockCopy(ref packet.Body, 0, packet.Body.Length);
 
-                    foreach (ClientInformationSocket client in _connectedClients.Values)
+                    foreach (ClientInformationSocket client in targetClients)
                     {
                         if (client.ID == packet.ExemptIDs)
                             continue;
