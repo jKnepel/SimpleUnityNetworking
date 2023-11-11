@@ -765,7 +765,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 }
                 else if (packet.ReceiverID == 0)
                 {   // target all clients
-					targetClients = (List<ClientInformationSocket>)_connectedClients.Values;
+					targetClients = _connectedClients.Values.ToList();
                 }
 
                 foreach (ClientInformationSocket client in _connectedClients.Values)
