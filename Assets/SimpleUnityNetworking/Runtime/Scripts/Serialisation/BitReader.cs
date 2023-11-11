@@ -413,6 +413,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             }
         }
 
+		public float ReadUncompressedSingle()
+		{
+			TypeConverter.UIntToFloat converter = new() { UInt = ReadUInt32() };
+			return converter.Float;
+		}
+
 		public float ReadCompressedSingle(float min, float max, float resolution)
 		{   // thanks to Glenn Fiedler https://gafferongames.com/post/serialization_strategies/
 			float delta = max - min;
@@ -420,9 +426,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 			uint maxIntValue = (uint)Mathf.Ceil(values);
 			uint requiredBits = SerialiserHelper.BitsRequired(0, maxIntValue);
-			uint integerValue = (uint)ReadBits((int)requiredBits);
+			uint intValue = (uint)ReadBits((int)requiredBits);
+			float normalizedValue = intValue / (float)maxIntValue;
 
-			float normalizedValue = integerValue / (float)maxIntValue;
             return normalizedValue * delta + min;
 		}
 

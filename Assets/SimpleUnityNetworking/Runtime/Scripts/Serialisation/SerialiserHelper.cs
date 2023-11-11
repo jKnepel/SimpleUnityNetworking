@@ -20,8 +20,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		static uint Popcount(uint x)
 		{
 			uint a = x - ((x >> 1) & 0x55555555);
-			uint b = (((a >> 2) & 0x33333333) + (a & 0x33333333));
-			uint c = (((b >> 4) + b) & 0x0f0f0f0f);
+			uint b = ((a >> 2) & 0x33333333) + (a & 0x33333333);
+			uint c = ((b >> 4) + b) & 0x0f0f0f0f;
 			uint d = c + (c >> 8);
 			uint e = d + (d >> 16);
 			uint result = e & 0x0000003f;

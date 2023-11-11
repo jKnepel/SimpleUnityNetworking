@@ -401,6 +401,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			}
         }
 
+        public void WriteUncompressedSingle(float val)
+        {
+			TypeConverter.UIntToFloat converter = new() { Float = val };
+			WriteUInt32(converter.UInt);
+		}
+
         public void WriteCompressedSingle(float val, float min, float max, float resolution)
 		{   // thanks to Glenn Fiedler https://gafferongames.com/post/serialization_strategies/
 			float delta = max - min;
@@ -408,9 +414,10 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 			float normalizedValue = Mathf.Clamp((val - min) / delta, 0.0f, 1.0f);
 			uint maxIntValue = (uint)Mathf.Ceil(values);
-			uint integerValue = (uint)Mathf.Floor(normalizedValue * maxIntValue + 0.5f);
             uint requiredBits = SerialiserHelper.BitsRequired(0, maxIntValue);
-            WriteBits(integerValue, (int)requiredBits);
+			uint intValue = (uint)Mathf.Floor(normalizedValue * maxIntValue + 0.5f);
+
+            WriteBits(intValue, (int)requiredBits);
 		}
 
 		public void WriteDouble(double val)
