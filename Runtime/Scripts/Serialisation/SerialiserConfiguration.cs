@@ -4,8 +4,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 {
     public class SerialiserConfiguration
     {
-        public static SerialiserConfiguration Standard => new SerialiserConfiguration();
-
         [SerializeField] private bool _compressFloats = false;
         public bool CompressFloats { get => _compressFloats; set => _compressFloats = value; }
 
