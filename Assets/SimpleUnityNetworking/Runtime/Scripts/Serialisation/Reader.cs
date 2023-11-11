@@ -31,9 +31,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// </summary>
 		public int Remaining => Length - Position;
 		/// <summary>
-		/// The set serialiser option flags of the reader.
+		/// The configuration of the reader.
 		/// </summary>
-		public readonly ESerialiserOptions SerialiserOptions;
+		public SerialiserConfiguration SerialiserConfiguration { get; }
 
 		private readonly byte[] _buffer;
 
@@ -44,17 +44,17 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region lifecycle
 
-        public Reader(byte[] bytes, ESerialiserOptions serialiserOptions = ESerialiserOptions.None) 
-            : this(new ArraySegment<byte>(bytes), serialiserOptions) { }
+        public Reader(byte[] bytes, SerialiserConfiguration config = null) 
+            : this(new ArraySegment<byte>(bytes), config = null) { }
 
-        public Reader(ArraySegment<byte> bytes, ESerialiserOptions serialiserOptions = ESerialiserOptions.None)
+        public Reader(ArraySegment<byte> bytes, SerialiserConfiguration config = null)
 		{
             if (bytes.Array == null)
                 return;
 
             Position = bytes.Offset;
             _buffer = bytes.Array;
-            SerialiserOptions = serialiserOptions;
+            SerialiserConfiguration = config ?? new();
 		}
 
         static Reader()

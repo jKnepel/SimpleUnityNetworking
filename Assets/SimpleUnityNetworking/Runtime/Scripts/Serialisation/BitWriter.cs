@@ -33,10 +33,10 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// The max capacity of the internal buffer.
 		/// </summary>
 		public int Capacity => _buffer.Length * 8;
-        /// <summary>
-        /// The set serialiser option flags of the writer.
-        /// </summary>
-        public ESerialiserOptions SerialiserOptions { get; }
+		/// <summary>
+		/// The configuration of the bit writer.
+		/// </summary>
+		public SerialiserConfiguration SerialiserConfiguration { get; }
 
         private byte[] _buffer = new byte[32];
 
@@ -47,9 +47,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region lifecycle
 
-        public BitWriter(ESerialiserOptions serialiserOptions = ESerialiserOptions.None)
+        public BitWriter(SerialiserConfiguration config = null)
         {
-            SerialiserOptions = serialiserOptions;
+            SerialiserConfiguration = config ?? new();
         }
 
         static BitWriter()
@@ -386,11 +386,34 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         public void WriteSingle(float val)
         {
-            TypeConverter.UIntToFloat converter = new() { Float = val };
-            WriteUInt32(converter.UInt);
+            if (SerialiserConfiguration.CompressFloats)
+            {
+                WriteCompressedSingle(
+                    val,
+                    SerialiserConfiguration.FloatMinValue,
+                    SerialiserConfiguration.FloatMaxValue,
+                    SerialiserConfiguration.FloatResolution);
+            }
+            else
+            {
+				TypeConverter.UIntToFloat converter = new() { Float = val };
+				WriteUInt32(converter.UInt);
+			}
         }
 
-        public void WriteDouble(double val)
+        public void WriteCompressedSingle(float val, float min, float max, float resolution)
+		{   // thanks to Glenn Fiedler https://gafferongames.com/post/serialization_strategies/
+			float delta = max - min;
+			float values = delta / resolution;
+
+			float normalizedValue = Mathf.Clamp((val - min) / delta, 0.0f, 1.0f);
+			uint maxIntValue = (uint)Mathf.Ceil(values);
+			uint integerValue = (uint)Mathf.Floor(normalizedValue * maxIntValue + 0.5f);
+            uint requiredBits = SerialiserHelper.BitsRequired(0, maxIntValue);
+            WriteBits(integerValue, (int)requiredBits);
+		}
+
+		public void WriteDouble(double val)
         {
             TypeConverter.ULongToDouble converter = new() { Double = val };
             WriteUInt64(converter.ULong);
@@ -413,6 +436,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteSingle(val.y);
         }
 
+        public void WriteCompressedVector2(Vector2 val,  float min, float max, float resolution)
+        {
+            WriteCompressedSingle(val.x, min, max, resolution);
+            WriteCompressedSingle(val.y, min, max, resolution);
+        }
+
         public void WriteVector3(Vector3 val)
         {
             WriteSingle(val.x);
@@ -420,7 +449,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteSingle(val.z);
         }
 
-        public void WriteVector4(Vector4 val)
+		public void WriteCompressedVector3(Vector3 val, float min, float max, float resolution)
+		{
+			WriteCompressedSingle(val.x, min, max, resolution);
+			WriteCompressedSingle(val.y, min, max, resolution);
+			WriteCompressedSingle(val.z, min, max, resolution);
+		}
+
+		public void WriteVector4(Vector4 val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);
@@ -428,7 +464,15 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteSingle(val.w);
         }
 
-        public void WriteQuaternion(Quaternion val)
+		public void WriteCompressedVector4(Vector4 val, float min, float max, float resolution)
+		{
+			WriteCompressedSingle(val.x, min, max, resolution);
+			WriteCompressedSingle(val.y, min, max, resolution);
+			WriteCompressedSingle(val.z, min, max, resolution);
+			WriteCompressedSingle(val.w, min, max, resolution);
+		}
+
+		public void WriteQuaternion(Quaternion val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);

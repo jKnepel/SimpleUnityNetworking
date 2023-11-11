@@ -30,9 +30,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// </summary>
 		public int Capacity => _buffer.Length;
 		/// <summary>
-		/// The set serialiser option flags of the writer.
+		/// The configuration of the writer.
 		/// </summary>
-		public ESerialiserOptions SerialiserOptions { get; }
+		public SerialiserConfiguration SerialiserConfiguration { get; }
 
 		private byte[] _buffer = new byte[32];
 
@@ -43,9 +43,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 		#region lifecycle
 
-		public Writer(ESerialiserOptions serialiserOptions = ESerialiserOptions.None)
+		public Writer(SerialiserConfiguration config = null)
 		{
-			SerialiserOptions = serialiserOptions;
+            SerialiserConfiguration = config ?? new();
 		}
 
 		static Writer()

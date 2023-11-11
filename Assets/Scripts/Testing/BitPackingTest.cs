@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using jKnepel.SimpleUnityNetworking.Serialisation;
 using jKnepel.SimpleUnityNetworking.Utilities;
@@ -8,7 +6,7 @@ public class BitPackingTest : MonoBehaviour
 {
     void Start()
     {
-        TestStruct test = new TestStruct()
+        TestStruct test = new()
         {
             /*
             */
@@ -31,7 +29,7 @@ public class BitPackingTest : MonoBehaviour
         Debug.Log(reader.Read<TestStruct>());
 	}
 
-    private struct TestStruct
+	private struct TestStruct
     {
         /*
         */
