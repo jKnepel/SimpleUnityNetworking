@@ -7,11 +7,19 @@ namespace jKnepel.SimpleUnityNetworking.Networking
     internal class NetworkConfigurationEditor : Editor
     {
         private bool _networkSettingsIsVisible = false;
+        private bool _serialiserSettingsIsVisible = false;
         private bool _serverDiscoverySettingsIsVisible = false;
         private bool _debugSettingsIsVisible = false;
 
-        // TODO : add descriptions to labels, was too lazy
-        public override void OnInspectorGUI()
+        private SerializedProperty _serialiserSettings;
+
+		private void OnEnable()
+		{
+            _serialiserSettings = serializedObject.FindProperty("_serialiserConfiguration");
+		}
+
+		// TODO : add descriptions to labels, was too lazy
+		public override void OnInspectorGUI()
         {
             var settings = (NetworkConfiguration)target;
 
@@ -39,6 +47,12 @@ namespace jKnepel.SimpleUnityNetworking.Networking
                 settings.MaxNumberResendReliablePackets = EditorGUILayout.IntField("Number of Resends of Reliable Packets: ", settings.MaxNumberResendReliablePackets);
                 
                 EditorGUI.indentLevel--;
+            }
+
+			_serialiserSettingsIsVisible = EditorGUILayout.Foldout(_serialiserSettingsIsVisible, "Serialiser Configuration Settings", EditorStyles.foldoutHeader);
+            if (_serialiserSettingsIsVisible)
+            {
+                EditorGUILayout.PropertyField(_serialiserSettings);
             }
 
             _serverDiscoverySettingsIsVisible = EditorGUILayout.Foldout(_serverDiscoverySettingsIsVisible, "Server Discovery Settings", EditorStyles.foldoutHeader);

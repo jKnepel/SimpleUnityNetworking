@@ -9,14 +9,25 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 {
     public abstract partial class ANetworkSocket
     {
-        private delegate void StructDataCallback(byte senderID, Reader reader);
+        private delegate void StructDataCallback(byte senderID, byte[] data);
         private readonly ConcurrentDictionary<uint, Dictionary<int, StructDataCallback>> _registeredStructDataCallbacks = new();
 
         private StructDataCallback CreateStructDataDelegate<T>(Action<byte, T> callback)
 		{
-            void ParseDelegate(byte senderID, Reader reader)
+            void ParseDelegate(byte senderID, byte[] data)
             {
-                callback?.Invoke(senderID, reader.Read<T>());
+				// TODO : somehow read data with generic before calling the delegate to prevent multiple reads
+				if (NetworkConfiguration.SerialiserConfiguration.CompressFloats
+				|| NetworkConfiguration.SerialiserConfiguration.CompressQuaternions)
+                {
+                    BitReader reader = new(data, NetworkConfiguration.SerialiserConfiguration);
+					callback?.Invoke(senderID, reader.Read<T>());
+                }
+				else
+                {
+                    Reader reader = new(data, NetworkConfiguration.SerialiserConfiguration);
+					callback?.Invoke(senderID, reader.Read<T>());
+                }
             }
             return ParseDelegate;
         }
@@ -52,13 +63,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             if (!_registeredStructDataCallbacks.TryGetValue(structHash, out Dictionary<int, StructDataCallback> callbacks))
                 return;
 
-            Reader reader = new(data);
-            int position = reader.Position;
             foreach (StructDataCallback callback in callbacks.Values)
 			{
-                callback?.Invoke(clientID, reader);
-                // TODO : somehow read data with generic before calling the delegate to prevent multiple reads
-                reader.Position = position;
+                callback?.Invoke(clientID, data);
 			}
 		}
 

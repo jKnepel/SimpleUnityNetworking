@@ -1,7 +1,9 @@
+using System;
 using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Serialisation
 {
+    [Serializable]
     public class SerialiserConfiguration
     {
         [SerializeField] private bool _compressFloats = false;
