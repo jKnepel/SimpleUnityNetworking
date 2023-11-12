@@ -22,8 +22,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 			SerializedProperty compressFloats = property.FindPropertyRelative("_compressFloats");
 			EditorGUI.PropertyField(compressFloatsRect, compressFloats, 
-				new GUIContent("Compress Floats: ", 
-				"If float compression is enabled, struct data packets will automatically use compressed floats."));
+				new GUIContent("Compress Floats:", "Whether floats should be automatically compressed by the serialiser."));
 			if (compressFloats.boolValue)
 			{
 				var floatMinRect = new Rect(position.x, positionY, position.width, LINE_HEIGHT);
@@ -34,9 +33,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 				positionY += POSITION_OFFSET;
 
 				EditorGUI.indentLevel = 2;
-				EditorGUI.PropertyField(floatMinRect, property.FindPropertyRelative("_floatMinValue"));
-				EditorGUI.PropertyField(floatMaxRect, property.FindPropertyRelative("_floatMaxValue"));
-				EditorGUI.PropertyField(floatResRect, property.FindPropertyRelative("_floatResolution"));
+				EditorGUI.PropertyField(floatMinRect, property.FindPropertyRelative("_floatMinValue"),
+					new GUIContent("Min Range:", "The minimum value defining the range in which the compressed float can be saved."));
+				EditorGUI.PropertyField(floatMaxRect, property.FindPropertyRelative("_floatMaxValue"),
+					new GUIContent("Max Range:", "The maximum value defining the range in which the compressed float can be saved."));
+				EditorGUI.PropertyField(floatResRect, property.FindPropertyRelative("_floatResolution"),
+					new GUIContent("Resolution:", "The floating point resolution in which the float is serialised."));
 				EditorGUI.indentLevel = 1;
 			}
 
@@ -45,11 +47,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			var bitsPerCompRect = new Rect(position.x, positionY, position.width, LINE_HEIGHT);
 
 			SerializedProperty compressQuat = property.FindPropertyRelative("_compressQuaternions");
-			EditorGUI.PropertyField(compressQuatRect, compressQuat);
+			EditorGUI.PropertyField(compressQuatRect, compressQuat,
+				new GUIContent("Compress Quaternions:", "Whether Quaternions should be automatically compressed by the serialiser."));
 			if (compressQuat.boolValue)
 			{
 				EditorGUI.indentLevel = 2;
-				EditorGUI.PropertyField(bitsPerCompRect, property.FindPropertyRelative("_bitsPerComponent"));
+				EditorGUI.PropertyField(bitsPerCompRect, property.FindPropertyRelative("_bitsPerComponent"),
+					new GUIContent("Bits per Component:", "The number of bits used by each compressed Quaternion component."));
 				EditorGUI.indentLevel = 1;
 			}
 
