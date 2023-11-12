@@ -135,9 +135,16 @@ namespace jKnepel.SimpleUnityNetworking.Networking
 
         #endregion
 
-        #region server discovery settings
+        #region serialiser settings
 
-        [SerializeField] private string _discoveryIP = "239.240.240.149";
+        [SerializeField] private SerialiserConfiguration _serialiserConfiguration;
+        public SerialiserConfiguration SerialiserConfiguration { get => _serialiserConfiguration; set => _serialiserConfiguration = value; }
+
+		#endregion
+
+		#region server discovery settings
+
+		[SerializeField] private string _discoveryIP = "239.240.240.149";
         public string DiscoveryIP { get => _discoveryIP; set => _discoveryIP = value; }
 
         [SerializeField] private int _discoveryPort = 26824;
@@ -170,7 +177,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking
             set => Messaging.ShowDebugMessages = _showDebugMessages = value;
         }
 
-        [SerializeField] private bool _allowLocalConnections = false;
+        [SerializeField] private bool _allowLocalConnections = true;
         public bool AllowLocalConnections { get => _allowLocalConnections; set => _allowLocalConnections = value; }
 
         #endregion

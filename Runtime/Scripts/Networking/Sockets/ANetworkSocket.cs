@@ -72,6 +72,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
         public ClientInformation ClientInformation { get; protected set; }
 
+        protected NetworkConfiguration NetworkConfiguration { get; set; }
+
         public abstract ConcurrentDictionary<byte, ClientInformation> ConnectedClients { get; }
 
         #endregion

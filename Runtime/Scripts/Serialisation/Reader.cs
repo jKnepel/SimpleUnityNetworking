@@ -257,7 +257,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <returns>Reads and returns a byte array of the specified length.</returns>
         public virtual byte[] ReadByteArray(int count)
         {
-            return ReadByteSegment(count).Array;
+            return ReadByteSegment(count).ToArray();
         }
 
 		/// <returns>The remaining bytes.</returns>
