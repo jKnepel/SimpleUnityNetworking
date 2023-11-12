@@ -623,9 +623,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _obj1: {fileID: 1232445639}
   _obj2: {fileID: 1111271108}
-  _min: -100000
-  _max: 100000
-  _resolution: 0.0001
+  _min: -10
+  _max: 10
+  _resolution: 0.01
+  _bitsPerComponent: 9
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

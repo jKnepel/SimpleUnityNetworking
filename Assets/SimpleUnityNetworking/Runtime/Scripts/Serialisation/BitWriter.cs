@@ -427,10 +427,21 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 		public override void WriteQuaternion(Quaternion val)
         {
-            WriteSingle(val.x);
-            WriteSingle(val.y);
-            WriteSingle(val.z);
-            WriteSingle(val.w);
+            if (SerialiserConfiguration.CompressQuaternions)
+            {
+                CompressedQuaternion q = new(val, SerialiserConfiguration.BitsPerComponent);
+                WriteBits(q.Largest, 2);
+                WriteBits(q.A, SerialiserConfiguration.BitsPerComponent);
+                WriteBits(q.B, SerialiserConfiguration.BitsPerComponent);
+                WriteBits(q.C, SerialiserConfiguration.BitsPerComponent);
+            }
+            else
+            {
+                WriteUncompressedSingle(val.x);
+				WriteUncompressedSingle(val.y);
+				WriteUncompressedSingle(val.z);
+				WriteUncompressedSingle(val.w);
+            }
         }
 
         public override void WriteMatrix4x4(Matrix4x4 val)

@@ -48,6 +48,7 @@ public class BitPackingTest : MonoBehaviour
             return $"{Value1} {Value9} {Value2} {Value3} {Value4} {Value5} {Value6} {Value7} {Value8}";
         }
 
+        /*
         public static void WriteTestStruct(Writer writer, TestStruct testStruct)
         {
             writer.WriteBoolean(testStruct.Value1);
@@ -77,5 +78,6 @@ public class BitPackingTest : MonoBehaviour
             };
             return testStruct;
         }
+        */
     }
 }

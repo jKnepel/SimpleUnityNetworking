@@ -15,5 +15,11 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         [SerializeField] private float _floatResolution = 0.001f;
         public float FloatResolution { get => _floatResolution; set => _floatResolution = value; }
+
+        [SerializeField] private bool _compressQuaternions = false;
+        public bool CompressQuaternions { get => _compressQuaternions; set => _compressQuaternions = value; }
+
+        [SerializeField] private int _bitsPerComponent = 9;
+        public int BitsPerComponent { get => _bitsPerComponent; set => _bitsPerComponent = value; }
     }
 }

@@ -8,6 +8,7 @@ public class CompressionTest : MonoBehaviour
     [SerializeField] private float _min; 
     [SerializeField] private float _max; 
     [SerializeField] private float _resolution;
+    [SerializeField] private int _bitsPerComponent;
 
     private SerialiserConfiguration _serialiserConfiguration;
 
@@ -15,6 +16,7 @@ public class CompressionTest : MonoBehaviour
 	{
 		_serialiserConfiguration = new SerialiserConfiguration();
 		_serialiserConfiguration.CompressFloats = true;
+		_serialiserConfiguration.CompressQuaternions = true;
 	}
 
 	private void Update()
@@ -22,14 +24,16 @@ public class CompressionTest : MonoBehaviour
 		_serialiserConfiguration.FloatMinValue = _min;
 		_serialiserConfiguration.FloatMaxValue = _max;
 		_serialiserConfiguration.FloatResolution = _resolution;
+		_serialiserConfiguration.BitsPerComponent = _bitsPerComponent;
 	}
 
 	private void LateUpdate()
     {
-
         BitWriter writer = new(_serialiserConfiguration);
 		writer.WriteVector3(_obj1.position);
+		writer.WriteQuaternion(_obj1.rotation);
+
         BitReader reader = new(writer.GetBuffer(), _serialiserConfiguration);
-		_obj2.position = reader.ReadVector3();
+		_obj2.SetPositionAndRotation(reader.ReadVector3(), reader.ReadQuaternion());
     }
 }
