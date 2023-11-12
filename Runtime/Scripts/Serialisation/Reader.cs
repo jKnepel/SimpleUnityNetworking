@@ -33,7 +33,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <summary>
 		/// The configuration of the reader.
 		/// </summary>
-		public SerialiserConfiguration SerialiserConfiguration { get; protected set; }
+		public SerialiserConfiguration SerialiserConfiguration { get; }
 
 		protected byte[] _buffer;
 

@@ -430,7 +430,22 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 		public override Quaternion ReadQuaternion()
 		{
-            return new Quaternion(ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle());
+            if (SerialiserConfiguration.CompressQuaternions)
+            {
+                uint largest = (uint)ReadBits(2);
+                uint a = (uint)ReadBits(SerialiserConfiguration.BitsPerComponent);
+                uint b = (uint)ReadBits(SerialiserConfiguration.BitsPerComponent);
+                uint c = (uint)ReadBits(SerialiserConfiguration.BitsPerComponent);
+                return new CompressedQuaternion(largest, a, b, c, SerialiserConfiguration.BitsPerComponent).Quaternion;
+            }
+            else
+            {
+                return new Quaternion(
+                    ReadUncompressedSingle(),
+                    ReadUncompressedSingle(),
+                    ReadUncompressedSingle(),
+                    ReadUncompressedSingle());
+            }
 		}
 
         public override Matrix4x4 ReadMatrix4x4()
