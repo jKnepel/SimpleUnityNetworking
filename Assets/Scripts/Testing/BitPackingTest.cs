@@ -47,5 +47,35 @@ public class BitPackingTest : MonoBehaviour
         {
             return $"{Value1} {Value9} {Value2} {Value3} {Value4} {Value5} {Value6} {Value7} {Value8}";
         }
+
+        public static void WriteTestStruct(Writer writer, TestStruct testStruct)
+        {
+            writer.WriteBoolean(testStruct.Value1);
+            writer.WriteString(testStruct.Value9);
+            writer.WriteBoolean(testStruct.Value2);
+            writer.WriteBoolean(testStruct.Value3);
+            writer.WriteBoolean(testStruct.Value4);
+            writer.WriteByte(testStruct.Value5);
+            writer.WriteByte(testStruct.Value6);
+            writer.WriteUInt16(testStruct.Value7);
+            writer.WriteUInt64(testStruct.Value8);
+        }
+
+        public static TestStruct ReadTestStruct(Reader reader)
+        {
+            TestStruct testStruct = new TestStruct()
+            {
+                Value1 = reader.ReadBoolean(),
+                Value9 = reader.ReadString(),
+                Value2 = reader.ReadBoolean(),
+                Value3 = reader.ReadBoolean(),
+                Value4 = reader.ReadBoolean(),
+                Value5 = reader.ReadByte(),
+                Value6 = reader.ReadByte(),
+                Value7 = reader.ReadUInt16(),
+                Value8 = reader.ReadUInt64()
+            };
+            return testStruct;
+        }
     }
 }

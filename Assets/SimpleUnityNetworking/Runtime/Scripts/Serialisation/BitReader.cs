@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Serialisation
 {
-    public class BitReader
+    public class BitReader : Reader
     {
 		#region fields
 
@@ -21,11 +21,11 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// IMPORTANT! Do not use this position unless you know what you are doing! 
 		/// Setting the position manually will not check for buffer bounds.
 		/// </remarks>
-		public int Position;
+		public new int Position;
         /// <summary>
         /// The length of the given buffer in bits.
         /// </summary>
-        public int Length => _buffer.Length * 8;
+        public new int Length => _buffer.Length * 8;
 		/// <summary>
 		/// The length of the given buffer in bytes.
 		/// </summary>
@@ -33,13 +33,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <summary>
 		/// The remaining positions until the full length of the buffer.
 		/// </summary>
-		public int Remaining => Length - Position;
-        /// <summary>
-        /// The configuration of the bit reader.
-        /// </summary>
-        public SerialiserConfiguration SerialiserConfiguration { get; }
-
-		private readonly byte[] _buffer;
+		public new int Remaining => Length - Position;
+        
+        public new readonly int Boolean = 1;
+        public new readonly int Byte = 8;
+        public new readonly int Int16 = 16;
+        public new readonly int Int32 = 32;
+        public new readonly int Int64 = 64;
 
 		private static readonly ConcurrentDictionary<Type, Func<BitReader, object>> _typeHandlerCache = new();
         private static readonly HashSet<Type> _unknownTypes = new();
@@ -49,17 +49,10 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         #region lifecycle
 
         public BitReader(byte[] bytes, SerialiserConfiguration config = null)
-            : this(new ArraySegment<byte>(bytes), config) { }
+            : base(new ArraySegment<byte>(bytes), config) { }
 
         public BitReader(ArraySegment<byte> bytes, SerialiserConfiguration config = null)
-		{
-            if (bytes.Array == null)
-                return;
-
-            Position = bytes.Offset;
-            _buffer = bytes.Array;
-            SerialiserConfiguration = config ?? new();
-		}
+            : base(bytes, config) { }
 
         static BitReader()
         {   // caches all implemented type handlers during compilation
@@ -86,19 +79,11 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             CreateTypeHandlerDelegate(typeof(DateTime));
         }
 
-        internal static void Init() { }
-
 		#endregion
 
 		#region automatic type handler
 
-		public T Read<T>()
-		{
-            Type type = typeof(T);
-            return (T)Read(type);
-        }
-
-        private object Read(Type type)
+		protected override object Read(Type type)
 		{
             if (!_unknownTypes.Contains(type))
 			{
@@ -220,16 +205,11 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			return result;
         }
 
-        private ulong ReadBits(EPrimitiveBitLength bits)
-        {
-            return ReadBits((int)bits);
-        }
-
 		/// <summary>
 		/// Skips the reader header ahead by the given number of bits.
 		/// </summary>
 		/// <param name="bits"></param>
-		public void Skip(int bits)
+		public override void Skip(int bits)
 		{
             if (bits < 1 || bits > Remaining)
                 return;
@@ -238,51 +218,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		}
 
 		/// <summary>
-		/// Skips the reader header ahead by the given primitives' lengths.
-		/// </summary>
-		/// <param name="val"></param>
-		public void Skip(params EPrimitiveBitLength[] val)
-        {
-			int bits = 0;
-			foreach (EPrimitiveBitLength length in val)
-				bits += (byte)length;
-			Skip(bits);
-		}
-
-		/// <summary>
 		/// Reverts the reader header back by the given number of bits.
 		/// </summary>
 		/// <param name="bits"></param>
-		public void Revert(int bits)
+		public override void Revert(int bits)
 		{
 			Position -= bits;
 			Position = Math.Max(Position, 0);
-		}
-
-		/// <summary>
-		/// Reverts the reader header back by the given primitives' lengths.
-		/// </summary>
-		/// <param name="val"></param>
-		public void Revert(params EPrimitiveBitLength[] val)
-		{
-			int bits = 0;
-			foreach (EPrimitiveBitLength length in val)
-				bits += (byte)length;
-			Revert(bits);
-		}
-
-		/// <summary>
-		/// Clears the writter buffer.
-		/// </summary>
-		public void Clear()
-		{
-            Position += Remaining;
-		}
-
-		/// <returns>The full internal buffer.</returns>
-		public byte[] GetFullBuffer()
-		{
-            return _buffer;
 		}
 
 		/// <summary>
@@ -291,7 +233,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <param name="dst"></param>
 		/// <param name="dstOffset"></param>
 		/// <param name="count"></param>
-		public void BlockCopy(ref byte[] dst, int dstOffset, int count)
+		public override void BlockCopy(ref byte[] dst, int dstOffset, int count)
         {
             byte[] bytes = ReadByteArray(count);
             Buffer.BlockCopy(bytes, 0, dst, dstOffset, bytes.Length);
@@ -303,14 +245,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <param name="count"></param>
 		/// <returns>The read bits inside a byte array.</returns>
 		/// <exception cref="ArgumentException">If the count exceeds the buffer</exception>
-		public ArraySegment<byte> ReadByteSegment(int count)
+		public override ArraySegment<byte> ReadByteSegment(int count)
         {
 			if (count * 8 > Remaining)
 				throw new ArgumentException("The count exceeds the remaining length!");
 
 			byte[] bytes = new byte[count];
 			for (int i = 0; i < count; i++)
-				bytes[i] = (byte)ReadBits(EPrimitiveBitLength.Byte);
+				bytes[i] = (byte)ReadBits(Byte);
 			return new(bytes);
 		}
 
@@ -320,25 +262,25 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <param name="count"></param>
 		/// <returns>The read bits inside a byte array.</returns>
 		/// <exception cref="ArgumentException">If the count exceeds the buffer</exception>
-		public byte[] ReadByteArray(int count)
+		public override byte[] ReadByteArray(int count)
 		{
 			if (count * 8 > Remaining)
                 throw new ArgumentException("The count exceeds the remaining length!");
 
 			byte[] bytes = new byte[count];
             for (int i = 0; i < count; i++)
-                bytes[i] = (byte)ReadBits(EPrimitiveBitLength.Byte);
+                bytes[i] = (byte)ReadBits(Byte);
             return bytes;
 		}
 
 
 		/// <returns>The remaining bits inside a byte array.</returns>
-		public byte[] ReadRemainingBits()
+		public override byte[] ReadRemainingBuffer()
 		{
             int numberBytes = (int)Mathf.Ceil((float)Remaining / 8);
             byte[] bytes = new byte[numberBytes];
             for (int i = 0; i < numberBytes - 1; i++)
-                bytes[i] = (byte)ReadBits(EPrimitiveBitLength.Byte);
+                bytes[i] = (byte)ReadBits(Byte);
             bytes[^1] = (byte)ReadBits(Remaining);
             return bytes;
 		}
@@ -347,57 +289,57 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 		#region primitives
 
-		public bool ReadBoolean()
+		public override bool ReadBoolean()
 		{
-			return ReadBits(EPrimitiveBitLength.Boolean) == 1;
+			return ReadBits(Boolean) == 1;
 		}
 
-        public byte ReadByte()
+        public override byte ReadByte()
 		{
-			return (byte)ReadBits(EPrimitiveBitLength.Byte);
+			return (byte)ReadBits(Byte);
 		}
 
-        public sbyte ReadSByte()
+        public override sbyte ReadSByte()
 		{
             return (sbyte)ReadByte();
 		}
 
-        public ushort ReadUInt16()
+        public override ushort ReadUInt16()
 		{
-			return (ushort)ReadBits(EPrimitiveBitLength.Short);
+			return (ushort)ReadBits(Int16);
 		}
 
-        public short ReadInt16()
+        public override short ReadInt16()
 		{
             return (short)ReadUInt16();
 		}
 
-        public uint ReadUInt32()
+        public override uint ReadUInt32()
 		{
-			return (uint)ReadBits(EPrimitiveBitLength.Int);
+			return (uint)ReadBits(Int32);
 		}
 
-        public int ReadInt32()
+        public override int ReadInt32()
 		{
             return (int)ReadUInt32();
 		}
 
-        public ulong ReadUInt64()
+        public override ulong ReadUInt64()
 		{
-			return ReadBits(EPrimitiveBitLength.Long);
+			return ReadBits(Int64);
 		}
 
-        public long ReadInt64()
+        public override long ReadInt64()
 		{
             return (long)ReadUInt64();
 		}
 
-        public char ReadChar()
+        public override char ReadChar()
 		{
             return (char)ReadUInt16();
         }
 
-        public float ReadSingle()
+        public override float ReadSingle()
 		{
             if (SerialiserConfiguration.CompressFloats)
             {
@@ -432,13 +374,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             return normalizedValue * delta + min;
 		}
 
-		public double ReadDouble()
+		public override double ReadDouble()
 		{
             TypeConverter.ULongToDouble converter = new() { ULong = ReadUInt64() };
             return converter.Double;
         }
 
-        public decimal ReadDecimal()
+        public override decimal ReadDecimal()
 		{
             TypeConverter.ULongsToDecimal converter = new() { ULong1 = ReadUInt64(), ULong2 = ReadUInt64() };
             return converter.Decimal;
@@ -448,7 +390,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 		#region unity objects
 
-        public Vector2 ReadVector2()
+        public override Vector2 ReadVector2()
 		{
             return new Vector2(ReadSingle(), ReadSingle());
 		}
@@ -460,7 +402,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 ReadCompressedSingle(min, max, resolution));
         }
 
-        public Vector3 ReadVector3()
+        public override Vector3 ReadVector3()
 		{
             return new Vector3(ReadSingle(), ReadSingle(), ReadSingle());
 		}
@@ -473,7 +415,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 				ReadCompressedSingle(min, max, resolution));
 		}
 
-		public Vector4 ReadVector4()
+		public override Vector4 ReadVector4()
 		{
             return new Vector4(ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle());
 		}
@@ -486,12 +428,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 				ReadCompressedSingle(min, max, resolution));
 		}
 
-		public Quaternion ReadQuaternion()
+		public override Quaternion ReadQuaternion()
 		{
             return new Quaternion(ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle());
 		}
 
-        public Matrix4x4 ReadMatrix4x4()
+        public override Matrix4x4 ReadMatrix4x4()
 		{
             Matrix4x4 result = new()
 			{
@@ -503,7 +445,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             return result;
         }
 
-        public Color ReadColor()
+        public override Color ReadColor()
 		{
             float r = (float)(ReadByte() / 100.0f);
             float g = (float)(ReadByte() / 100.0f);
@@ -512,7 +454,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             return new Color(r, g, b, a);
 		}
 
-        public Color ReadColorWithoutAlpha()
+        public override Color ReadColorWithoutAlpha()
 		{
             float r = (float)(ReadByte() / 100.0f);
             float g = (float)(ReadByte() / 100.0f);
@@ -520,12 +462,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             return new Color(r, g, b, 1);
         }
 
-        public Color32 ReadColor32()
+        public override Color32 ReadColor32()
 		{
             return new Color32(ReadByte(), ReadByte(), ReadByte(), ReadByte());
 		}
 
-        public Color32 ReadColor32WithoutAlpha()
+        public override Color32 ReadColor32WithoutAlpha()
 		{
             return new Color32(ReadByte(), ReadByte(), ReadByte(), 255);
         }
@@ -534,18 +476,18 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 		#region objects
 
-        public string ReadString()
+        public override string ReadString()
 		{
             ushort length = ReadUInt16();
             return Encoding.ASCII.GetString(ReadByteArray(length));
 		}
 
-        public string ReadStringWithoutFlag(int length)
+        public override string ReadStringWithoutFlag(int length)
         {
             return Encoding.ASCII.GetString(ReadByteArray(length));
         }
 
-        public T[] ReadArray<T>()
+        public override T[] ReadArray<T>()
 		{
             int length = ReadInt32();
             T[] array = new T[length];
@@ -554,7 +496,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             return array;
 		}
 
-        public List<T> ReadList<T>()
+        public override List<T> ReadList<T>()
 		{
             int count = ReadInt32();
             List<T> list = new(count);
@@ -563,7 +505,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             return list;
         }
 
-        public Dictionary<TKey, TValue> ReadDictionary<TKey, TValue>()
+        public override Dictionary<TKey, TValue> ReadDictionary<TKey, TValue>()
 		{
             int count = ReadInt32();
             Dictionary<TKey, TValue> dictionary = new(count);
@@ -572,7 +514,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             return dictionary;
         }
 
-        public DateTime ReadDateTime()
+        public override DateTime ReadDateTime()
 		{
             return DateTime.FromBinary(ReadInt64());
 		}
