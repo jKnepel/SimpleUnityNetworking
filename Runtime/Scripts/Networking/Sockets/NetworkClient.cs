@@ -487,7 +487,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
                 // update sequence and consume packet
                 _unreliableRemoteSequence = sequence;
-                ConsumeSequencedPacket(header, reader.ReadRemainingBytes());
+                ConsumeSequencedPacket(header, reader.ReadRemainingBuffer());
                 return;
             }
 
@@ -504,13 +504,13 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
                 if (!IsNextPacket(sequence, _reliableRemoteSequence) && IsOrderedChannel(header.NetworkChannel))
                 {   // if a packet is missing in the sequence keep it in the buffer
-                    _receivedPacketsBuffer.TryAdd(sequence, (header, reader.ReadRemainingBytes()));
+                    _receivedPacketsBuffer.TryAdd(sequence, (header, reader.ReadRemainingBuffer()));
                     return;
                 }
 
                 // update sequence and consume packet
                 _reliableRemoteSequence = sequence;
-                ConsumeSequencedPacket(header, reader.ReadRemainingBytes());
+                ConsumeSequencedPacket(header, reader.ReadRemainingBuffer());
 
                 // apply all packets from that sender's buffer that are now next in the sequence
                 while (_receivedPacketsBuffer.Count > 0)
@@ -537,7 +537,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             ushort sequence = reader.ReadUInt16();
             ushort numberOfSlices = reader.ReadUInt16();
             ushort sliceNumber = reader.ReadUInt16();
-            byte[] sliceData = reader.ReadRemainingBytes();
+            byte[] sliceData = reader.ReadRemainingBuffer();
 
             // send ACK
             Writer writer = new();
@@ -667,7 +667,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             {
                 // write header, sequence and body to buffer 
                 Writer writer = new();
-                writer.Skip(EPrimitiveLength.Int); // skip crc32 
+                writer.Skip(writer.Int32); // skip crc32 
                 writer.Write(new PacketHeader(false, false, packet.NetworkChannel, packet.PacketType));
                 writer.WriteUInt16((ushort)(_unreliableLocalSequence + 1));
                 writer.BlockCopy(ref packet.Body, 0, packet.Body.Length);
@@ -719,7 +719,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 {   // send as complete packet
                     // write header and body to buffer
                     Writer writer = new();
-                    writer.Skip(EPrimitiveLength.Int); // skip crc32
+                    writer.Skip(writer.Int32); // skip crc32
                     writer.Write(new PacketHeader(false, false, packet.NetworkChannel, packet.PacketType));
                     writer.WriteUInt16((ushort)(_reliableLocalSequence + 1));
                     writer.BlockCopy(ref packet.Body, 0, packet.Body.Length);
@@ -755,7 +755,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
                     // write header, sequence and number of slices to buffer
                     Writer writer = new();
-                    writer.Skip(EPrimitiveLength.Int); // skip crc32
+                    writer.Skip(writer.Int32); // skip crc32
                     writer.Write(new PacketHeader(false, true, packet.NetworkChannel, packet.PacketType));
                     writer.WriteUInt16((ushort)(_reliableLocalSequence + 1));
                     writer.WriteUInt16(numberOfSlices);
@@ -872,7 +872,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         private void SendConnectionPacket(EPacketType packetType, byte[] data)
         {   // set packet type and packet bytes
             Writer writer = new();
-            writer.Skip(EPrimitiveLength.Int);
+            writer.Skip(writer.Int32);
             writer.Write<PacketHeader>(new(packetType));
             writer.BlockCopy(ref data, 0, data.Length);
 

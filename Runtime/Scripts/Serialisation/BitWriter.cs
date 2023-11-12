@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Serialisation
 {
-    public class BitWriter
+    public class BitWriter : Writer
     {
         #region fields
 
@@ -20,11 +20,11 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         /// IMPORTANT! Do not use this position unless you know what you are doing! 
         /// Setting the position manually will not check for buffer bounds or update the length of the written buffer.
         /// </remarks>
-        public int Position { get; set; }
+        public new int Position { get; set; }
 		/// <summary>
 		/// The highest bit position to which the writer has written a value.
 		/// </summary>
-		public int Length { get; private set; }
+		public new int Length { get; private set; }
         /// <summary>
         /// The amount of bytes which were written to.
         /// </summary>
@@ -32,15 +32,15 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <summary>
 		/// The max capacity of the internal buffer.
 		/// </summary>
-		public int Capacity => _buffer.Length * 8;
-		/// <summary>
-		/// The configuration of the bit writer.
-		/// </summary>
-		public SerialiserConfiguration SerialiserConfiguration { get; }
+		public new int Capacity => _buffer.Length * 8;
 
-        private byte[] _buffer = new byte[32];
+		public new readonly int Boolean = 1;
+		public new readonly int Byte = 8;
+		public new readonly int Int16 = 16;
+		public new readonly int Int32 = 32;
+		public new readonly int Int64 = 64;
 
-        private static readonly ConcurrentDictionary<Type, Action<BitWriter, object>> _typeHandlerCache = new();
+		private static readonly ConcurrentDictionary<Type, Action<BitWriter, object>> _typeHandlerCache = new();
         private static readonly HashSet<Type> _unknownTypes = new();
 
         #endregion
@@ -48,9 +48,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         #region lifecycle
 
         public BitWriter(SerialiserConfiguration config = null)
-        {
-            SerialiserConfiguration = config ?? new();
-        }
+            : base(config) { }
 
         static BitWriter()
         {   // caches all implemented type handlers during compilation
@@ -77,19 +75,11 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             CreateTypeHandlerDelegate(typeof(DateTime));
         }
 
-		internal static void Init() { }
-
 		#endregion
 
 		#region automatic type handler
 
-		public void Write<T>(T val)
-        {
-            Type type = typeof(T);
-            Write(val, type);
-        }
-
-        private void Write<T>(T val, Type type)
+		protected override void Write<T>(T val, Type type)
 		{
             if (!_unknownTypes.Contains(type))
             {   
@@ -215,16 +205,11 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			Length = Math.Max(Length, Position);
 		}
 
-        private void WriteBits(ulong val, EPrimitiveBitLength bits)
-        {
-            WriteBits(val, (int)bits);
-        }
-
 		/// <summary>
 		/// Skips the writer header ahead by the given number of bits.
 		/// </summary>
 		/// <param name="bits"></param>
-		public void Skip(int bits)
+		public override void Skip(int bits)
         {
 			AdjustBufferSize(bits);
 			Position += bits;
@@ -232,61 +217,22 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		}
 
 		/// <summary>
-		/// Skips the writer header ahead by the given primitives' lengths.
-		/// </summary>
-		/// <param name="val"></param>
-		public void Skip(params EPrimitiveBitLength[] val)
-		{
-			int bits = 0;
-			foreach (EPrimitiveBitLength length in val)
-				bits += (byte)length;
-            Skip(bits);
-		}
-
-		/// <summary>
 		/// Reverts the writer header back by the given number of bits.
 		/// </summary>
 		/// <param name="val"></param>
-		public void Revert(int bits)
+		public override void Revert(int bits)
         {
 			Position -= bits;
 			Position = Math.Max(Position, 0);
 		}
 
-        /// <summary>
-        /// Reverts the writer header back by the given primitives' lengths.
-        /// </summary>
-        /// <param name="val"></param>
-        public void Revert(params EPrimitiveBitLength[] val)
-        {
-			int bits = 0;
-			foreach (EPrimitiveBitLength length in val)
-				bits += (byte)length;
-            Revert(bits);
-		}
-
-        /// <summary>
-        /// Clears the writter buffer.
-        /// </summary>
-        public void Clear()
-		{
-            Position = 0;
-            Length = 0;
-		}
-
 		/// <returns>The written buffer.</returns>
-		public byte[] GetBuffer()
+		public override byte[] GetBuffer()
         {
 			byte[] result = new byte[ByteLength];
 			Array.Copy(_buffer, 0, result, 0, ByteLength);
 			return result;
 		}
-
-		/// <returns>The entire internal buffer.</returns>
-		public byte[] GetFullBuffer()
-        {
-            return _buffer;
-        }
 
 		/// <summary>
 		/// Writes a specified number of bytes from a source array starting at a particular byte offset to the buffer.
@@ -297,7 +243,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <exception cref="ArgumentNullException"></exception>
 		/// <exception cref="ArgumentException"></exception>
 		/// <exception cref="ArgumentOutOfRangeException"></exception>
-		public void BlockCopy(ref byte[] src, int srcOffset, int count)
+		public override void BlockCopy(ref byte[] src, int srcOffset, int count)
         {
             if (src == null)
                 throw new ArgumentNullException(nameof(src));
@@ -307,84 +253,84 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 throw new ArgumentOutOfRangeException();
 
 			for (int i = 0; i < count; i++)
-				WriteBits(src[srcOffset + i], EPrimitiveBitLength.Byte);
+				WriteBits(src[srcOffset + i], Byte);
 		}
 
 		/// <summary>
 		/// Writes a source array to the buffer.
 		/// </summary>
 		/// <param name="src"></param>
-		public void WriteByteSegment(ArraySegment<byte> src)
+		public override void WriteByteSegment(ArraySegment<byte> src)
         {
 			for (int i = 0; i < src.Count; i++)
-				WriteBits(src[i], EPrimitiveBitLength.Byte);
+				WriteBits(src[i], Byte);
 		}
 
 		/// <summary>
 		/// Writes a source array to the buffer.
 		/// </summary>
 		/// <param name="src"></param>
-		public void WriteByteArray(byte[] src)
+		public override void WriteByteArray(byte[] src)
         {
             for (int i = 0; i < src.Length; i++)
-                WriteBits(src[i], EPrimitiveBitLength.Byte);
+                WriteBits(src[i], Byte);
 		}
 
         #endregion
 
         #region primitives
 
-        public void WriteBoolean(bool val)
+        public override void WriteBoolean(bool val)
 		{
-			WriteBits((ulong)(val ? 1 : 0), EPrimitiveBitLength.Boolean);
+			WriteBits((ulong)(val ? 1 : 0), Boolean);
 		}
 
-        public void WriteByte(byte val)
+        public override void WriteByte(byte val)
         {
-			WriteBits(val, EPrimitiveBitLength.Byte);
+			WriteBits(val, Byte);
 		}
 
-        public void WriteSByte(sbyte val)
+        public override void WriteSByte(sbyte val)
         {
             WriteByte((byte)val);
 		}
 
-        public void WriteUInt16(ushort val)
+        public override void WriteUInt16(ushort val)
         {
-			WriteBits(val, EPrimitiveBitLength.Short);
+			WriteBits(val, Int16);
 		}
 
-        public void WriteInt16(short val)
+        public override void WriteInt16(short val)
         {
             WriteUInt16((ushort)val);
         }
 
-        public void WriteUInt32(uint val)
+        public override void WriteUInt32(uint val)
         {
-			WriteBits(val, EPrimitiveBitLength.Int);
+			WriteBits(val, Int32);
 		}
 
-        public void WriteInt32(int val)
+        public override void WriteInt32(int val)
         {
             WriteUInt32((uint)val);
         }
 
-        public void WriteUInt64(ulong val)
+        public override void WriteUInt64(ulong val)
         {
-			WriteBits(val, EPrimitiveBitLength.Long);
+			WriteBits(val, Int64);
 		}
 
-        public void WriteInt64(long val)
+        public override void WriteInt64(long val)
         {
             WriteUInt64((ulong)val);
         }
 
-        public void WriteChar(char val)
+        public override void WriteChar(char val)
         {
             WriteUInt16(val);
         }
 
-        public void WriteSingle(float val)
+        public override void WriteSingle(float val)
         {
             if (SerialiserConfiguration.CompressFloats)
             {
@@ -420,13 +366,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteBits(intValue, (int)requiredBits);
 		}
 
-		public void WriteDouble(double val)
+		public override void WriteDouble(double val)
         {
             TypeConverter.ULongToDouble converter = new() { Double = val };
             WriteUInt64(converter.ULong);
         }
 
-        public void WriteDecimal(decimal val)
+        public override void WriteDecimal(decimal val)
         {
             TypeConverter.ULongsToDecimal converter = new() { Decimal = val };
             WriteUInt64(converter.ULong1);
@@ -437,7 +383,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region unity objects
 
-        public void WriteVector2(Vector2 val)
+        public override void WriteVector2(Vector2 val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);
@@ -449,7 +395,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteCompressedSingle(val.y, min, max, resolution);
         }
 
-        public void WriteVector3(Vector3 val)
+        public override void WriteVector3(Vector3 val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);
@@ -463,7 +409,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			WriteCompressedSingle(val.z, min, max, resolution);
 		}
 
-		public void WriteVector4(Vector4 val)
+		public override void WriteVector4(Vector4 val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);
@@ -479,7 +425,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			WriteCompressedSingle(val.w, min, max, resolution);
 		}
 
-		public void WriteQuaternion(Quaternion val)
+		public override void WriteQuaternion(Quaternion val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);
@@ -487,7 +433,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteSingle(val.w);
         }
 
-        public void WriteMatrix4x4(Matrix4x4 val)
+        public override void WriteMatrix4x4(Matrix4x4 val)
         {
             WriteSingle(val.m00);
             WriteSingle(val.m01);
@@ -503,7 +449,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteSingle(val.m23);
         }
 
-        public void WriteColor(Color val)
+        public override void WriteColor(Color val)
         {
             WriteByte((byte)(val.r * 100.0f));
             WriteByte((byte)(val.g * 100.0f));
@@ -511,14 +457,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteByte((byte)(val.a * 100.0f));
         }
 
-        public void WriteColorWithoutAlpha(Color val)
+        public override void WriteColorWithoutAlpha(Color val)
         {
             WriteByte((byte)(val.r * 100.0f));
             WriteByte((byte)(val.g * 100.0f));
             WriteByte((byte)(val.b * 100.0f));
         }
 
-        public void WriteColor32(Color32 val)
+        public override void WriteColor32(Color32 val)
         {
             WriteByte(val.r);
             WriteByte(val.g);
@@ -526,7 +472,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteByte(val.a);
         }
 
-        public void WriteColor32WithoutAlpha(Color32 val)
+        public override void WriteColor32WithoutAlpha(Color32 val)
         {
             WriteByte(val.r);
             WriteByte(val.g);
@@ -537,7 +483,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region objects
 
-        public void WriteString(string val)
+        public override void WriteString(string val)
         {
             if (string.IsNullOrEmpty(val))
             {
@@ -552,7 +498,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteByteArray(Encoding.ASCII.GetBytes(val));
         }
 
-        public void WriteStringWithoutFlag(string val)
+        public override void WriteStringWithoutFlag(string val)
         {
             if (string.IsNullOrEmpty(val))
 			{
@@ -566,7 +512,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			WriteByteArray(Encoding.ASCII.GetBytes(val));
 		}
 
-        public void WriteArray<T>(T[] val)
+        public override void WriteArray<T>(T[] val)
 		{
             if (val == null)
 			{
@@ -579,7 +525,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 Write(t);
         }
 
-		public void WriteList<T>(List<T> val)
+		public override void WriteList<T>(List<T> val)
         {
             if (val == null)
 			{
@@ -592,7 +538,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 Write(t);
         }
 
-        public void WriteDictionary<TKey, TValue>(Dictionary<TKey, TValue> val)
+        public override void WriteDictionary<TKey, TValue>(Dictionary<TKey, TValue> val)
 		{
             if (val == null)
             {
@@ -608,7 +554,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			}
 		}
 
-        public void WriteDateTime(DateTime val)
+        public override void WriteDateTime(DateTime val)
 		{
             WriteInt64(val.ToBinary());
 		}

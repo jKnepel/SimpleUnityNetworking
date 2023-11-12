@@ -32,11 +32,17 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <summary>
 		/// The configuration of the writer.
 		/// </summary>
-		public SerialiserConfiguration SerialiserConfiguration { get; }
+		public SerialiserConfiguration SerialiserConfiguration { get; protected set; }
 
-		private byte[] _buffer = new byte[32];
+		protected byte[] _buffer = new byte[32];
 
-        private static readonly ConcurrentDictionary<Type, Action<Writer, object>> _typeHandlerCache = new();
+		public readonly int Boolean = 1;
+		public readonly int Byte = 1;
+		public readonly int Int16 = 2;
+		public readonly int Int32 = 4;
+		public readonly int Int64 = 8;
+
+		private static readonly ConcurrentDictionary<Type, Action<Writer, object>> _typeHandlerCache = new();
         private static readonly HashSet<Type> _unknownTypes = new();
 
 		#endregion
@@ -85,7 +91,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             Write(val, type);
         }
 
-        private void Write<T>(T val, Type type)
+        protected virtual void Write<T>(T val, Type type)
 		{
             if (!_unknownTypes.Contains(type))
             {   
@@ -192,7 +198,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// Skips the writer header ahead by the given number of bytes.
 		/// </summary>
 		/// <param name="bytes"></param>
-		public void Skip(int bytes)
+		public virtual void Skip(int bytes)
 		{
             AdjustBufferSize(bytes);
             Position += bytes;
@@ -200,50 +206,26 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		}
 
 		/// <summary>
-		/// Skips the writer header ahead by the given primitives' lengths.
-		/// </summary>
-		/// <param name="val"></param>
-		public void Skip(params EPrimitiveLength[] val)
-        {
-			int bytes = 0;
-			foreach (EPrimitiveLength length in val)
-				bytes += (byte)length;
-			Skip(bytes);
-		}
-
-		/// <summary>
 		/// Reverts the writer header back by the given number of bytes.
 		/// </summary>
 		/// <param name="bytes"></param>
-		public void Revert(int bytes)
+		public virtual void Revert(int bytes)
 		{
 			Position -= bytes;
 			Position = Mathf.Max(Position, 0);
 		}
 
 		/// <summary>
-		/// Reverts the writer header back by the given primitives' lengths.
-		/// </summary>
-		/// <param name="val"></param>
-		public void Revert(params EPrimitiveLength[] val)
-		{
-			int bytes = 0;
-			foreach (EPrimitiveLength length in val)
-				bytes += (byte)length;
-			Revert(bytes);
-		}
-
-		/// <summary>
 		/// Clears the writter buffer.
 		/// </summary>
-		public void Clear()
+		public virtual void Clear()
 		{
             Position = 0;
             Length = 0;
 		}
 
 		/// <returns>The written buffer.</returns>
-		public byte[] GetBuffer()
+		public virtual byte[] GetBuffer()
         {
             byte[] result = new byte[Length];
             Array.Copy(_buffer, 0, result, 0, Length);
@@ -251,7 +233,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         }
 
 		/// <returns>The entire internal buffer.</returns>
-		public byte[] GetFullBuffer()
+		public virtual byte[] GetFullBuffer()
         {
             return _buffer;
         }
@@ -262,7 +244,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <param name="src"></param>
 		/// <param name="srcOffset"></param>
 		/// <param name="count"></param>
-		public void BlockCopy(ref byte[] src, int srcOffset, int count)
+		public virtual void BlockCopy(ref byte[] src, int srcOffset, int count)
         {
 			AdjustBufferSize(count);
             Buffer.BlockCopy(src, srcOffset, _buffer, Position, count);
@@ -274,7 +256,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// Writes a source array to the buffer.
 		/// </summary>
 		/// <param name="src"></param>
-		public void WriteByteSegment(ArraySegment<byte> src)
+		public virtual void WriteByteSegment(ArraySegment<byte> src)
         {
             byte[] srcArray = src.Array;
             BlockCopy(ref srcArray, 0, src.Count);
@@ -284,7 +266,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// Writes a source array to the buffer.
 		/// </summary>
 		/// <param name="src"></param>
-		public void WriteByteArray(byte[] src)
+		public virtual void WriteByteArray(byte[] src)
         {
             BlockCopy(ref src, 0, src.Length);
         }
@@ -293,26 +275,26 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region primitives
 
-        public void WriteBoolean(bool val)
+        public virtual void WriteBoolean(bool val)
 		{
             AdjustBufferSize(1);
             _buffer[Position++] = (byte)(val ? 1 : 0);
             Length = Math.Max(Length, Position);
 		}
 
-        public void WriteByte(byte val)
+        public virtual void WriteByte(byte val)
         {
             AdjustBufferSize(1);
             _buffer[Position++] = val;
             Length = Math.Max(Length, Position);
         }
 
-        public void WriteSByte(sbyte val)
+        public virtual void WriteSByte(sbyte val)
         {
             WriteByte((byte)val);
         }
 
-        public void WriteUInt16(ushort val)
+        public virtual void WriteUInt16(ushort val)
         {
             AdjustBufferSize(2);
             _buffer[Position++] = (byte)val;
@@ -320,12 +302,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             Length = Math.Max(Length, Position);
         }
 
-        public void WriteInt16(short val)
+        public virtual void WriteInt16(short val)
         {
             WriteUInt16((ushort)val);
         }
 
-        public void WriteUInt32(uint val)
+        public virtual void WriteUInt32(uint val)
         {
             AdjustBufferSize(4);
             _buffer[Position++] = (byte)val;
@@ -335,12 +317,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             Length = Math.Max(Length, Position);
         }
 
-        public void WriteInt32(int val)
+        public virtual void WriteInt32(int val)
         {
             WriteUInt32((uint)val);
         }
 
-        public void WriteUInt64(ulong val)
+        public virtual void WriteUInt64(ulong val)
         {
             AdjustBufferSize(8);
             _buffer[Position++] = (byte)val;
@@ -354,29 +336,29 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             Length = Math.Max(Length, Position);
         }
 
-        public void WriteInt64(long val)
+        public virtual void WriteInt64(long val)
         {
             WriteUInt64((ulong)val);
         }
 
-        public void WriteChar(char val)
+        public virtual void WriteChar(char val)
         {
             WriteUInt16(val);
         }
 
-        public void WriteSingle(float val)
+        public virtual void WriteSingle(float val)
         {
             TypeConverter.UIntToFloat converter = new() { Float = val };
             WriteUInt32(converter.UInt);
         }
 
-        public void WriteDouble(double val)
+        public virtual void WriteDouble(double val)
         {
             TypeConverter.ULongToDouble converter = new() { Double = val };
             WriteUInt64(converter.ULong);
         }
 
-        public void WriteDecimal(decimal val)
+        public virtual void WriteDecimal(decimal val)
         {
             TypeConverter.ULongsToDecimal converter = new() { Decimal = val };
             WriteUInt64(converter.ULong1);
@@ -387,28 +369,20 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region unity objects
 
-        public void WriteVector2(Vector2 val)
+        public virtual void WriteVector2(Vector2 val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);
         }
 
-        public void WriteVector3(Vector3 val)
-        {
-            WriteSingle(val.x);
-            WriteSingle(val.y);
-            WriteSingle(val.z);
-        }
-
-        public void WriteVector4(Vector4 val)
+        public virtual void WriteVector3(Vector3 val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);
             WriteSingle(val.z);
-            WriteSingle(val.w);
         }
 
-        public void WriteQuaternion(Quaternion val)
+        public virtual void WriteVector4(Vector4 val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);
@@ -416,7 +390,15 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteSingle(val.w);
         }
 
-        public void WriteMatrix4x4(Matrix4x4 val)
+        public virtual void WriteQuaternion(Quaternion val)
+        {
+            WriteSingle(val.x);
+            WriteSingle(val.y);
+            WriteSingle(val.z);
+            WriteSingle(val.w);
+        }
+
+        public virtual void WriteMatrix4x4(Matrix4x4 val)
         {
             WriteSingle(val.m00);
             WriteSingle(val.m01);
@@ -432,7 +414,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteSingle(val.m23);
         }
 
-        public void WriteColor(Color val)
+        public virtual void WriteColor(Color val)
         {
             WriteByte((byte)(val.r * 100.0f));
             WriteByte((byte)(val.g * 100.0f));
@@ -440,14 +422,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteByte((byte)(val.a * 100.0f));
         }
 
-        public void WriteColorWithoutAlpha(Color val)
+        public virtual void WriteColorWithoutAlpha(Color val)
         {
             WriteByte((byte)(val.r * 100.0f));
             WriteByte((byte)(val.g * 100.0f));
             WriteByte((byte)(val.b * 100.0f));
         }
 
-        public void WriteColor32(Color32 val)
+        public virtual void WriteColor32(Color32 val)
         {
             WriteByte(val.r);
             WriteByte(val.g);
@@ -455,7 +437,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteByte(val.a);
         }
 
-        public void WriteColor32WithoutAlpha(Color32 val)
+        public virtual void WriteColor32WithoutAlpha(Color32 val)
         {
             WriteByte(val.r);
             WriteByte(val.g);
@@ -466,7 +448,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region objects
 
-        public void WriteString(string val)
+        public virtual void WriteString(string val)
         {
             if (string.IsNullOrEmpty(val))
             {
@@ -483,7 +465,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             Length = Math.Max(Length, Position);
         }
 
-        public void WriteStringWithoutFlag(string val)
+        public virtual void WriteStringWithoutFlag(string val)
         {
             if (string.IsNullOrEmpty(val))
 			{
@@ -499,7 +481,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             Length = Math.Max(Length, Position);
         }
 
-        public void WriteArray<T>(T[] val)
+        public virtual void WriteArray<T>(T[] val)
 		{
             if (val == null)
 			{
@@ -512,7 +494,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 Write(t);
         }
 
-		public void WriteList<T>(List<T> val)
+		public virtual void WriteList<T>(List<T> val)
         {
             if (val == null)
 			{
@@ -525,7 +507,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 Write(t);
         }
 
-        public void WriteDictionary<TKey, TValue>(Dictionary<TKey, TValue> val)
+        public virtual void WriteDictionary<TKey, TValue>(Dictionary<TKey, TValue> val)
 		{
             if (val == null)
             {
@@ -541,7 +523,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			}
 		}
 
-        public void WriteDateTime(DateTime val)
+        public virtual void WriteDateTime(DateTime val)
 		{
             WriteInt64(val.ToBinary());
 		}
