@@ -26,7 +26,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking
                 EditorGUI.indentLevel++;
 
                 settings.LocalIPAddressIndex = EditorGUILayout.Popup("Local IP Address:", settings.LocalIPAddressIndex, settings.LocalStringIPAddresses);
+                EditorGUI.BeginDisabledGroup(true);
                 EditorGUILayout.IntField(new GUIContent("Local Port:", "The Local Port used by the Network Socket. The Port is readonly and is assigned automatically upon starting a Socket."), settings.LocalPort);
+                EditorGUI.EndDisabledGroup();
                 EditorGUILayout.Space();
                 settings.MTU = EditorGUILayout.IntField("MTU:", settings.MTU);
                 settings.RTT = EditorGUILayout.IntField("RTT:", settings.RTT);
