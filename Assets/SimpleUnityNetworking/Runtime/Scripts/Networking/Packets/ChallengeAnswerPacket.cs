@@ -21,7 +21,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 
 		public static ChallengeAnswerPacket ReadChallengeAnswerPacket(Reader reader)
 		{
-			byte[] challengeAnswer = reader.ReadByteSegment(CHALLENGE_ANSWER_LENGTH).ToArray();
+			byte[] challengeAnswer = reader.ReadByteArray(CHALLENGE_ANSWER_LENGTH);
 			string username = reader.ReadString();
 			Color32 color = reader.ReadColor32WithoutAlpha();
 			return new(challengeAnswer, username, color);

@@ -9,52 +9,48 @@ using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Serialisation
 {
-    public class Writer
+    public class BitWriter : Writer
     {
-		#region fields
+        #region fields
 
+        /// <summary>
+        /// The current bit position of the writer header within the buffer.
+        /// </summary>
+        /// <remarks>
+        /// IMPORTANT! Do not use this position unless you know what you are doing! 
+        /// Setting the position manually will not check for buffer bounds or update the length of the written buffer.
+        /// </remarks>
+        public new int Position { get; set; }
 		/// <summary>
-		/// The current byte position of the writer header within the buffer.
+		/// The highest bit position to which the writer has written a value.
 		/// </summary>
-		/// <remarks>
-		/// IMPORTANT! Do not use this position unless you know what you are doing! 
-		/// Setting the position manually will not check for buffer bounds or update the length of the written buffer.
-		/// </remarks>
-		public int Position { get; set; }
-		/// <summary>
-		/// The highest byte position to which the writer has written a value.
-		/// </summary>
-		public int Length { get; private set; }
+		public new int Length { get; private set; }
+        /// <summary>
+        /// The amount of bytes which were written to.
+        /// </summary>
+        public int ByteLength => (int)Math.Ceiling((float)Length / 8);
 		/// <summary>
 		/// The max capacity of the internal buffer.
 		/// </summary>
-		public int Capacity => _buffer.Length;
-		/// <summary>
-		/// The configuration of the writer.
-		/// </summary>
-		public SerialiserConfiguration SerialiserConfiguration { get; }
+		public new int Capacity => _buffer.Length * 8;
 
-		protected byte[] _buffer = new byte[32];
+		public new readonly int Boolean = 1;
+		public new readonly int Byte = 8;
+		public new readonly int Int16 = 16;
+		public new readonly int Int32 = 32;
+		public new readonly int Int64 = 64;
 
-		public readonly int Boolean = 1;
-		public readonly int Byte = 1;
-		public readonly int Int16 = 2;
-		public readonly int Int32 = 4;
-		public readonly int Int64 = 8;
-
-		private static readonly ConcurrentDictionary<Type, Action<Writer, object>> _typeHandlerCache = new();
+		private static readonly ConcurrentDictionary<Type, Action<BitWriter, object>> _typeHandlerCache = new();
         private static readonly HashSet<Type> _unknownTypes = new();
 
-		#endregion
+        #endregion
 
-		#region lifecycle
+        #region lifecycle
 
-		public Writer(SerialiserConfiguration config = null)
-		{
-            SerialiserConfiguration = config ?? new();
-		}
+        public BitWriter(SerialiserConfiguration config = null)
+            : base(config) { }
 
-		static Writer()
+        static BitWriter()
         {   // caches all implemented type handlers during compilation
             CreateTypeHandlerDelegate(typeof(bool));
             CreateTypeHandlerDelegate(typeof(byte));
@@ -79,29 +75,21 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             CreateTypeHandlerDelegate(typeof(DateTime));
         }
 
-		internal static void Init() { }
-
 		#endregion
 
 		#region automatic type handler
 
-		public void Write<T>(T val)
-        {
-            Type type = typeof(T);
-            Write(val, type);
-        }
-
-        protected virtual void Write<T>(T val, Type type)
+		protected override void Write<T>(T val, Type type)
 		{
             if (!_unknownTypes.Contains(type))
             {   
-                if (_typeHandlerCache.TryGetValue(type, out Action<Writer, object> handler))
+                if (_typeHandlerCache.TryGetValue(type, out Action<BitWriter, object> handler))
                 {   // check for already cached type handler delegates
                     handler(this, val);
                     return;
                 }
 
-                Action<Writer, object> customHandler = CreateTypeHandlerDelegate(type, true);
+                Action<BitWriter, object> customHandler = CreateTypeHandlerDelegate(type, true);
                 if (customHandler != null)
                 {   // use custom type handler if user defined method was found
                     customHandler(this, val);
@@ -109,7 +97,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 }
 
                 // TODO : remove this once pre-compile cached generic handlers are supported
-                Action<Writer, object> implementedHandler = CreateTypeHandlerDelegate(type);
+                Action<BitWriter, object> implementedHandler = CreateTypeHandlerDelegate(type);
                 if (implementedHandler != null)
                 {   // use implemented type handler
                     implementedHandler(this, val);
@@ -146,16 +134,16 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         /// <param name="type">The type of the variable for which the writer is defined</param>
         /// <param name="useCustomWriter">Wether the writer method is an instance of the Writer class or a custom static method in the type</param>
         /// <returns></returns>
-        private static Action<Writer, object> CreateTypeHandlerDelegate(Type type, bool useCustomWriter = false)
+        private static Action<BitWriter, object> CreateTypeHandlerDelegate(Type type, bool useCustomWriter = false)
         {   // find implemented or custom write method
             var writerMethod = useCustomWriter
                 ?           type.GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
-                : typeof(Writer).GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+                : typeof(BitWriter).GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (writerMethod == null)
                 return null;
 
             // parameters
-            var instanceArg = Expression.Parameter(typeof(Writer), "instance");
+            var instanceArg = Expression.Parameter(typeof(BitWriter), "instance");
             var objectArg = Expression.Parameter(typeof(object), "value");
             var castArg = Expression.Convert(objectArg, type);
 
@@ -178,7 +166,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			}
 
             // cache delegate
-            var lambda = Expression.Lambda<Action<Writer, object>>(call, instanceArg, objectArg);
+            var lambda = Expression.Lambda<Action<BitWriter, object>>(call, instanceArg, objectArg);
             var action = lambda.Compile();
             _typeHandlerCache.TryAdd(type, action);
             return action;
@@ -190,175 +178,201 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         private void AdjustBufferSize(int size)
 		{
-            if (Position + size > _buffer.Length)
-                Array.Resize(ref _buffer, (_buffer.Length * 2) + size);
+			if (Position + size > Capacity)
+			{
+				float remainingBits = size - Position % 8;
+				int requiredBytes = (int)Mathf.Ceil(remainingBits / 8);
+				Array.Resize(ref _buffer, (Capacity * 2) + requiredBytes);
+			}
+		}
+
+		private void WriteBits(ulong val, int bits)
+		{
+			AdjustBufferSize(bits);
+
+			int bytePosition = Position / 8;
+			int valueOffset = bits + (Position % 8) - 8;
+			for (int i = 0; i <= bits / 8; i++)
+			{
+				int bufferOffset = valueOffset - 8 * i;
+				if (bufferOffset > 0)
+					_buffer[bytePosition + i] |= (byte)(val >> bufferOffset);
+				else
+					_buffer[bytePosition + i] |= (byte)(val << Math.Abs(bufferOffset));
+			}
+
+			Position += bits;
+			Length = Math.Max(Length, Position);
 		}
 
 		/// <summary>
-		/// Skips the writer header ahead by the given number of bytes.
+		/// Skips the writer header ahead by the given number of bits.
 		/// </summary>
-		/// <param name="bytes"></param>
-		public virtual void Skip(int bytes)
-		{
-            AdjustBufferSize(bytes);
-            Position += bytes;
-            Length = Math.Max(Length, Position);
+		/// <param name="bits"></param>
+		public override void Skip(int bits)
+        {
+			AdjustBufferSize(bits);
+			Position += bits;
+			Length = Math.Max(Length, Position);
 		}
 
 		/// <summary>
-		/// Reverts the writer header back by the given number of bytes.
+		/// Reverts the writer header back by the given number of bits.
 		/// </summary>
-		/// <param name="bytes"></param>
-		public virtual void Revert(int bytes)
-		{
-			Position -= bytes;
-			Position = Mathf.Max(Position, 0);
-		}
-
-		/// <summary>
-		/// Clears the writter buffer.
-		/// </summary>
-		public virtual void Clear()
-		{
-            Position = 0;
-            Length = 0;
+		/// <param name="val"></param>
+		public override void Revert(int bits)
+        {
+			Position -= bits;
+			Position = Math.Max(Position, 0);
 		}
 
 		/// <returns>The written buffer.</returns>
-		public virtual byte[] GetBuffer()
+		public override byte[] GetBuffer()
         {
-            byte[] result = new byte[Length];
-            Array.Copy(_buffer, 0, result, 0, Length);
-            return result;
-        }
-
-		/// <returns>The entire internal buffer.</returns>
-		public virtual byte[] GetFullBuffer()
-        {
-            return _buffer;
-        }
+			byte[] result = new byte[ByteLength];
+			Array.Copy(_buffer, 0, result, 0, ByteLength);
+			return result;
+		}
 
 		/// <summary>
-		/// Writes a specified number of bytes from a source array starting at a particular offset to the buffer.
+		/// Writes a specified number of bytes from a source array starting at a particular byte offset to the buffer.
 		/// </summary>
 		/// <param name="src"></param>
 		/// <param name="srcOffset"></param>
 		/// <param name="count"></param>
-		public virtual void BlockCopy(ref byte[] src, int srcOffset, int count)
+		/// <exception cref="ArgumentNullException"></exception>
+		/// <exception cref="ArgumentException"></exception>
+		/// <exception cref="ArgumentOutOfRangeException"></exception>
+		public override void BlockCopy(ref byte[] src, int srcOffset, int count)
         {
-			AdjustBufferSize(count);
-            Buffer.BlockCopy(src, srcOffset, _buffer, Position, count);
-            Position += count;
-            Length = Math.Max(Length, Position);
-        }
+            if (src == null)
+                throw new ArgumentNullException(nameof(src));
+            if (srcOffset + count > src.Length)
+                throw new ArgumentException(nameof(count));
+            if (srcOffset < 0 || count <= 0)
+                throw new ArgumentOutOfRangeException();
+
+			for (int i = 0; i < count; i++)
+				WriteBits(src[srcOffset + i], Byte);
+		}
 
 		/// <summary>
 		/// Writes a source array to the buffer.
 		/// </summary>
 		/// <param name="src"></param>
-		public virtual void WriteByteSegment(ArraySegment<byte> src)
+		public override void WriteByteSegment(ArraySegment<byte> src)
         {
-            byte[] srcArray = src.Array;
-            BlockCopy(ref srcArray, 0, src.Count);
-        }
+			for (int i = 0; i < src.Count; i++)
+				WriteBits(src[i], Byte);
+		}
 
 		/// <summary>
 		/// Writes a source array to the buffer.
 		/// </summary>
 		/// <param name="src"></param>
-		public virtual void WriteByteArray(byte[] src)
+		public override void WriteByteArray(byte[] src)
         {
-            BlockCopy(ref src, 0, src.Length);
-        }
+            for (int i = 0; i < src.Length; i++)
+                WriteBits(src[i], Byte);
+		}
 
         #endregion
 
         #region primitives
 
-        public virtual void WriteBoolean(bool val)
+        public override void WriteBoolean(bool val)
 		{
-            AdjustBufferSize(1);
-            _buffer[Position++] = (byte)(val ? 1 : 0);
-            Length = Math.Max(Length, Position);
+			WriteBits((ulong)(val ? 1 : 0), Boolean);
 		}
 
-        public virtual void WriteByte(byte val)
+        public override void WriteByte(byte val)
         {
-            AdjustBufferSize(1);
-            _buffer[Position++] = val;
-            Length = Math.Max(Length, Position);
-        }
+			WriteBits(val, Byte);
+		}
 
-        public virtual void WriteSByte(sbyte val)
+        public override void WriteSByte(sbyte val)
         {
             WriteByte((byte)val);
-        }
+		}
 
-        public virtual void WriteUInt16(ushort val)
+        public override void WriteUInt16(ushort val)
         {
-            AdjustBufferSize(2);
-            _buffer[Position++] = (byte)val;
-            _buffer[Position++] = (byte)(val >> 8);
-            Length = Math.Max(Length, Position);
-        }
+			WriteBits(val, Int16);
+		}
 
-        public virtual void WriteInt16(short val)
+        public override void WriteInt16(short val)
         {
             WriteUInt16((ushort)val);
         }
 
-        public virtual void WriteUInt32(uint val)
+        public override void WriteUInt32(uint val)
         {
-            AdjustBufferSize(4);
-            _buffer[Position++] = (byte)val;
-            _buffer[Position++] = (byte)(val >> 8);
-            _buffer[Position++] = (byte)(val >> 16);
-            _buffer[Position++] = (byte)(val >> 24);
-            Length = Math.Max(Length, Position);
-        }
+			WriteBits(val, Int32);
+		}
 
-        public virtual void WriteInt32(int val)
+        public override void WriteInt32(int val)
         {
             WriteUInt32((uint)val);
         }
 
-        public virtual void WriteUInt64(ulong val)
+        public override void WriteUInt64(ulong val)
         {
-            AdjustBufferSize(8);
-            _buffer[Position++] = (byte)val;
-            _buffer[Position++] = (byte)(val >> 8);
-            _buffer[Position++] = (byte)(val >> 16);
-            _buffer[Position++] = (byte)(val >> 24);
-            _buffer[Position++] = (byte)(val >> 32);
-            _buffer[Position++] = (byte)(val >> 40);
-            _buffer[Position++] = (byte)(val >> 48);
-            _buffer[Position++] = (byte)(val >> 56);
-            Length = Math.Max(Length, Position);
-        }
+			WriteBits(val, Int64);
+		}
 
-        public virtual void WriteInt64(long val)
+        public override void WriteInt64(long val)
         {
             WriteUInt64((ulong)val);
         }
 
-        public virtual void WriteChar(char val)
+        public override void WriteChar(char val)
         {
             WriteUInt16(val);
         }
 
-        public virtual void WriteSingle(float val)
+        public override void WriteSingle(float val)
         {
-            TypeConverter.UIntToFloat converter = new() { Float = val };
-            WriteUInt32(converter.UInt);
+            if (SerialiserConfiguration.CompressFloats)
+            {
+                WriteCompressedSingle(
+                    val,
+                    SerialiserConfiguration.FloatMinValue,
+                    SerialiserConfiguration.FloatMaxValue,
+                    SerialiserConfiguration.FloatResolution);
+            }
+            else
+            {
+				TypeConverter.UIntToFloat converter = new() { Float = val };
+				WriteUInt32(converter.UInt);
+			}
         }
 
-        public virtual void WriteDouble(double val)
+        public void WriteUncompressedSingle(float val)
+        {
+			TypeConverter.UIntToFloat converter = new() { Float = val };
+			WriteUInt32(converter.UInt);
+		}
+
+        public void WriteCompressedSingle(float val, float min, float max, float resolution)
+		{   // thanks to Glenn Fiedler https://gafferongames.com/post/serialization_strategies/
+			float delta = max - min;
+			float values = delta / resolution;
+
+			float normalizedValue = Mathf.Clamp((val - min) / delta, 0.0f, 1.0f);
+			uint maxIntValue = (uint)Mathf.Ceil(values);
+            uint requiredBits = SerialiserHelper.BitsRequired(0, maxIntValue);
+			uint intValue = (uint)Mathf.Floor(normalizedValue * maxIntValue + 0.5f);
+
+            WriteBits(intValue, (int)requiredBits);
+		}
+
+		public override void WriteDouble(double val)
         {
             TypeConverter.ULongToDouble converter = new() { Double = val };
             WriteUInt64(converter.ULong);
         }
 
-        public virtual void WriteDecimal(decimal val)
+        public override void WriteDecimal(decimal val)
         {
             TypeConverter.ULongsToDecimal converter = new() { Decimal = val };
             WriteUInt64(converter.ULong1);
@@ -369,20 +383,33 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region unity objects
 
-        public virtual void WriteVector2(Vector2 val)
+        public override void WriteVector2(Vector2 val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);
         }
 
-        public virtual void WriteVector3(Vector3 val)
+        public void WriteCompressedVector2(Vector2 val,  float min, float max, float resolution)
+        {
+            WriteCompressedSingle(val.x, min, max, resolution);
+            WriteCompressedSingle(val.y, min, max, resolution);
+        }
+
+        public override void WriteVector3(Vector3 val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);
             WriteSingle(val.z);
         }
 
-        public virtual void WriteVector4(Vector4 val)
+		public void WriteCompressedVector3(Vector3 val, float min, float max, float resolution)
+		{
+			WriteCompressedSingle(val.x, min, max, resolution);
+			WriteCompressedSingle(val.y, min, max, resolution);
+			WriteCompressedSingle(val.z, min, max, resolution);
+		}
+
+		public override void WriteVector4(Vector4 val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);
@@ -390,15 +417,34 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteSingle(val.w);
         }
 
-        public virtual void WriteQuaternion(Quaternion val)
+		public void WriteCompressedVector4(Vector4 val, float min, float max, float resolution)
+		{
+			WriteCompressedSingle(val.x, min, max, resolution);
+			WriteCompressedSingle(val.y, min, max, resolution);
+			WriteCompressedSingle(val.z, min, max, resolution);
+			WriteCompressedSingle(val.w, min, max, resolution);
+		}
+
+		public override void WriteQuaternion(Quaternion val)
         {
-            WriteSingle(val.x);
-            WriteSingle(val.y);
-            WriteSingle(val.z);
-            WriteSingle(val.w);
+            if (SerialiserConfiguration.CompressQuaternions)
+            {
+                CompressedQuaternion q = new(val, SerialiserConfiguration.BitsPerComponent);
+                WriteBits(q.Largest, 2);
+                WriteBits(q.A, SerialiserConfiguration.BitsPerComponent);
+                WriteBits(q.B, SerialiserConfiguration.BitsPerComponent);
+                WriteBits(q.C, SerialiserConfiguration.BitsPerComponent);
+            }
+            else
+            {
+                WriteUncompressedSingle(val.x);
+				WriteUncompressedSingle(val.y);
+				WriteUncompressedSingle(val.z);
+				WriteUncompressedSingle(val.w);
+            }
         }
 
-        public virtual void WriteMatrix4x4(Matrix4x4 val)
+        public override void WriteMatrix4x4(Matrix4x4 val)
         {
             WriteSingle(val.m00);
             WriteSingle(val.m01);
@@ -414,7 +460,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteSingle(val.m23);
         }
 
-        public virtual void WriteColor(Color val)
+        public override void WriteColor(Color val)
         {
             WriteByte((byte)(val.r * 100.0f));
             WriteByte((byte)(val.g * 100.0f));
@@ -422,14 +468,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteByte((byte)(val.a * 100.0f));
         }
 
-        public virtual void WriteColorWithoutAlpha(Color val)
+        public override void WriteColorWithoutAlpha(Color val)
         {
             WriteByte((byte)(val.r * 100.0f));
             WriteByte((byte)(val.g * 100.0f));
             WriteByte((byte)(val.b * 100.0f));
         }
 
-        public virtual void WriteColor32(Color32 val)
+        public override void WriteColor32(Color32 val)
         {
             WriteByte(val.r);
             WriteByte(val.g);
@@ -437,7 +483,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteByte(val.a);
         }
 
-        public virtual void WriteColor32WithoutAlpha(Color32 val)
+        public override void WriteColor32WithoutAlpha(Color32 val)
         {
             WriteByte(val.r);
             WriteByte(val.g);
@@ -448,7 +494,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region objects
 
-        public virtual void WriteString(string val)
+        public override void WriteString(string val)
         {
             if (string.IsNullOrEmpty(val))
             {
@@ -460,12 +506,10 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 throw new FormatException($"The string can't be longer than {ushort.MaxValue}!");
 
             WriteUInt16((ushort)val.Length);
-            byte[] bytes = Encoding.ASCII.GetBytes(val);
-            BlockCopy(ref bytes, 0, bytes.Length);
-            Length = Math.Max(Length, Position);
+            WriteByteArray(Encoding.ASCII.GetBytes(val));
         }
 
-        public virtual void WriteStringWithoutFlag(string val)
+        public override void WriteStringWithoutFlag(string val)
         {
             if (string.IsNullOrEmpty(val))
 			{
@@ -476,12 +520,10 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             if (val.Length > ushort.MaxValue)
                 throw new FormatException($"The string can't be longer than {ushort.MaxValue}!");
 
-            byte[] bytes = Encoding.ASCII.GetBytes(val);
-            BlockCopy(ref bytes, 0, bytes.Length);
-            Length = Math.Max(Length, Position);
-        }
+			WriteByteArray(Encoding.ASCII.GetBytes(val));
+		}
 
-        public virtual void WriteArray<T>(T[] val)
+        public override void WriteArray<T>(T[] val)
 		{
             if (val == null)
 			{
@@ -494,7 +536,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 Write(t);
         }
 
-		public virtual void WriteList<T>(List<T> val)
+		public override void WriteList<T>(List<T> val)
         {
             if (val == null)
 			{
@@ -507,7 +549,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 Write(t);
         }
 
-        public virtual void WriteDictionary<TKey, TValue>(Dictionary<TKey, TValue> val)
+        public override void WriteDictionary<TKey, TValue>(Dictionary<TKey, TValue> val)
 		{
             if (val == null)
             {
@@ -523,7 +565,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			}
 		}
 
-        public virtual void WriteDateTime(DateTime val)
+        public override void WriteDateTime(DateTime val)
 		{
             WriteInt64(val.ToBinary());
 		}

@@ -23,7 +23,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 			bool isStructData = reader.ReadBoolean();
 			uint dataID = reader.ReadUInt32();
 			byte clientID = reader.ReadByte();
-			byte[] simpleData = reader.ReadRemainingBytes();
+			byte[] simpleData = reader.ReadRemainingBuffer();
 			return new(isStructData, dataID, clientID, simpleData);
 		}
 

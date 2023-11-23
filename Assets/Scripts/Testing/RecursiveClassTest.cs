@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using jKnepel.SimpleUnityNetworking.Serialisation;
 
-public class Test : MonoBehaviour
+public class RecursiveClassTest : MonoBehaviour
 {
     // Start is called before the first frame update
     void Start()

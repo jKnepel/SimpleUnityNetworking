@@ -9,40 +9,46 @@ using UnityEditor;
 public class StructTest : MonoBehaviour
 {
     [SerializeField] private NetworkManager _manager;
+    [SerializeField] private Transform _obj1;
+    [SerializeField] private Transform _obj2;
+    
+    private bool _registered = false;
 
     public void Register()
     {
-        _manager.RegisterStructData<TextTest>(ReceiveStruct);
+        _manager.RegisterStructData<ObjectData>(ReceiveStruct);
+        _registered = true;
     }
 
     public void Unregister()
     {
-        _manager.UnregisterStructData<TextTest>(ReceiveStruct);
+        _manager.UnregisterStructData<ObjectData>(ReceiveStruct);
+        _registered = false;
     }
 
-    public void SendStruct()
+    private void Update()
     {
-        TextTest test = new()
+        if (!_manager.IsConnected || !_registered || !_obj1.hasChanged)
+            return;
+
+		ObjectData test = new()
         {
-            ID = 1,
-            Text = "hello",
-            Text2 = "world"
+            Position = _obj1.position,
+            Rotation = _obj1.rotation,
         };
-        _manager.SendStructData(2, test, ENetworkChannel.ReliableOrdered, (succ) => Debug.Log($"Packet Send: {succ}"));
+        _manager.SendStructDataToAll(test, ENetworkChannel.UnreliableOrdered, (succ) => Debug.Log($"Packet Send: {succ}"));
+        _obj1.hasChanged = false;
 	}
 
-    private void ReceiveStruct(byte userId, TextTest test)
+    private void ReceiveStruct(byte userId, ObjectData test)
     {
-        Debug.Log($"Received: {userId} {test}");
+        _obj2.SetPositionAndRotation(test.Position, test.Rotation);
     }
 
-    private struct TextTest : IStructData
+    private struct ObjectData : IStructData
     {
-        public int ID;
-        public string Text;
-        public string Text2;
-
-        public override string ToString() { return $"{ID} {Text} {Text2}"; }
+        public Vector3 Position;
+        public Quaternion Rotation;
     }
 }
 
@@ -59,8 +65,6 @@ public class UnreliableTestEditor : Editor
             test.Register();
         if (GUILayout.Button("Unregister"))
             test.Unregister();
-        if (GUILayout.Button("Send"))
-            test.SendStruct();
     }
 }
 #endif
