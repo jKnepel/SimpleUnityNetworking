@@ -1085,7 +1085,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 ClientInfoPacket connectedClientInfo = new(client.ID, client.Username, client.Color);
                 writer.Clear();
                 writer.Write(connectedClientInfo);
-                _packetsToSend.Enqueue(new(client.ID, ENetworkChannel.ReliableUnordered, EPacketType.ClientInfo, writer.GetBuffer()));
+                _packetsToSend.Enqueue(new(newID, ENetworkChannel.ReliableUnordered, EPacketType.ClientInfo, writer.GetBuffer()));
             }
 
             MainThreadQueue.Enqueue(() => OnClientConnected?.Invoke(newID));
