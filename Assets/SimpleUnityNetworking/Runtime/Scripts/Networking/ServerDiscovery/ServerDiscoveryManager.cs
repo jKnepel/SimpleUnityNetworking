@@ -215,8 +215,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery
 
         private bool ShouldAcceptConnection(IPEndPoint endpoint)
 		{
-            if (_config.LocalPort == 0)
-                return true;
             if (endpoint.Address.Equals(_localIP) && endpoint.Port == _config.LocalPort)
                 return false;
             return !endpoint.Address.Equals(_localIP) || _config.AllowLocalConnections;
