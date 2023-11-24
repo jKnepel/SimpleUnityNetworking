@@ -228,6 +228,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		}
 
 		/// <summary>
+		/// Clears the reader buffer.
+		/// </summary>
+		public override void Clear()
+		{
+			Position += Remaining;
+		}
+
+		/// <summary>
 		/// Reads a specified number of bytes from the internal buffer to a destination array starting at a particular offset.
 		/// </summary>
 		/// <param name="dst"></param>
