@@ -218,7 +218,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         }
 
 		/// <summary>
-		/// Clears the writter buffer.
+		/// Clears the reader buffer.
 		/// </summary>
 		public virtual void Clear()
 		{

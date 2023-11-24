@@ -226,6 +226,15 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			Position = Math.Max(Position, 0);
 		}
 
+		/// <summary>
+		/// Clears the writer buffer.
+		/// </summary>
+		public override void Clear()
+		{
+			Position = 0;
+			Length = 0;
+		}
+
 		/// <returns>The written buffer.</returns>
 		public override byte[] GetBuffer()
         {
@@ -276,11 +285,11 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 WriteBits(src[i], Byte);
 		}
 
-        #endregion
+		#endregion
 
-        #region primitives
+		#region primitives
 
-        public override void WriteBoolean(bool val)
+		public override void WriteBoolean(bool val)
 		{
 			WriteBits((ulong)(val ? 1 : 0), Boolean);
 		}
