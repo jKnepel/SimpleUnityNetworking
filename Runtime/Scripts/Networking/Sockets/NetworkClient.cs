@@ -772,12 +772,12 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                     writer.Write(new PacketHeader(false, true, packet.NetworkChannel, packet.PacketType));
                     writer.WriteUInt16((ushort)(_reliableLocalSequence + 1));
                     writer.WriteUInt16(numberOfSlices);
-                    int startPosition = writer.Position;
+                    int slicePosition = writer.Position;
 
                     // send slices individually to client
                     for (ushort i = 0; i < numberOfSlices; i++)
                     {   // reset body in writer buffer and fill with new slice
-                        writer.Position = startPosition;
+                        writer.Position = slicePosition;
                         writer.WriteUInt16(i);
 
                         int length = i < numberOfSlices - 1 ? NetworkConfiguration.MTU : packet.Body.Length % NetworkConfiguration.MTU;
