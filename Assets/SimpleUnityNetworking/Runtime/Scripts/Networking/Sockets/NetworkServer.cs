@@ -912,12 +912,13 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
                         writer.Position = sequencePos;
                         writer.WriteUInt16(localSequence);
-                        int startPosition = writer.Position;
+                        writer.Skip(writer.Int16);
+                        int slicePosition = writer.Position;
 
                         // send slices individually to client
                         for (ushort i = 0; i < numberOfSlices; i++)
                         {   // reset body in writer buffer and fill with new slice
-                            writer.Position = startPosition;
+                            writer.Position = slicePosition;
                             writer.WriteUInt16(i);
 
                             int length = i < numberOfSlices - 1 ? NetworkConfiguration.MTU : packet.Body.Length % NetworkConfiguration.MTU;
