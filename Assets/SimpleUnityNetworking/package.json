@@ -1,6 +1,6 @@
 {
   "name": "jknepel.simpleunitynetworking",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "displayName": "Simple Unity Networking",
   "description": "Unity Package offering a simple to use R/UDP Networking functionality for LAN.",
   "unity": "2022.3",
