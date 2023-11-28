@@ -2,10 +2,10 @@ using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Serialisation
 {
-    internal class CompressedQuaternion
+    public class CompressedQuaternion
 	{   // thanks to Glenn Fiedler https://gafferongames.com/post/snapshot_compression/
 		private const float MINIMUM = -0.70710678f; // -1 / sqrt(2)
-        private const float MAXIMUM = +0.70710678f; // +1 / sqrt(2)
+		private const float MAXIMUM = +0.70710678f; // +1 / sqrt(2)
 
         public readonly int Bits;
 
@@ -26,6 +26,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             float absZ = Mathf.Abs(q.z);
             float absW = Mathf.Abs(q.w);
 
+            Largest = 0;
             float largestValue = q.x;
             float largestAbsValue = absX;
 
@@ -82,9 +83,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             float normalisedC = (c - MINIMUM) / (MAXIMUM - MINIMUM);
 
             float scale = (1 << bits) - 1;
-            A = (uint)Mathf.FloorToInt(normalisedA * scale + 0.5f);
-            B = (uint)Mathf.FloorToInt(normalisedB * scale + 0.5f);
-            C = (uint)Mathf.FloorToInt(normalisedC * scale + 0.5f);
+            A = (uint)Mathf.Floor(normalisedA * scale + 0.5f);
+            B = (uint)Mathf.Floor(normalisedB * scale + 0.5f);
+            C = (uint)Mathf.Floor(normalisedC * scale + 0.5f);
         }
 
         public CompressedQuaternion(uint largest, uint a, uint b, uint c, int bits = 9)
@@ -131,7 +132,20 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 					break;
 			}
 
-            Quaternion = new(x, y, z, w);
+            float norm = x*x + y*y + z*z + w*w;
+			if (norm > 0.000001f)
+			{
+				float length = Mathf.Sqrt(norm);
+				Quaternion = new(x, y, z, w);
+				Quaternion.x /= length;
+				Quaternion.y /= length;
+				Quaternion.z /= length;
+				Quaternion.w /= length;
+			}
+			else
+			{
+				Quaternion = new(0, 0, 0, 1);
+			}
 		}
     }
 }
