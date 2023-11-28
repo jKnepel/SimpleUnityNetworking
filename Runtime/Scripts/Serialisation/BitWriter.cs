@@ -180,9 +180,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		{
 			if (Position + size > Capacity)
 			{
-				float remainingBits = size - Position % 8;
-				int requiredBytes = (int)Mathf.Ceil(remainingBits / 8);
-				Array.Resize(ref _buffer, (Capacity * 2) + requiredBytes);
+				int requiredBytes = (int)Mathf.Ceil((float)(Position + size - Capacity) / 8);
+				Array.Resize(ref _buffer, (_buffer.Length * 2) + requiredBytes);
 			}
 		}
 
