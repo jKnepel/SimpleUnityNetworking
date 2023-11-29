@@ -172,15 +172,16 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             return action;
         }
 
-        #endregion
+		#endregion
 
-        #region helpers
+		#region helpers
 
-        private void AdjustBufferSize(int size)
+		private void AdjustBufferSize(int size)
 		{
 			if (Position + size > Capacity)
 			{
-				int requiredBytes = (int)Mathf.Ceil((float)(Position + size - Capacity) / 8);
+				int remainingBits = Position + size - Capacity;
+				int requiredBytes = (int)Mathf.Ceil((float)remainingBits / 8);
 				Array.Resize(ref _buffer, (_buffer.Length * 2) + requiredBytes);
 			}
 		}
