@@ -191,8 +191,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			AdjustBufferSize(bits);
 
 			int bytePosition = Position / 8;
-			int valueOffset = bits + (Position % 8) - 8;
-			for (int i = 0; i <= bits / 8; i++)
+            int valueOffset = bits - 8 + (Position % 8);
+            int iterations = (int)Math.Ceiling((float)(bits + Position % 8) / 8);
+			for (int i = 0; i < iterations; i++)
 			{
 				int bufferOffset = valueOffset - 8 * i;
 				if (bufferOffset > 0)
