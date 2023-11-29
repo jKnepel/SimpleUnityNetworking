@@ -2,7 +2,7 @@ using System;
 
 namespace jKnepel.SimpleUnityNetworking.Serialisation
 {
-    internal static class SerialiserHelper
+    public static class SerialiserHelper
     {
 		public static string GetTypeName(Type type)
 		{
