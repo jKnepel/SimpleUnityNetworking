@@ -54,19 +54,19 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		private void OnEnable()
 		{
             var manager = (NetworkManager)target;
-            manager.OnConnectionStatusUpdated += Repaint;
-            manager.OnConnectedClientListUpdated += Repaint;
-            manager.OnOpenServerListUpdated += Repaint;
-            manager.OnNetworkMessageAdded += Repaint;
+            manager.Events.OnConnectionStatusUpdated += Repaint;
+            manager.Events.OnConnectedClientListUpdated += Repaint;
+            manager.Events.OnOpenServerListUpdated += Repaint;
+            manager.Events.OnNetworkMessageAdded += Repaint;
         }
 
 		private void OnDisable()
 		{
             var manager = (NetworkManager)target;
-            manager.OnConnectionStatusUpdated -= Repaint;
-            manager.OnConnectedClientListUpdated -= Repaint;
-            manager.OnOpenServerListUpdated -= Repaint;
-            manager.OnNetworkMessageAdded -= Repaint;
+            manager.Events.OnConnectionStatusUpdated -= Repaint;
+            manager.Events.OnConnectedClientListUpdated -= Repaint;
+            manager.Events.OnOpenServerListUpdated -= Repaint;
+            manager.Events.OnNetworkMessageAdded -= Repaint;
         }
 
 		public override void OnInspectorGUI()

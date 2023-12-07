@@ -72,18 +72,18 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private void OnEnable()
         {
-            StaticNetworkManager.OnConnectionStatusUpdated += Repaint;
-            StaticNetworkManager.OnConnectedClientListUpdated += Repaint;
-            StaticNetworkManager.OnOpenServerListUpdated += Repaint;
-            StaticNetworkManager.OnNetworkMessageAdded += Repaint;
+            StaticNetworkManager.Events.OnConnectionStatusUpdated += Repaint;
+            StaticNetworkManager.Events.OnConnectedClientListUpdated += Repaint;
+            StaticNetworkManager.Events.OnOpenServerListUpdated += Repaint;
+            StaticNetworkManager.Events.OnNetworkMessageAdded += Repaint;
         }
 
         private void OnDisable()
         {
-            StaticNetworkManager.OnConnectionStatusUpdated -= Repaint;
-            StaticNetworkManager.OnConnectedClientListUpdated -= Repaint;
-            StaticNetworkManager.OnOpenServerListUpdated -= Repaint;
-            StaticNetworkManager.OnNetworkMessageAdded -= Repaint;
+            StaticNetworkManager.Events.OnConnectionStatusUpdated -= Repaint;
+            StaticNetworkManager.Events.OnConnectedClientListUpdated -= Repaint;
+            StaticNetworkManager.Events.OnOpenServerListUpdated -= Repaint;
+            StaticNetworkManager.Events.OnNetworkMessageAdded -= Repaint;
         }
 
         private void OnGUI()
