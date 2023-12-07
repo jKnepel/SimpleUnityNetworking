@@ -11,7 +11,7 @@ namespace jKnepel.SimpleUnityNetworking
 {
     public interface INetworkManager
     {
-        NetworkConfiguration NetworkConfiguration { get; }
+        NetworkConfiguration NetworkConfiguration { get; set; }
 
         bool IsConnected { get; }
 

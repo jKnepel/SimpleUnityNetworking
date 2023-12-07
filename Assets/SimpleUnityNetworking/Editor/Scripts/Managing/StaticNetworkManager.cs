@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery;
@@ -20,13 +19,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public static NetworkConfiguration NetworkConfiguration
         {
-            get
-            {
-                if (_networkConfiguration == null)
-                    _networkConfiguration = LoadOrCreateConfiguration<NetworkConfiguration>();
-                return _networkConfiguration;
-            }
-            set => _networkConfiguration = value;
+            get => NetworkManager.NetworkConfiguration;
+            set => NetworkManager.NetworkConfiguration = value;
         }
 
         /// <summary>
@@ -77,14 +71,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         #region private members
 
         private static NetworkManager _networkManager;
-        private static NetworkConfiguration _networkConfiguration;
 
         private static NetworkManager NetworkManager
         {
             get
             {
                 if (_networkManager == null)
-                    _networkManager = new(NetworkConfiguration);
+                    _networkManager = new();
                 return _networkManager;
             }
         }
@@ -290,53 +283,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         #region private methods
 
-        private static T LoadOrCreateConfiguration<T>(string name = "NetworkConfiguration", string path = "Assets/Resources/") where T : ScriptableObject
-        {
-            T configuration = Resources.Load<T>(Path.GetFileNameWithoutExtension(name));
-
-            string fullPath = path + name + ".asset";
-
-            if (!configuration)
-            {
-                if (EditorApplication.isCompiling)
-                {
-                    UnityEngine.Debug.LogError("Can not load settings when editor is compiling!");
-                    return null;
-                }
-                if (EditorApplication.isUpdating)
-                {
-                    UnityEngine.Debug.LogError("Can not load settings when editor is updating!");
-                    return null;
-                }
-
-                configuration = AssetDatabase.LoadAssetAtPath<T>(fullPath);
-            }
-            if (!configuration)
-            {
-                string[] allSettings = AssetDatabase.FindAssets($"t:{name}{".asset"}");
-                if (allSettings.Length > 0)
-                {
-                    configuration = AssetDatabase.LoadAssetAtPath<T>(AssetDatabase.GUIDToAssetPath(allSettings[0]));
-                }
-            }
-            if (!configuration)
-            {
-                configuration = ScriptableObject.CreateInstance<T>();
-                string dir = Path.GetDirectoryName(fullPath);
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
-                AssetDatabase.CreateAsset(configuration, fullPath);
-                AssetDatabase.SaveAssets();
-            }
-
-            if (!configuration)
-            {
-                configuration = ScriptableObject.CreateInstance<T>();
-            }
-
-            return configuration;
-        }
-
         private static void ListenForStateChange(bool isActive)
         {
             if (isActive)
@@ -348,7 +294,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private static void PreventPlayMode(PlayModeStateChange state)
         {
             if (state == PlayModeStateChange.ExitingEditMode)
+            {
                 EditorApplication.isPlaying = false;
+                Debug.LogWarning("Prevent from exiting edit mode while static network manager is active.");
+            }
         }
 
         #endregion
