@@ -70,53 +70,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public static List<OpenServer> OpenServers => _serverDiscovery?.OpenServers ?? null;
 
         /// <summary>
-        /// Action for when connection to or creation of a server is being started.
+        /// Network events.
         /// </summary>
-        public static Action OnConnecting;
-        /// <summary>
-        /// Action for when successfully connecting to or creating a Server.
-        /// </summary>
-        public static Action OnConnected;
-        /// <summary>
-        /// Action for when disconnecting from or closing the Server.
-        /// </summary>
-        public static Action OnDisconnected;
-        /// <summary>
-        /// Action for when the connection status of the local client was updated.
-        /// </summary>
-        public static Action OnConnectionStatusUpdated;
-        /// <summary>
-        /// Action for when the server the local client was connected to was closed.
-        /// </summary>
-        public static Action OnServerWasClosed;
-        /// <summary>
-        /// Action for when a remote Client connected to the current Server and can now receive Messages.
-        /// </summary>
-        public static Action<byte> OnClientConnected;
-        /// <summary>
-        /// Action for when a remote Client disconnected from the current Server and can no longer receive any Messages.
-        /// </summary>
-        public static Action<byte> OnClientDisconnected;
-        /// <summary>
-        /// Action for when a Client was added or removed from ConnectedClients.
-        /// </summary>
-        public static Action OnConnectedClientListUpdated;
-        /// <summary>
-        /// Action for when the Server Discovery was activated.
-        /// </summary>
-        public static Action OnServerDiscoveryActivated;
-        /// <summary>
-        /// Action for when the Server Discovery was deactivated.
-        /// </summary>
-        public static Action OnServerDiscoveryDeactivated;
-        /// <summary>
-        /// Action for when a Server was added or removed from the OpenServers.
-        /// </summary>
-        public static Action OnOpenServerListUpdated;
-        /// <summary>
-        /// Action for when a new Network Message was added.
-        /// </summary>
-        public static Action OnNetworkMessageAdded;
+        public static NetworkEvents Events { get; } = new NetworkEvents();
 
         #endregion
 
@@ -132,7 +88,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         static StaticNetworkManager()
         {
-            Messaging.OnNetworkMessageAdded += FireOnNetworkMessageAdded;
+            Messaging.OnNetworkMessageAdded += Events.FireOnNetworkMessageAdded;
             StartServerDiscovery();
         }
 
@@ -160,14 +116,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             NetworkServer server = new();
             _networkSocket = server;
-            server.OnConnecting += FireOnConnecting;
-            server.OnConnected += FireOnConnected;
-            server.OnDisconnected += FireOnDisconnected;
-            server.OnConnectionStatusUpdated += FireOnConnectionStatusUpdated;
-            server.OnServerWasClosed += FireOnServerWasClosed;
-            server.OnClientConnected += FireOnClientConnected;
-            server.OnClientDisconnected += FireOnClientDisconnected;
-            server.OnConnectedClientListUpdated += FireOnConnectedClientListUpdated;
+            server.OnConnecting += Events.FireOnConnecting;
+            server.OnConnected += Events.FireOnConnected;
+            server.OnDisconnected += Events.FireOnDisconnected;
+            server.OnConnectionStatusUpdated += Events.FireOnConnectionStatusUpdated;
+            server.OnServerWasClosed += Events.FireOnServerWasClosed;
+            server.OnClientConnected += Events.FireOnClientConnected;
+            server.OnClientDisconnected += Events.FireOnClientDisconnected;
+            server.OnConnectedClientListUpdated += Events.FireOnConnectedClientListUpdated;
 
             onConnectionEstablished += ListenForStateChange;
 
@@ -194,14 +150,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             NetworkClient client = new();
             _networkSocket = client;
-            client.OnConnecting += FireOnConnecting;
-            client.OnConnected += FireOnConnected;
-            client.OnDisconnected += FireOnDisconnected;
-            client.OnConnectionStatusUpdated += FireOnConnectionStatusUpdated;
-            client.OnServerWasClosed += FireOnServerWasClosed;
-            client.OnClientConnected += FireOnClientConnected;
-            client.OnClientDisconnected += FireOnClientDisconnected;
-            client.OnConnectedClientListUpdated += FireOnConnectedClientListUpdated;
+            client.OnConnecting += Events.FireOnConnecting;
+            client.OnConnected += Events.FireOnConnected;
+            client.OnDisconnected += Events.FireOnDisconnected;
+            client.OnConnectionStatusUpdated += Events.FireOnConnectionStatusUpdated;
+            client.OnServerWasClosed += Events.FireOnServerWasClosed;
+            client.OnClientConnected += Events.FireOnClientConnected;
+            client.OnClientDisconnected += Events.FireOnClientDisconnected;
+            client.OnConnectedClientListUpdated += Events.FireOnConnectedClientListUpdated;
 
             onConnectionEstablished += ListenForStateChange;
 
@@ -222,24 +178,24 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             switch (_networkSocket)
             {
                 case NetworkServer server:
-                    server.OnConnecting -= FireOnConnecting;
-                    server.OnConnected -= FireOnConnected;
-                    server.OnDisconnected -= FireOnDisconnected;
-                    server.OnConnectionStatusUpdated -= FireOnConnectionStatusUpdated;
-                    server.OnServerWasClosed -= FireOnServerWasClosed;
-                    server.OnClientConnected -= FireOnClientConnected;
-                    server.OnClientDisconnected -= FireOnClientDisconnected;
-                    server.OnConnectedClientListUpdated -= FireOnConnectedClientListUpdated;
+                    server.OnConnecting -= Events.FireOnConnecting;
+                    server.OnConnected -= Events.FireOnConnected;
+                    server.OnDisconnected -= Events.FireOnDisconnected;
+                    server.OnConnectionStatusUpdated -= Events.FireOnConnectionStatusUpdated;
+                    server.OnServerWasClosed -= Events.FireOnServerWasClosed;
+                    server.OnClientConnected -= Events.FireOnClientConnected;
+                    server.OnClientDisconnected -= Events.FireOnClientDisconnected;
+                    server.OnConnectedClientListUpdated -= Events.FireOnConnectedClientListUpdated;
                     break;
                 case NetworkClient client:
-                    client.OnConnecting -= FireOnConnecting;
-                    client.OnConnected -= FireOnConnected;
-                    client.OnDisconnected -= FireOnDisconnected;
-                    client.OnConnectionStatusUpdated -= FireOnConnectionStatusUpdated;
-                    client.OnServerWasClosed -= FireOnServerWasClosed;
-                    client.OnClientConnected -= FireOnClientConnected;
-                    client.OnClientDisconnected -= FireOnClientDisconnected;
-                    client.OnConnectedClientListUpdated -= FireOnConnectedClientListUpdated;
+                    client.OnConnecting -= Events.FireOnConnecting;
+                    client.OnConnected -= Events.FireOnConnected;
+                    client.OnDisconnected -= Events.FireOnDisconnected;
+                    client.OnConnectionStatusUpdated -= Events.FireOnConnectionStatusUpdated;
+                    client.OnServerWasClosed -= Events.FireOnServerWasClosed;
+                    client.OnClientConnected -= Events.FireOnClientConnected;
+                    client.OnClientDisconnected -= Events.FireOnClientDisconnected;
+                    client.OnConnectedClientListUpdated -= Events.FireOnConnectedClientListUpdated;
                     break;
             }
             _networkSocket = null;
@@ -256,9 +212,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 return;
 
             _serverDiscovery = new();
-            _serverDiscovery.OnServerDiscoveryActivated += FireOnServerDiscoveryActivated;
-            _serverDiscovery.OnServerDiscoveryDeactivated += FireOnServerDiscoveryDeactivated;
-            _serverDiscovery.OnOpenServerListUpdated += FireOnOpenServerListUpdated;
+            _serverDiscovery.OnServerDiscoveryActivated += Events.FireOnServerDiscoveryActivated;
+            _serverDiscovery.OnServerDiscoveryDeactivated += Events.FireOnServerDiscoveryDeactivated;
+            _serverDiscovery.OnOpenServerListUpdated += Events.FireOnOpenServerListUpdated;
             _serverDiscovery.StartServerDiscovery(NetworkConfiguration);
         }
 
@@ -271,9 +227,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 return;
 
             _serverDiscovery.EndServerDiscovery();
-            _serverDiscovery.OnServerDiscoveryActivated -= FireOnServerDiscoveryActivated;
-            _serverDiscovery.OnServerDiscoveryDeactivated -= FireOnServerDiscoveryDeactivated;
-            _serverDiscovery.OnOpenServerListUpdated -= FireOnOpenServerListUpdated;
+            _serverDiscovery.OnServerDiscoveryActivated -= Events.FireOnServerDiscoveryActivated;
+            _serverDiscovery.OnServerDiscoveryDeactivated -= Events.FireOnServerDiscoveryDeactivated;
+            _serverDiscovery.OnOpenServerListUpdated -= Events.FireOnOpenServerListUpdated;
         }
 
         /// <summary>
@@ -446,19 +402,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         #endregion
 
         #region private methods
-
-        private static void FireOnConnecting() => OnConnecting?.Invoke();
-        private static void FireOnConnected() => OnConnected?.Invoke();
-        private static void FireOnDisconnected() => OnDisconnected?.Invoke();
-        private static void FireOnConnectionStatusUpdated() => OnConnectionStatusUpdated?.Invoke();
-        private static void FireOnServerWasClosed() => OnServerWasClosed?.Invoke();
-        private static void FireOnClientConnected(byte clientID) => OnClientConnected?.Invoke(clientID);
-        private static void FireOnClientDisconnected(byte clientID) => OnClientDisconnected?.Invoke(clientID);
-        private static void FireOnConnectedClientListUpdated() => OnConnectedClientListUpdated?.Invoke();
-        private static void FireOnServerDiscoveryActivated() => OnServerDiscoveryActivated?.Invoke();
-        private static void FireOnServerDiscoveryDeactivated() => OnServerDiscoveryDeactivated?.Invoke();
-        private static void FireOnOpenServerListUpdated() => OnOpenServerListUpdated?.Invoke();
-        private static void FireOnNetworkMessageAdded() => OnNetworkMessageAdded?.Invoke();
 
         private static T LoadOrCreateConfiguration<T>(string name = "NetworkConfiguration", string path = "Assets/Resources/") where T : ScriptableObject
         {
