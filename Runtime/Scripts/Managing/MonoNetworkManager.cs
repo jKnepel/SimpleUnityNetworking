@@ -18,13 +18,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public NetworkConfiguration NetworkConfiguration
         {
-            get
-            {
-                if (_networkConfiguration == null)
-                    _networkConfiguration = (NetworkConfiguration)ScriptableObject.CreateInstance(typeof(NetworkConfiguration));
-                return _networkConfiguration;
-            }
-            set => _networkConfiguration = value;
+            get => NetworkManager.NetworkConfiguration;
+            set => NetworkManager.NetworkConfiguration = value;
         }
 
         /// <summary>
@@ -75,14 +70,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         #region private members
 
         private NetworkManager _networkManager;
-        private NetworkConfiguration _networkConfiguration;
 
         private NetworkManager NetworkManager
         {
             get
             {
                 if (_networkManager == null)
-                    _networkManager = new(NetworkConfiguration);
+                    _networkManager = new();
                 return _networkManager;
             }
         }

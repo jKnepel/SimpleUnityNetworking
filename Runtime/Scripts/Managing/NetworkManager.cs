@@ -7,6 +7,9 @@ using jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery;
 using jKnepel.SimpleUnityNetworking.Networking.Sockets;
 using jKnepel.SimpleUnityNetworking.Utilities;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
+using System.IO;
+using UnityEditor;
+using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
@@ -17,7 +20,16 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// The Configuration for the networking.
         /// </summary>
-        public NetworkConfiguration NetworkConfiguration { get; }
+        public NetworkConfiguration NetworkConfiguration
+        {
+            get
+            {
+                if (_networkConfiguration == null)
+                    _networkConfiguration = LoadOrCreateConfiguration<NetworkConfiguration>();
+                return _networkConfiguration;
+            }
+            set => _networkConfiguration = value;
+        }
         /// <summary>
         /// Wether the local client is currently connected to or hosting a server.
         /// </summary>
@@ -65,6 +77,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         #region private members
 
+        private static NetworkConfiguration _networkConfiguration;
+
         private ANetworkSocket _networkSocket;
         private ServerDiscoveryManager _serverDiscovery;
 
@@ -72,10 +86,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         #region lifecycle
 
-        public NetworkManager(NetworkConfiguration networkConfiguration, bool startServerDiscovery = true)
+        public NetworkManager(bool startServerDiscovery = true)
         {
-            NetworkConfiguration = networkConfiguration;
-
             Messaging.OnNetworkMessageAdded += Events.FireOnNetworkMessageAdded;
             if (startServerDiscovery) StartServerDiscovery();
         }
@@ -385,6 +397,53 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
 
             _networkSocket.SendByteData(receiverID, dataID, data, networkChannel, onDataSend);
+        }
+
+        public static T LoadOrCreateConfiguration<T>(string name = "NetworkConfiguration", string path = "Assets/Resources/") where T : ScriptableObject
+        {
+            T configuration = Resources.Load<T>(Path.GetFileNameWithoutExtension(name));
+
+            string fullPath = path + name + ".asset";
+
+            if (!configuration)
+            {
+                if (EditorApplication.isCompiling)
+                {
+                    UnityEngine.Debug.LogError("Can not load settings when editor is compiling!");
+                    return null;
+                }
+                if (EditorApplication.isUpdating)
+                {
+                    UnityEngine.Debug.LogError("Can not load settings when editor is updating!");
+                    return null;
+                }
+
+                configuration = AssetDatabase.LoadAssetAtPath<T>(fullPath);
+            }
+            if (!configuration)
+            {
+                string[] allSettings = AssetDatabase.FindAssets($"t:{name}{".asset"}");
+                if (allSettings.Length > 0)
+                {
+                    configuration = AssetDatabase.LoadAssetAtPath<T>(AssetDatabase.GUIDToAssetPath(allSettings[0]));
+                }
+            }
+            if (!configuration)
+            {
+                configuration = ScriptableObject.CreateInstance<T>();
+                string dir = Path.GetDirectoryName(fullPath);
+                if (!Directory.Exists(dir))
+                    Directory.CreateDirectory(dir);
+                AssetDatabase.CreateAsset(configuration, fullPath);
+                AssetDatabase.SaveAssets();
+            }
+
+            if (!configuration)
+            {
+                configuration = ScriptableObject.CreateInstance<T>();
+            }
+
+            return configuration;
         }
 
         #endregion
