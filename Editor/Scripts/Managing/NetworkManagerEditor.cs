@@ -10,7 +10,7 @@ using jKnepel.SimpleUnityNetworking.Utilities;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
-	[CustomEditor(typeof(NetworkManager))]
+	[CustomEditor(typeof(MonoNetworkManager))]
 	internal class NetworkManagerEditor : Editor
 	{
 		private Editor _settingsEditor = null;
@@ -19,7 +19,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 			get
 			{
 				if (_settingsEditor == null)
-					_settingsEditor = Editor.CreateEditor(((NetworkManager)target).NetworkConfiguration);
+					_settingsEditor = Editor.CreateEditor(((MonoNetworkManager)target).NetworkConfiguration);
 				return _settingsEditor;
 			}
 		}
@@ -53,7 +53,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
 		private void OnEnable()
 		{
-            var manager = (NetworkManager)target;
+            var manager = (MonoNetworkManager)target;
             manager.Events.OnConnectionStatusUpdated += Repaint;
             manager.Events.OnConnectedClientListUpdated += Repaint;
             manager.Events.OnOpenServerListUpdated += Repaint;
@@ -62,7 +62,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
 		private void OnDisable()
 		{
-            var manager = (NetworkManager)target;
+            var manager = (MonoNetworkManager)target;
             manager.Events.OnConnectionStatusUpdated -= Repaint;
             manager.Events.OnConnectedClientListUpdated -= Repaint;
             manager.Events.OnOpenServerListUpdated -= Repaint;
@@ -71,7 +71,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
 		public override void OnInspectorGUI()
 		{
-			var manager = (NetworkManager)target;
+			var manager = (MonoNetworkManager)target;
 
 			manager.NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(manager.NetworkConfiguration, typeof(NetworkConfiguration), true);
 			if (manager.NetworkConfiguration != null)
@@ -92,7 +92,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             ShowSystemMessages();
         }
 
-        private void ShowConnectedGUI(NetworkManager manager)
+        private void ShowConnectedGUI(MonoNetworkManager manager)
 		{
             // connected clients list
             GUILayout.Label($"Current Server: {manager.ServerInformation.Servername}");
@@ -125,7 +125,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 manager.DisconnectFromServer();
         }
 
-        private void ShowDisconnectedGUI(NetworkManager manager)
+        private void ShowDisconnectedGUI(MonoNetworkManager manager)
 		{
             // open servers list
             _serversViewPos = EditorGUILayout.BeginScrollView(_serversViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(200));
