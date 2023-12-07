@@ -8,7 +8,7 @@ using UnityEditor;
 
 public class StructTest : MonoBehaviour
 {
-    [SerializeField] private NetworkManager _manager;
+    [SerializeField] private MonoNetworkManager _manager;
     [SerializeField] private Transform _obj1;
     [SerializeField] private Transform _obj2;
     
