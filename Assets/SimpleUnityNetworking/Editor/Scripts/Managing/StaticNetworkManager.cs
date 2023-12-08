@@ -72,12 +72,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private static NetworkManager _networkManager;
 
-        private static NetworkManager NetworkManager
+        public static NetworkManager NetworkManager
         {
             get
             {
                 if (_networkManager == null)
-                    _networkManager = new();
+                    _networkManager = new(BeforeCreateServer, BeforeJoinServer, false);
                 return _networkManager;
             }
         }
@@ -88,6 +88,17 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         static StaticNetworkManager()
         {
+            NetworkManager.Events.OnConnected += () => ListenForStateChange(true);
+            NetworkManager.Events.OnDisconnected += () => ListenForStateChange(false);
+
+            EditorApplication.playModeStateChanged += state =>
+            {
+                if (state == PlayModeStateChange.EnteredPlayMode)
+                    EndServerDiscovery();
+                if (state == PlayModeStateChange.EnteredEditMode)
+                    StartServerDiscovery();
+            };
+
             StartServerDiscovery();
         }
 
@@ -103,11 +114,16 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="onConnectionEstablished">Will be called once the server was successfully or failed to be created</param>
         public static void CreateServer(string servername, byte maxNumberClients, Action<bool> onConnectionEstablished = null)
         {
-            if (Application.isPlaying) return;
-
-            onConnectionEstablished += ListenForStateChange;
-
             NetworkManager.CreateServer(servername, maxNumberClients, onConnectionEstablished);
+        }
+        private static bool BeforeCreateServer(string servername, byte maxNumberClients, Action<bool> onConnectionEstablished = null)
+        {
+            if (Application.isPlaying)
+            {
+                Debug.LogWarning("Can not create server with static network manager while in play mode.");
+                return false;
+            }
+            return true;
         }
 
         /// <summary>
@@ -118,11 +134,16 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="onConnectionEstablished">Will be called once the connection to the server was successfully or failed to be created</param>
         public static void JoinServer(IPAddress serverIP, int serverPort, Action<bool> onConnectionEstablished = null)
         {
-            if (Application.isPlaying) return;
-
-            onConnectionEstablished += ListenForStateChange;
-
             NetworkManager.JoinServer(serverIP, serverPort, onConnectionEstablished);
+        }
+        public static bool BeforeJoinServer(IPAddress serverIP, int serverPort, Action<bool> onConnectionEstablished = null)
+        {
+            if (Application.isPlaying)
+            {
+                Debug.LogWarning("Can not join server with static network manager while in play mode.");
+                return false;
+            }
+            return true;
         }
 
         /// <summary>
@@ -131,8 +152,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public static void DisconnectFromServer()
         {
             NetworkManager.DisconnectFromServer();
-
-            ListenForStateChange(false);
         }
 
         /// <summary>

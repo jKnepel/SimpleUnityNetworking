@@ -75,6 +75,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         #endregion
 
+        public delegate bool BeforeCreateServer(string servername, byte maxNumberClients, Action<bool> onConnectionEstablished = null);
+        public delegate bool BeforeJoinServer(IPAddress serverIP, int serverPort, Action<bool> onConnectionEstablished = null);
+
         #region private members
 
         private static NetworkConfiguration _networkConfiguration;
@@ -82,12 +85,20 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private ANetworkSocket _networkSocket;
         private ServerDiscoveryManager _serverDiscovery;
 
+        private BeforeCreateServer _beforeCreateServer = null;
+        private BeforeJoinServer _beforeJoinServer = null;
+
         #endregion
+
 
         #region lifecycle
 
-        public NetworkManager(bool startServerDiscovery = true)
+        public NetworkManager(BeforeCreateServer beforeCreateServer, BeforeJoinServer beforeJoinServer,
+            bool startServerDiscovery = true)
         {
+            _beforeCreateServer = beforeCreateServer;
+            _beforeJoinServer = beforeJoinServer;
+
             Messaging.OnNetworkMessageAdded += Events.FireOnNetworkMessageAdded;
             if (startServerDiscovery) StartServerDiscovery();
         }
@@ -118,6 +129,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="onConnectionEstablished">Will be called once the server was successfully or failed to be created</param>
         public void CreateServer(string servername, byte maxNumberClients, Action<bool> onConnectionEstablished = null)
         {
+            if (!(_beforeCreateServer?.Invoke(servername, maxNumberClients, onConnectionEstablished) ?? false)) return;
+
             if (IsConnected)
             {
                 Messaging.DebugMessage("The Client is already hosting a server!");
@@ -135,7 +148,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             server.OnClientConnected += Events.FireOnClientConnected;
             server.OnClientDisconnected += Events.FireOnClientDisconnected;
             server.OnConnectedClientListUpdated += Events.FireOnConnectedClientListUpdated;
-            server.StartServer(NetworkConfiguration, servername, maxNumberClients, onConnectionEstablished);
+            server.StartServer(NetworkConfiguration, servername, maxNumberClients, onConnectionEstablished); // Bug: The onConnectionEstablished event is not fired!
         }
 
         /// <summary>
@@ -146,6 +159,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="onConnectionEstablished">Will be called once the connection to the server was successfully or failed to be created</param>
         public void JoinServer(IPAddress serverIP, int serverPort, Action<bool> onConnectionEstablished = null)
         {
+            if (!(_beforeJoinServer?.Invoke(serverIP, serverPort, onConnectionEstablished) ?? false)) return;
+
             if (IsConnected)
             {
                 Messaging.DebugMessage("The Client is already connected to a server!");
@@ -163,7 +178,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             client.OnClientConnected += Events.FireOnClientConnected;
             client.OnClientDisconnected += Events.FireOnClientDisconnected;
             client.OnConnectedClientListUpdated += Events.FireOnConnectedClientListUpdated;
-            client.ConnectToServer(NetworkConfiguration, serverIP, serverPort, onConnectionEstablished);
+            client.ConnectToServer(NetworkConfiguration, serverIP, serverPort, onConnectionEstablished); // Bug: The onConnectionEstablished event is not fired!
         }
 
         /// <summary>

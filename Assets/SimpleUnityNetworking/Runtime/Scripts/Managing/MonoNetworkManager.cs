@@ -71,12 +71,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private NetworkManager _networkManager;
 
-        private NetworkManager NetworkManager
+        public NetworkManager NetworkManager
         {
             get
             {
                 if (_networkManager == null)
-                    _networkManager = new();
+                    _networkManager = new(BeforeCreateServer, BeforeJoinServer, false);
                 return _networkManager;
             }
         }
@@ -85,12 +85,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         #region lifecycle
 
-        private void OnEnable()
+        private void Start()
         {
             StartServerDiscovery();
         }
 
-        private void OnDisable()
+        private void OnDestroy()
         {
             NetworkManager.Dispose();
         }
@@ -107,9 +107,16 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="onConnectionEstablished">Will be called once the server was successfully or failed to be created</param>
         public void CreateServer(string servername, byte maxNumberClients, Action<bool> onConnectionEstablished = null)
         {
-            if (!Application.isPlaying) return;
-
             NetworkManager.CreateServer(servername, maxNumberClients, onConnectionEstablished);
+        }
+        private bool BeforeCreateServer(string servername, byte maxNumberClients, Action<bool> onConnectionEstablished = null)
+        {
+            if (!Application.isPlaying)
+            {
+                Debug.LogWarning("Can not create server with mono network manager while in edit mode.");
+                return false;
+            }
+            return true;
         }
 
         /// <summary>
@@ -120,11 +127,17 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="onConnectionEstablished">Will be called once the connection to the server was successfully or failed to be created</param>
         public void JoinServer(IPAddress serverIP, int serverPort, Action<bool> onConnectionEstablished = null)
         {
-            if (!Application.isPlaying) return;
-
             NetworkManager.JoinServer(serverIP, serverPort, onConnectionEstablished);
         }
-
+        public bool BeforeJoinServer(IPAddress serverIP, int serverPort, Action<bool> onConnectionEstablished = null)
+        {
+            if (!Application.isPlaying)
+            {
+                Debug.LogWarning("Can not join server with mono network manager while in edit mode.");
+                return false;
+            }
+            return true;
+        }
         /// <summary>
         /// Disconnects from the current server. Also closes the server if the local client is the host.
         /// </summary>
