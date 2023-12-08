@@ -98,8 +98,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 if (state == PlayModeStateChange.EnteredEditMode)
                     StartServerDiscovery();
             };
-
-            StartServerDiscovery();
         }
 
         #endregion
@@ -159,6 +157,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public static void StartServerDiscovery()
         {
+            if (Application.isPlaying) return;
+
             NetworkManager.StartServerDiscovery();
         }
 

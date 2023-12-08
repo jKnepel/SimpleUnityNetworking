@@ -25,14 +25,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             get
             {
-                if (_settingsEditor == null)
+                if (_settingsEditor == null && NetworkConfiguration)
                     _settingsEditor = Editor.CreateEditor(NetworkConfiguration);
                 return _settingsEditor;
             }
         }
 
         private Vector2 _scrollViewPosition = Vector2.zero;
-        
+
         private NetworkManagerEditor _networkManagerEditor = null;
         private NetworkManagerEditor NetworkManagerEditor
         {
@@ -68,14 +68,24 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 return;
             }
 
+            if(StaticNetworkManager.NetworkManager == null)
+            {
+                GUILayout.Label("The network manager is null. Can not show settings.", EditorStyles.largeLabel);
+                return;
+            }
+
             _scrollViewPosition = EditorGUILayout.BeginScrollView(_scrollViewPosition);
             EditorGUILayout.BeginVertical(EditorStyles.inspectorDefaultMargins);
 
             GUILayout.Label("Network Manager", EditorStyles.largeLabel);
 
-            StaticNetworkManager.NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(StaticNetworkManager.NetworkConfiguration, typeof(NetworkConfiguration), true);
-            if (StaticNetworkManager.NetworkConfiguration != null)
-                SettingsEditor.OnInspectorGUI();
+            NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(_cachedNetworkConfiguration, typeof(NetworkConfiguration), false) ??
+                NetworkManager.LoadOrCreateConfiguration<NetworkConfiguration>();
+
+            if (NetworkConfiguration != null)
+                StaticNetworkManager.StartServerDiscovery();
+
+            SettingsEditor?.OnInspectorGUI();
 
             EditorGUILayout.Space();
             EditorGUILayout.Space();
