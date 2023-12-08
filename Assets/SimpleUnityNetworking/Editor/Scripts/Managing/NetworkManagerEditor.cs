@@ -106,7 +106,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private void ShowDisconnectedGUI(NetworkManager manager)
         {
             // open servers list
-            _serversViewPos = EditorGUILayout.BeginScrollView(_serversViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(200));
+            _serversViewPos = EditorGUILayout.BeginScrollView(_serversViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MinHeight(50), GUILayout.MaxHeight(200));
             {
                 if (manager.IsServerDiscoveryActive)
                 {

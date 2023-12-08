@@ -7,13 +7,25 @@ namespace jKnepel.SimpleUnityNetworking.Managing
     [CustomEditor(typeof(MonoNetworkManager))]
     internal class MonoNetworkManagerEditor : Editor
     {
+        private NetworkConfiguration NetworkConfiguration
+        {
+            get => Target.NetworkConfiguration;
+            set
+            {
+                if (Target.NetworkConfiguration != value)
+                    _settingsEditor = null;
+
+                Target.NetworkConfiguration = value;
+            }
+        }
+
         private Editor _settingsEditor = null;
         public Editor SettingsEditor
         {
             get
             {
-                if (_settingsEditor == null)
-                    _settingsEditor = Editor.CreateEditor(((MonoNetworkManager)target).NetworkConfiguration);
+                if (_settingsEditor == null && NetworkConfiguration)
+                    _settingsEditor = Editor.CreateEditor(NetworkConfiguration);
                 return _settingsEditor;
             }
         }
@@ -29,25 +41,43 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
-        private void OnEnable()
+        [SerializeField] private MonoNetworkManager _target = null;
+        private MonoNetworkManager Target
         {
-            var manager = (MonoNetworkManager)target;
-            NetworkManagerEditor.SubscribeNetworkEvents(manager.Events, Repaint);
+            get
+            {
+                if (_target == null)
+                {
+                    _target = (MonoNetworkManager)target;
+                    NetworkManagerEditor.SubscribeNetworkEvents(_target.Events, Repaint);
+                }
+                return _target;
+            }
         }
 
-        private void OnDisable()
+        private void OnDestroy()
         {
-            var manager = (MonoNetworkManager)target;
-            NetworkManagerEditor.UnsubscribeNetworkEvents(manager.Events, Repaint);
+            NetworkManagerEditor.UnsubscribeNetworkEvents(Target.Events, Repaint);
         }
 
         public override void OnInspectorGUI()
         {
-            var manager = (MonoNetworkManager)target;
+            if (EditorApplication.isCompiling)
+            {
+                GUILayout.Label("The editor is compiling...\nSettings will show up after recompile.", EditorStyles.largeLabel);
+                return;
+            }
 
-            manager.NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(manager.NetworkConfiguration, typeof(NetworkConfiguration), true);
-            if (manager.NetworkConfiguration != null)
-                SettingsEditor.OnInspectorGUI();
+            if (Target.NetworkManager == null)
+            {
+                GUILayout.Label("The network manager is null. Can not show settings.", EditorStyles.largeLabel);
+                return;
+            }
+
+            NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(NetworkConfiguration, typeof(NetworkConfiguration), false) ??
+                NetworkManager.LoadOrCreateConfiguration<NetworkConfiguration>();
+
+            SettingsEditor?.OnInspectorGUI();
 
             EditorGUILayout.Space();
             EditorGUILayout.Space();
@@ -56,7 +86,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 GUILayout.Label("Functionality is disabled in edit mode.");
 
             EditorGUI.BeginDisabledGroup(!Application.isPlaying);
-            NetworkManagerEditor.OnInspectorGUI(manager.NetworkManager);
+            NetworkManagerEditor.OnInspectorGUI(Target.NetworkManager);
             EditorGUI.EndDisabledGroup();
         }
     }

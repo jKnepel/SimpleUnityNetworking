@@ -13,13 +13,18 @@ namespace jKnepel.SimpleUnityNetworking.Managing
     {
         #region public members
 
+        [SerializeField] private NetworkConfiguration _cachedNetworkConfiguration = null;
         /// <summary>
         /// The Configuration for the networking.
         /// </summary>
         public NetworkConfiguration NetworkConfiguration
         {
-            get => NetworkManager.NetworkConfiguration;
-            set => NetworkManager.NetworkConfiguration = value;
+            get => _cachedNetworkConfiguration;
+            set
+            {
+                _cachedNetworkConfiguration = value;
+                NetworkManager.NetworkConfiguration = _cachedNetworkConfiguration;
+            }
         }
 
         /// <summary>
@@ -69,7 +74,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         #region private members
 
-        private NetworkManager _networkManager;
+        [SerializeField] private NetworkManager _networkManager;
 
         public NetworkManager NetworkManager
         {
@@ -151,6 +156,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public void StartServerDiscovery()
         {
+            if (!Application.isPlaying) return;
+
             NetworkManager.StartServerDiscovery();
         }
 

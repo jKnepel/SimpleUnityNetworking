@@ -22,12 +22,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public NetworkConfiguration NetworkConfiguration
         {
-            get
-            {
-                if (_networkConfiguration == null)
-                    _networkConfiguration = LoadOrCreateConfiguration<NetworkConfiguration>();
-                return _networkConfiguration;
-            }
+            get => _networkConfiguration;
             set => _networkConfiguration = value;
         }
         /// <summary>
@@ -66,12 +61,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// All open servers that the local client could connect to.
         /// </summary>
-        public List<OpenServer> OpenServers => _serverDiscovery?.OpenServers ?? null;
+        public List<OpenServer> OpenServers => _serverDiscovery?.OpenServers;
 
         /// <summary>
         /// Network events.
         /// </summary>
-        public NetworkEvents Events { get; } = new NetworkEvents();
+        public NetworkEvents Events => _networkEvents;
 
         #endregion
 
@@ -80,10 +75,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         #region private members
 
-        private static NetworkConfiguration _networkConfiguration;
-
+        private NetworkConfiguration _networkConfiguration;
         private ANetworkSocket _networkSocket;
         private ServerDiscoveryManager _serverDiscovery;
+        private NetworkEvents _networkEvents;
 
         private BeforeCreateServer _beforeCreateServer = null;
         private BeforeJoinServer _beforeJoinServer = null;
@@ -99,6 +94,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             _beforeCreateServer = beforeCreateServer;
             _beforeJoinServer = beforeJoinServer;
 
+            _networkEvents = new NetworkEvents();
             Messaging.OnNetworkMessageAdded += Events.FireOnNetworkMessageAdded;
             if (startServerDiscovery) StartServerDiscovery();
         }
@@ -457,6 +453,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             {
                 configuration = ScriptableObject.CreateInstance<T>();
             }
+
+            Debug.Log($"Network configuration {(configuration ? "loaded" : "not loaded")}.");
 
             return configuration;
         }
