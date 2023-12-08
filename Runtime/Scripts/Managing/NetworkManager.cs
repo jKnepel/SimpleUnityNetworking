@@ -8,7 +8,9 @@ using jKnepel.SimpleUnityNetworking.Networking.Sockets;
 using jKnepel.SimpleUnityNetworking.Utilities;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using System.IO;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
@@ -414,6 +416,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             T configuration = Resources.Load<T>(Path.GetFileNameWithoutExtension(name));
 
+#if UNITY_EDITOR
             string fullPath = path + name + ".asset";
 
             if (!configuration)
@@ -448,6 +451,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 AssetDatabase.CreateAsset(configuration, fullPath);
                 AssetDatabase.SaveAssets();
             }
+#endif
 
             if (!configuration)
             {
