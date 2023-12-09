@@ -68,7 +68,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 return;
             }
 
-            if(StaticNetworkManager.NetworkManager == null)
+            if (StaticNetworkManager.NetworkManager == null)
             {
                 GUILayout.Label("The network manager is null. Can not show settings.", EditorStyles.largeLabel);
                 return;
@@ -79,8 +79,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             GUILayout.Label("Network Manager", EditorStyles.largeLabel);
 
-            NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(_cachedNetworkConfiguration, typeof(NetworkConfiguration), false) ??
-                NetworkManager.LoadOrCreateConfiguration<NetworkConfiguration>();
+            if (!StaticNetworkManager.IsConnected)
+                NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(_cachedNetworkConfiguration, typeof(NetworkConfiguration), false) ??
+                    NetworkManager.LoadOrCreateConfiguration<NetworkConfiguration>();
 
             if (NetworkConfiguration != null)
                 StaticNetworkManager.StartServerDiscovery();

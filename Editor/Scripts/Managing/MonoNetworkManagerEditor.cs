@@ -74,9 +74,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 return;
             }
 
-            NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(NetworkConfiguration, typeof(NetworkConfiguration), false) ??
-                NetworkManager.LoadOrCreateConfiguration<NetworkConfiguration>();
-
+            if (!EditorApplication.isPlaying)
+                NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(NetworkConfiguration, typeof(NetworkConfiguration), false) ??
+                    NetworkManager.LoadOrCreateConfiguration<NetworkConfiguration>();
+            
             SettingsEditor?.OnInspectorGUI();
 
             EditorGUILayout.Space();
