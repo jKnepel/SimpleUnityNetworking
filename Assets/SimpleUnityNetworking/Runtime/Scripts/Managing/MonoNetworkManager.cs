@@ -6,6 +6,10 @@ using UnityEngine;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
+#if UNITY_EDITOR
+using UnityEditor;
+using UnityEditor.SceneManagement;
+#endif
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
@@ -28,8 +32,17 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     return;
                 }
 
-                _cachedNetworkConfiguration = value;
-                NetworkManager.NetworkConfiguration = _cachedNetworkConfiguration;
+                if (_cachedNetworkConfiguration != value)
+                {
+                    _cachedNetworkConfiguration = value;
+                    NetworkManager.NetworkConfiguration = _cachedNetworkConfiguration;
+
+#if UNITY_EDITOR
+                    // This is needed for changes inside prefabs
+                    EditorSceneManager.MarkSceneDirty(gameObject.scene);
+                    EditorUtility.SetDirty(_cachedNetworkConfiguration);
+#endif
+                }
             }
         }
 
