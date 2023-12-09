@@ -22,6 +22,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             get => _cachedNetworkConfiguration;
             set
             {
+                if (Application.isPlaying)
+                {
+                    Debug.LogWarning($"Can not change {nameof(NetworkConfiguration)} when in play mode.");
+                    return;
+                }
+
                 _cachedNetworkConfiguration = value;
                 NetworkManager.NetworkConfiguration = _cachedNetworkConfiguration;
             }
