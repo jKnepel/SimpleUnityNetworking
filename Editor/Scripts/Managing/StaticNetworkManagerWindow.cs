@@ -85,6 +85,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             if (NetworkConfiguration != null)
                 StaticNetworkManager.StartServerDiscovery();
+            
+            EditorGUILayout.Space();
+
+            if (GUILayout.Button(new GUIContent("Randomize User Information"), GUILayout.ExpandWidth(false)))
+                {
+                NetworkConfiguration.Username = $"User_{Random.Range(0, 100)}";
+                NetworkConfiguration.Color = new Color(Random.value, Random.value, Random.value);
+            }
 
             SettingsEditor?.OnInspectorGUI();
 
