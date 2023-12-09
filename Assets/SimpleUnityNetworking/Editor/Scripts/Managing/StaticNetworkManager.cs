@@ -20,7 +20,16 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public static NetworkConfiguration NetworkConfiguration
         {
             get => NetworkManager.NetworkConfiguration;
-            set => NetworkManager.NetworkConfiguration = value;
+            set
+            {
+                if (NetworkManager.IsConnected)
+                {
+                    Debug.LogWarning($"Can not change {nameof(NetworkConfiguration)} when connected.");
+                    return;
+                }
+
+                NetworkManager.NetworkConfiguration = value;
+            }
         }
 
         /// <summary>
