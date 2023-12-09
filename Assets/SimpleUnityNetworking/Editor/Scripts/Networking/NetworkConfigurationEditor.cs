@@ -13,13 +13,18 @@ namespace jKnepel.SimpleUnityNetworking.Networking
 
         private SerializedProperty _serialiserSettings;
 
-		private void OnEnable()
-		{
-            _serialiserSettings = serializedObject.FindProperty("_serialiserConfiguration");
-		}
+        private SerializedProperty SerialiserSettings
+        {
+            get
+            {
+                if (_serialiserSettings == null)
+                    _serialiserSettings = serializedObject.FindProperty("_serialiserConfiguration");
+                return _serialiserSettings;
+            }
+        }
 
-		// TODO : add descriptions to labels, was too lazy
-		public override void OnInspectorGUI()
+        // TODO : add descriptions to labels, was too lazy
+        public override void OnInspectorGUI()
         {
             var settings = (NetworkConfiguration)target;
 
@@ -45,14 +50,14 @@ namespace jKnepel.SimpleUnityNetworking.Networking
                 settings.ServerHeartbeatDelay = EditorGUILayout.IntField("Heartbeat Delay:", settings.ServerHeartbeatDelay);
                 settings.ServerDiscoveryTimeout = EditorGUILayout.IntField("ServerDiscovery Timeout:", settings.ServerDiscoveryTimeout);
                 settings.MaxNumberResendReliablePackets = EditorGUILayout.IntField("Number of Resends of Reliable Packets: ", settings.MaxNumberResendReliablePackets);
-                
+
                 EditorGUI.indentLevel--;
             }
 
-			_serialiserSettingsIsVisible = EditorGUILayout.Foldout(_serialiserSettingsIsVisible, "Serialiser Configuration Settings", EditorStyles.foldoutHeader);
+            _serialiserSettingsIsVisible = EditorGUILayout.Foldout(_serialiserSettingsIsVisible, "Serialiser Configuration Settings", EditorStyles.foldoutHeader);
             if (_serialiserSettingsIsVisible)
             {
-                EditorGUILayout.PropertyField(_serialiserSettings);
+                EditorGUILayout.PropertyField(SerialiserSettings);
             }
 
             _serverDiscoverySettingsIsVisible = EditorGUILayout.Foldout(_serverDiscoverySettingsIsVisible, "Server Discovery Settings", EditorStyles.foldoutHeader);
