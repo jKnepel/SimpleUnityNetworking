@@ -81,7 +81,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             get
             {
                 if (_networkManager == null)
+                {
                     _networkManager = new(BeforeCreateServer, BeforeJoinServer, false);
+                    _networkManager.NetworkConfiguration = NetworkConfiguration;
+                }
                 return _networkManager;
             }
         }
