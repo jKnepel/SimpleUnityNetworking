@@ -69,6 +69,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 			}
 		}
 
-        public abstract void SendStructData<T>(byte receiverID, T StructData, ENetworkChannel networkChannel, Action<bool> onDataSend = null) where T : struct, IStructData;
+        public abstract void SendStructData<T>(byte receiverID, T structData, ENetworkChannel networkChannel, Action<bool> onDataSend = null) where T : struct, IStructData;
     }
 }

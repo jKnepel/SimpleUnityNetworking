@@ -11,27 +11,59 @@ namespace jKnepel.SimpleUnityNetworking
 {
     public interface INetworkManager
     {
-        NetworkConfiguration NetworkConfiguration { get; set; }
+		/// <summary>
+		/// The Configuration for the networking.
+		/// </summary>
+		NetworkConfiguration NetworkConfiguration { get; set; }
+		/// <summary>
+		/// Events relating to the state of the network.
+		/// </summary>
+		NetworkEvents Events { get; }
 
-        bool IsConnected { get; }
+		/// <summary>
+		/// Whether the local client is currently connected to or hosting a server.
+		/// </summary>
+		bool IsConnected { get; }
 
-        public bool IsHost { get; }
+		/// <summary>
+		/// Whether the local client is currently hosting a lobby.
+		/// </summary>
+		public bool IsHost { get; }
 
-        EConnectionStatus ConnectionStatus { get; }
+		/// <summary>
+		/// The current connection status of the local client.
+		/// </summary>
+		EConnectionStatus ConnectionStatus { get; }
 
-        ServerInformation ServerInformation { get; }
+		/// <summary>
+		/// Information on the server the client is currently connected to.
+		/// </summary>
+		ServerInformation ServerInformation { get; }
 
-        ClientInformation ClientInformation { get; }
+		/// <summary>
+		/// Information on the local clients information associated with the server they are connected to.
+		/// </summary>
+		ClientInformation ClientInformation { get; }
 
-        ConcurrentDictionary<byte, ClientInformation> ConnectedClients { get; }
+		/// <summary>
+		/// All other clients that are connected to the same server as the local client.
+		/// </summary>
+		ConcurrentDictionary<byte, ClientInformation> ConnectedClients { get; }
 
-        byte NumberConnectedClients { get; }
+		/// <summary>
+		/// The number of connected clients.
+		/// </summary>
+		byte NumberConnectedClients { get; }
 
-        bool IsServerDiscoveryActive { get; }
+		/// <summary>
+		/// Whether the server discovery is currently active or not.
+		/// </summary>
+		bool IsServerDiscoveryActive { get; }
 
-        List<OpenServer> OpenServers { get; }
-
-        NetworkEvents Events { get; }
+		/// <summary>
+		/// All open servers that the local client could connect to.
+		/// </summary>
+		List<OpenServer> OpenServers { get; }
 
         /// <summary>
         /// Creates a new server with the local client has host.
@@ -72,14 +104,14 @@ namespace jKnepel.SimpleUnityNetworking
         /// <summary>
         /// Registers a callback for received data structs of type <typeparamref name="T"/>. Only works if the local client is currently connected to a server.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="callback">Callback containing the sender ID and synchronised data struct</param>
         void RegisterStructData<T>(Action<byte, T> callback) where T : struct, IStructData;
 
         /// <summary>
         /// Unregisters a registered callback for received data structs of type <typeparamref name="T"/>. Only works if the local client is currently connected to a server.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="callback">Callback containing the sender ID and synchronised data struct</param>
         void UnregisterStructData<T>(Action<byte, T> callback) where T : struct, IStructData;
 
@@ -100,7 +132,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <summary>
         /// Sends a struct over the network to all other connected clients.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="structData"></param>
         /// <param name="networkChannel"></param>
         /// <param name="onDataSend"></param>
@@ -110,7 +142,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <summary>
         /// Sends a struct over the network to the server.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="structData"></param>
         /// <param name="networkChannel"></param>
         /// <param name="onDataSend"></param>
@@ -120,7 +152,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <summary>
         /// Sends a struct over the network to a specific client.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="receiverID"></param>
         /// <param name="structData"></param>
         /// <param name="networkChannel"></param>

@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using jKnepel.SimpleUnityNetworking.Networking;
+using jKnepel.SimpleUnityNetworking.Utilities;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
@@ -25,7 +26,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             get
             {
-                if (_settingsEditor == null && NetworkConfiguration)
+                if (_settingsEditor is null && NetworkConfiguration)
                     _settingsEditor = Editor.CreateEditor(NetworkConfiguration);
                 return _settingsEditor;
             }
@@ -81,15 +82,15 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             if (!StaticNetworkManager.IsConnected)
                 NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(_cachedNetworkConfiguration, typeof(NetworkConfiguration), false) ??
-                    NetworkManager.LoadOrCreateConfiguration<NetworkConfiguration>();
+                    UnityUtilities.LoadOrCreateScriptableObject<NetworkConfiguration>("NetworkConfiguration", "Assets/Resources/");
 
-            if (NetworkConfiguration != null)
+            if (NetworkConfiguration is not null)
                 StaticNetworkManager.StartServerDiscovery();
             
             EditorGUILayout.Space();
 
             if (GUILayout.Button(new GUIContent("Randomize User Information"), GUILayout.ExpandWidth(false)))
-                {
+            {
                 NetworkConfiguration.Username = $"User_{Random.Range(0, 100)}";
                 NetworkConfiguration.Color = new Color(Random.value, Random.value, Random.value);
             }

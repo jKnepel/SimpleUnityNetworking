@@ -167,6 +167,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5cfb563979cd3084cb4cac07aa21d8f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _cachedNetworkConfiguration: {fileID: 11400000, guid: aa49a109daf20ad4cb686d0f17cac280, type: 2}
 --- !u!1 &705507993
 GameObject:
   m_ObjectHideFlags: 0

@@ -31,13 +31,17 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 NetworkManager.NetworkConfiguration = value;
             }
         }
+        /// <summary>
+        /// Network events.
+        /// </summary>
+        public static NetworkEvents Events => NetworkManager.Events;
 
         /// <summary>
-        /// Wether the local client is currently connected to or hosting a server.
+        /// Whether the local client is currently connected to or hosting a server.
         /// </summary>
         public static bool IsConnected => NetworkManager.IsConnected;
         /// <summary>
-        /// Wether the local client is currently hosting a lobby.
+        /// Whether the local client is currently hosting a lobby.
         /// </summary>
         public static bool IsHost => NetworkManager.IsHost;
         /// <summary>
@@ -62,18 +66,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public static byte NumberConnectedClients => NetworkManager.NumberConnectedClients;
 
         /// <summary>
-        /// Wether the server discovery is currently active or not.
+        /// Whether the server discovery is currently active or not.
         /// </summary>
         public static bool IsServerDiscoveryActive => NetworkManager.IsServerDiscoveryActive;
         /// <summary>
         /// All open servers that the local client could connect to.
         /// </summary>
         public static List<OpenServer> OpenServers => NetworkManager.OpenServers;
-
-        /// <summary>
-        /// Network events.
-        /// </summary>
-        public static NetworkEvents Events => NetworkManager.Events;
 
         #endregion
 
@@ -86,7 +85,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             get
             {
                 if (_networkManager == null)
-                    _networkManager = new(BeforeCreateServer, BeforeJoinServer, false);
+                    _networkManager = new(false);
                 return _networkManager;
             }
         }
@@ -121,16 +120,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="onConnectionEstablished">Will be called once the server was successfully or failed to be created</param>
         public static void CreateServer(string servername, byte maxNumberClients, Action<bool> onConnectionEstablished = null)
         {
-            NetworkManager.CreateServer(servername, maxNumberClients, onConnectionEstablished);
-        }
-        private static bool BeforeCreateServer(string servername, byte maxNumberClients, Action<bool> onConnectionEstablished = null)
-        {
             if (Application.isPlaying)
             {
                 Debug.LogWarning("Can not create server with static network manager while in play mode.");
-                return false;
+                return;
             }
-            return true;
+            
+            NetworkManager.CreateServer(servername, maxNumberClients, onConnectionEstablished);
         }
 
         /// <summary>
@@ -141,16 +137,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="onConnectionEstablished">Will be called once the connection to the server was successfully or failed to be created</param>
         public static void JoinServer(IPAddress serverIP, int serverPort, Action<bool> onConnectionEstablished = null)
         {
-            NetworkManager.JoinServer(serverIP, serverPort, onConnectionEstablished);
-        }
-        public static bool BeforeJoinServer(IPAddress serverIP, int serverPort, Action<bool> onConnectionEstablished = null)
-        {
             if (Application.isPlaying)
             {
                 Debug.LogWarning("Can not join server with static network manager while in play mode.");
-                return false;
+                return;
             }
-            return true;
+            
+            NetworkManager.JoinServer(serverIP, serverPort, onConnectionEstablished);
         }
 
         /// <summary>
@@ -190,7 +183,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// Registers a callback for received data structs of type <typeparamref name="T"/>. Only works if the local client is currently connected to a server.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="callback">Callback containing the sender ID and synchronised data struct</param>
         public static void RegisterStructData<T>(Action<byte, T> callback) where T : struct, IStructData
         {
@@ -200,7 +193,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// Unregisters a registered callback for received data structs of type <typeparamref name="T"/>. Only works if the local client is currently connected to a server.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="callback">Callback containing the sender ID and synchronised data struct</param>
         public static void UnregisterStructData<T>(Action<byte, T> callback) where T : struct, IStructData
         {
@@ -230,7 +223,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// Sends a struct over the network to all other connected clients.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="structData"></param>
         /// <param name="networkChannel"></param>
         /// <param name="onDataSend"></param>
@@ -243,7 +236,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// Sends a struct over the network to the server.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="structData"></param>
         /// <param name="networkChannel"></param>
         /// <param name="onDataSend"></param>
@@ -256,7 +249,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// Sends a struct over the network to a specific client.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="receiverID"></param>
         /// <param name="structData"></param>
         /// <param name="networkChannel"></param>

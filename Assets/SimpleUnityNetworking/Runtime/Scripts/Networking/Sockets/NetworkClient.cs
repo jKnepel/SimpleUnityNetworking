@@ -57,16 +57,14 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         private readonly ConcurrentDictionary<ushort, byte[]> _sendPacketsBuffer = new();
         private readonly ConcurrentDictionary<(ushort, ushort), byte[]> _sendChunksBuffer = new();
 
-        private ushort _unreliableLocalSequence = 0;
-        private ushort _unreliableRemoteSequence = 0;
-        private ushort _reliableLocalSequence = 0;
-        private ushort _reliableRemoteSequence = 0;
+        private ushort _unreliableLocalSequence;
+        private ushort _unreliableRemoteSequence;
+        private ushort _reliableLocalSequence;
+        private ushort _reliableRemoteSequence;
 
         #endregion
 
         #region lifecycle
-
-        public NetworkClient() { }
 
         public void ConnectToServer(NetworkConfiguration config, IPAddress serverIP, int serverPort, Action<bool> onConnectionEstablished = null)
         {
@@ -127,16 +125,16 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 NetworkConfiguration = config;
                 _onConnectionEstablished = onConnectionEstablished;
 
-                _listenerThread = new(() => ListenerThread()) { IsBackground = true };
+                _listenerThread = new(ListenerThread) { IsBackground = true };
                 _listenerThread.Start();
-                _senderThread = new(() => SenderThread()) { IsBackground = true };
+                _senderThread = new(SenderThread) { IsBackground = true };
                 _senderThread.Start();
 
                 Messaging.SystemMessage("Connecting to Server...");
                 Writer writer = new();
                 writer.Write(new ConnectionRequestPacket());
                 SendConnectionPacket(EPacketType.ConnectionRequest, writer.GetBuffer());
-                _ = TimeoutEstablishConnection(onConnectionEstablished);
+                _ = TimeoutEstablishConnection();
             }
             catch (Exception ex)
             {
@@ -144,10 +142,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 {
                     case ObjectDisposedException:
                     case SocketException:
-                        Messaging.DebugMessage("An error ocurred when attempting to access the socket!");
+                        Messaging.DebugMessage("An error occurred when attempting to access the socket!");
                         break;
                     case ThreadStartException:
-                        Messaging.DebugMessage("An error ocurred when starting the threads. Please try again later!");
+                        Messaging.DebugMessage("An error occurred when starting the threads. Please try again later!");
                         break;
                     case OutOfMemoryException:
                         Messaging.DebugMessage("Not enough memory available to start the threads!");
@@ -211,7 +209,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             Dispose();
         }
 
-        public override void SendStructData<T>(byte receiverID, T StructData, ENetworkChannel networkChannel, Action<bool> onDataSend = null)
+        public override void SendStructData<T>(byte receiverID, T structData, ENetworkChannel networkChannel, Action<bool> onDataSend = null)
         {
             if (receiverID == ClientInformation.ID)
             {
@@ -225,20 +223,20 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 				|| NetworkConfiguration.SerialiserConfiguration.CompressQuaternions)
             {
                 BitWriter structWriter = new(NetworkConfiguration.SerialiserConfiguration);
-				structWriter.Write(StructData);
+				structWriter.Write(structData);
 				structBuffer = structWriter.GetBuffer();
 			}
             else
             {
 				Writer structWriter = new(NetworkConfiguration.SerialiserConfiguration);
-				structWriter.Write(StructData);
+				structWriter.Write(structData);
 				structBuffer = structWriter.GetBuffer();
 			}
 
             Writer writer = new();
-            DataPacket DataPacket = new(true, Hashing.GetFNV1Hash32(typeof(T).Name), receiverID, structBuffer);
+            DataPacket dataPacket = new(true, Hashing.GetFNV1Hash32(typeof(T).Name), receiverID, structBuffer);
             writer.Clear();
-            writer.Write(DataPacket);
+            writer.Write(dataPacket);
             _packetsToSend.Enqueue(new(receiverID, networkChannel, EPacketType.Data, writer.GetBuffer(), onDataSend));
         }
 
@@ -251,9 +249,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 return;
             }
 
-            DataPacket DataPacket = new(false, Hashing.GetFNV1Hash32(id), receiverID, data);
+            DataPacket dataPacket = new(false, Hashing.GetFNV1Hash32(id), receiverID, data);
             Writer writer = new(NetworkConfiguration.SerialiserConfiguration);
-			writer.Write(DataPacket);
+			writer.Write(dataPacket);
             _packetsToSend.Enqueue(new(receiverID, networkChannel, EPacketType.Data, writer.GetBuffer(), onDataSend));
         }
 
@@ -362,10 +360,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                         case SocketException:
                         case ObjectDisposedException:
                             Messaging.DebugMessage(ex.ToString());
-                            MainThreadQueue.Enqueue(() => Dispose());
+                            MainThreadQueue.Enqueue(Dispose);
                             return;
                         default:
-                            MainThreadQueue.Enqueue(() => Dispose());
+                            MainThreadQueue.Enqueue(Dispose);
                             ExceptionDispatchInfo.Capture(ex).Throw();
                             throw;
                     }
@@ -418,7 +416,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             ClientInformation = new(packet.ClientID, NetworkConfiguration.Username, NetworkConfiguration.Color);
             ServerInformation = new(_serverEndpoint, packet.Servername, packet.MaxNumberConnectedClients);
 
-            MainThreadQueue.Enqueue(() => _onConnectionEstablished?.Invoke(true));
+            MainThreadQueue.Enqueue(EstablishConnection);
             MainThreadQueue.Enqueue(() => ConnectionStatus = EConnectionStatus.IsConnected);
 
             Messaging.SystemMessage("Connected to Server!");
@@ -430,7 +428,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 return;
 
             MainThreadQueue.Enqueue(() => _onConnectionEstablished?.Invoke(false));
-            MainThreadQueue.Enqueue(() => Dispose());
+            MainThreadQueue.Enqueue(Dispose);
 
             switch (packet.Reason)
 			{
@@ -454,7 +452,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             if (!IsConnected)
                 return;
 
-            MainThreadQueue.Enqueue(() => Dispose());
+            MainThreadQueue.Enqueue(Dispose);
 
             switch (packet.Reason)
 			{
@@ -643,7 +641,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                             MainThreadQueue.Enqueue(() => ReceiveByteData(packet.DataID, packet.ClientID, packet.Data));
                         break;
 					}
-                default: break;
             }
         }
 
@@ -667,7 +664,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 }
                 catch (Exception ex)
                 {
-                    MainThreadQueue.Enqueue(() => Dispose());
+                    MainThreadQueue.Enqueue(Dispose);
                     ExceptionDispatchInfo.Capture(ex).Throw();
                     throw;
                 }
@@ -718,7 +715,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                     case SocketException:
                     case ObjectDisposedException:
                         Messaging.DebugMessage(ex.ToString());
-                        MainThreadQueue.Enqueue(() => Dispose());
+                        MainThreadQueue.Enqueue(Dispose);
                         return;
                 }
             }
@@ -817,7 +814,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                     case SocketException:
                     case ObjectDisposedException:
                         Messaging.DebugMessage(ex.ToString());
-                        MainThreadQueue.Enqueue(() => Dispose());
+                        MainThreadQueue.Enqueue(Dispose);
                         return;
                 }
             }
@@ -826,7 +823,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         /// <summary>
         /// Retry sending a Packet Slice after a Delay and within a maximum number of retries
         /// </summary>
-        /// <param name="client"></param>
         /// <param name="sequence"></param>
         /// <param name="retries"></param>
         /// <returns></returns>
@@ -847,7 +843,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         /// <summary>
         /// Retry sending a Packet after a Delay and within a maximum number of retries
         /// </summary>
-        /// <param name="client"></param>
         /// <param name="sequence"></param>
         /// <param name="retries"></param>
         /// <returns></returns>
@@ -872,14 +867,20 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         /// Stops the process of establishing a Connection, if it did not success within a given timeout.
         /// </summary>
         /// <returns></returns>
-        private async Task TimeoutEstablishConnection(Action<bool> onConnectionEstablished)
+        private async Task TimeoutEstablishConnection()
         {
             await Task.Delay(NetworkConfiguration.ServerConnectionTimeout);
-            if (!IsConnected)
+            if (!IsConnected && _onConnectionEstablished != null)
             {
                 Dispose();
-                onConnectionEstablished?.Invoke(false);
+                _onConnectionEstablished?.Invoke(false);
             }
+        }
+
+        private void EstablishConnection()
+        {
+            _onConnectionEstablished?.Invoke(true);
+            _onConnectionEstablished = null;
         }
 
         private void SendConnectionPacket(EPacketType packetType, byte[] data)
