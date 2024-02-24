@@ -73,7 +73,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery
                 _udpClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(_discoveryIP, _localIP));
                 _udpClient.Client.Bind(new IPEndPoint(_localIP, config.DiscoveryPort));
 
-                _discoveryThread = new(() => DiscoveryThread()) { IsBackground = true };
+                _discoveryThread = new(DiscoveryThread) { IsBackground = true };
                 _discoveryThread.Start();
 
                 OnServerDiscoveryActivated?.Invoke();
@@ -91,10 +91,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery
                         break;
                     case ObjectDisposedException:
                     case SocketException:
-                        Messaging.DebugMessage("An error ocurred when attempting to access the socket!");
+                        Messaging.DebugMessage("An error occurred when attempting to access the socket!");
                         break;
                     case ThreadStartException:
-                        Messaging.DebugMessage("An error ocurred when starting the threads. Please try again later!");
+                        Messaging.DebugMessage("An error occurred when starting the threads. Please try again later!");
                         break;
                     case OutOfMemoryException:
                         Messaging.DebugMessage("Not enough memory available to start the threads!");

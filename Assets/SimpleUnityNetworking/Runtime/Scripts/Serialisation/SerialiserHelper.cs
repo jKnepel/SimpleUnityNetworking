@@ -17,7 +17,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		}
 
 		// thanks to Glenn Fiedler https://gafferongames.com/post/reading_and_writing_packets/
-		static uint Popcount(uint x)
+		private static uint Popcount(uint x)
 		{
 			uint a = x - ((x >> 1) & 0x55555555);
 			uint b = ((a >> 2) & 0x33333333) + (a & 0x33333333);

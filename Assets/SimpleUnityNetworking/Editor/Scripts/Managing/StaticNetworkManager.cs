@@ -1,15 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
-using UnityEditor;
-using UnityEngine;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery;
-using jKnepel.SimpleUnityNetworking.Networking.Sockets;
-using jKnepel.SimpleUnityNetworking.Utilities;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
+using UnityEditor;
+using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
@@ -22,109 +19,76 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public static NetworkConfiguration NetworkConfiguration
         {
-            get
+            get => NetworkManager.NetworkConfiguration;
+            set
             {
-                if (_networkConfiguration == null)
-                    _networkConfiguration = LoadOrCreateConfiguration<NetworkConfiguration>();
-                return _networkConfiguration;
+                if (NetworkManager.IsConnected)
+                {
+                    Debug.LogWarning($"Can not change {nameof(NetworkConfiguration)} when connected.");
+                    return;
+                }
+
+                NetworkManager.NetworkConfiguration = value;
             }
-            set => _networkConfiguration = value;
         }
+        /// <summary>
+        /// Network events.
+        /// </summary>
+        public static NetworkEvents Events => NetworkManager.Events;
 
         /// <summary>
-        /// Wether the local client is currently connected to or hosting a server.
+        /// Whether the local client is currently connected to or hosting a server.
         /// </summary>
-        public static bool IsConnected => _networkSocket?.IsConnected ?? false;
+        public static bool IsConnected => NetworkManager.IsConnected;
         /// <summary>
-        /// Wether the local client is currently hosting a lobby.
+        /// Whether the local client is currently hosting a lobby.
         /// </summary>
-        public static bool IsHost => ClientInformation?.IsHost ?? false;
+        public static bool IsHost => NetworkManager.IsHost;
         /// <summary>
         /// The current connection status of the local client.
         /// </summary>
-        public static EConnectionStatus ConnectionStatus => _networkSocket?.ConnectionStatus ?? EConnectionStatus.IsDisconnected;
+        public static EConnectionStatus ConnectionStatus => NetworkManager.ConnectionStatus;
         /// <summary>
         /// Information on the server the client is currently connected to.
         /// </summary>
-        public static ServerInformation ServerInformation => _networkSocket?.ServerInformation ?? null;
+        public static ServerInformation ServerInformation => NetworkManager.ServerInformation;
         /// <summary>
         /// Information on the local clients information associated with the server they are connected to.
         /// </summary>
-        public static ClientInformation ClientInformation => _networkSocket?.ClientInformation ?? null;
+        public static ClientInformation ClientInformation => NetworkManager.ClientInformation;
         /// <summary>
         /// All other clients that are connected to the same server as the local client.
         /// </summary>
-        public static ConcurrentDictionary<byte, ClientInformation> ConnectedClients => _networkSocket?.ConnectedClients ?? null;
+        public static ConcurrentDictionary<byte, ClientInformation> ConnectedClients => NetworkManager.ConnectedClients;
         /// <summary>
         /// The number of connected clients.
         /// </summary>
-        public static byte NumberConnectedClients => (byte)(ConnectedClients?.Values.Count ?? 0);
+        public static byte NumberConnectedClients => NetworkManager.NumberConnectedClients;
 
         /// <summary>
-        /// Wether the server discovery is currently active or not.
+        /// Whether the server discovery is currently active or not.
         /// </summary>
-        public static bool IsServerDiscoveryActive => _serverDiscovery?.IsActive ?? false;
+        public static bool IsServerDiscoveryActive => NetworkManager.IsServerDiscoveryActive;
         /// <summary>
         /// All open servers that the local client could connect to.
         /// </summary>
-        public static List<OpenServer> OpenServers => _serverDiscovery?.OpenServers ?? null;
-
-        /// <summary>
-        /// Action for when connection to or creation of a server is being started.
-        /// </summary>
-        public static Action OnConnecting;
-        /// <summary>
-        /// Action for when successfully connecting to or creating a Server.
-        /// </summary>
-        public static Action OnConnected;
-        /// <summary>
-        /// Action for when disconnecting from or closing the Server.
-        /// </summary>
-        public static Action OnDisconnected;
-        /// <summary>
-        /// Action for when the connection status of the local client was updated.
-        /// </summary>
-        public static Action OnConnectionStatusUpdated;
-        /// <summary>
-        /// Action for when the server the local client was connected to was closed.
-        /// </summary>
-        public static Action OnServerWasClosed;
-        /// <summary>
-        /// Action for when a remote Client connected to the current Server and can now receive Messages.
-        /// </summary>
-        public static Action<byte> OnClientConnected;
-        /// <summary>
-        /// Action for when a remote Client disconnected from the current Server and can no longer receive any Messages.
-        /// </summary>
-        public static Action<byte> OnClientDisconnected;
-        /// <summary>
-        /// Action for when a Client was added or removed from ConnectedClients.
-        /// </summary>
-        public static Action OnConnectedClientListUpdated;
-        /// <summary>
-        /// Action for when the Server Discovery was activated.
-        /// </summary>
-        public static Action OnServerDiscoveryActivated;
-        /// <summary>
-        /// Action for when the Server Discovery was deactivated.
-        /// </summary>
-        public static Action OnServerDiscoveryDeactivated;
-        /// <summary>
-        /// Action for when a Server was added or removed from the OpenServers.
-        /// </summary>
-        public static Action OnOpenServerListUpdated;
-        /// <summary>
-        /// Action for when a new Network Message was added.
-        /// </summary>
-        public static Action OnNetworkMessageAdded;
+        public static List<OpenServer> OpenServers => NetworkManager.OpenServers;
 
         #endregion
 
         #region private members
 
-        private static NetworkConfiguration _networkConfiguration;
-        private static ANetworkSocket _networkSocket;
-        private static ServerDiscoveryManager _serverDiscovery;
+        private static NetworkManager _networkManager;
+
+        public static NetworkManager NetworkManager
+        {
+            get
+            {
+                if (_networkManager == null)
+                    _networkManager = new(false);
+                return _networkManager;
+            }
+        }
 
         #endregion
 
@@ -132,8 +96,16 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         static StaticNetworkManager()
         {
-            Messaging.OnNetworkMessageAdded += FireOnNetworkMessageAdded;
-            StartServerDiscovery();
+            NetworkManager.Events.OnConnected += () => ListenForStateChange(true);
+            NetworkManager.Events.OnDisconnected += () => ListenForStateChange(false);
+
+            EditorApplication.playModeStateChanged += state =>
+            {
+                if (state == PlayModeStateChange.EnteredPlayMode)
+                    EndServerDiscovery();
+                if (state == PlayModeStateChange.EnteredEditMode)
+                    StartServerDiscovery();
+            };
         }
 
         #endregion
@@ -149,29 +121,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public static void CreateServer(string servername, byte maxNumberClients, Action<bool> onConnectionEstablished = null)
         {
             if (Application.isPlaying)
-                return;
-
-            if (IsConnected)
             {
-                Messaging.DebugMessage("The Client is already hosting a server!");
-                onConnectionEstablished?.Invoke(false);
+                Debug.LogWarning("Can not create server with static network manager while in play mode.");
                 return;
             }
-
-            NetworkServer server = new();
-            _networkSocket = server;
-            server.OnConnecting += FireOnConnecting;
-            server.OnConnected += FireOnConnected;
-            server.OnDisconnected += FireOnDisconnected;
-            server.OnConnectionStatusUpdated += FireOnConnectionStatusUpdated;
-            server.OnServerWasClosed += FireOnServerWasClosed;
-            server.OnClientConnected += FireOnClientConnected;
-            server.OnClientDisconnected += FireOnClientDisconnected;
-            server.OnConnectedClientListUpdated += FireOnConnectedClientListUpdated;
-
-            onConnectionEstablished += ListenForStateChange;
-
-            server.StartServer(NetworkConfiguration, servername, maxNumberClients, onConnectionEstablished);
+            
+            NetworkManager.CreateServer(servername, maxNumberClients, onConnectionEstablished);
         }
 
         /// <summary>
@@ -183,29 +138,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public static void JoinServer(IPAddress serverIP, int serverPort, Action<bool> onConnectionEstablished = null)
         {
             if (Application.isPlaying)
-                return;
-
-            if (IsConnected)
             {
-                Messaging.DebugMessage("The Client is already connected to a server!");
-                onConnectionEstablished?.Invoke(false);
+                Debug.LogWarning("Can not join server with static network manager while in play mode.");
                 return;
             }
-
-            NetworkClient client = new();
-            _networkSocket = client;
-            client.OnConnecting += FireOnConnecting;
-            client.OnConnected += FireOnConnected;
-            client.OnDisconnected += FireOnDisconnected;
-            client.OnConnectionStatusUpdated += FireOnConnectionStatusUpdated;
-            client.OnServerWasClosed += FireOnServerWasClosed;
-            client.OnClientConnected += FireOnClientConnected;
-            client.OnClientDisconnected += FireOnClientDisconnected;
-            client.OnConnectedClientListUpdated += FireOnConnectedClientListUpdated;
-
-            onConnectionEstablished += ListenForStateChange;
-
-            client.ConnectToServer(NetworkConfiguration, serverIP, serverPort, onConnectionEstablished);
+            
+            NetworkManager.JoinServer(serverIP, serverPort, onConnectionEstablished);
         }
 
         /// <summary>
@@ -213,38 +151,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public static void DisconnectFromServer()
         {
-            if (_networkSocket == null)
-                return;
-
-            if (IsConnected)
-                _networkSocket.DisconnectFromServer();
-
-            switch (_networkSocket)
-            {
-                case NetworkServer server:
-                    server.OnConnecting -= FireOnConnecting;
-                    server.OnConnected -= FireOnConnected;
-                    server.OnDisconnected -= FireOnDisconnected;
-                    server.OnConnectionStatusUpdated -= FireOnConnectionStatusUpdated;
-                    server.OnServerWasClosed -= FireOnServerWasClosed;
-                    server.OnClientConnected -= FireOnClientConnected;
-                    server.OnClientDisconnected -= FireOnClientDisconnected;
-                    server.OnConnectedClientListUpdated -= FireOnConnectedClientListUpdated;
-                    break;
-                case NetworkClient client:
-                    client.OnConnecting -= FireOnConnecting;
-                    client.OnConnected -= FireOnConnected;
-                    client.OnDisconnected -= FireOnDisconnected;
-                    client.OnConnectionStatusUpdated -= FireOnConnectionStatusUpdated;
-                    client.OnServerWasClosed -= FireOnServerWasClosed;
-                    client.OnClientConnected -= FireOnClientConnected;
-                    client.OnClientDisconnected -= FireOnClientDisconnected;
-                    client.OnConnectedClientListUpdated -= FireOnConnectedClientListUpdated;
-                    break;
-            }
-            _networkSocket = null;
-
-            ListenForStateChange(false);
+            NetworkManager.DisconnectFromServer();
         }
 
         /// <summary>
@@ -252,14 +159,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public static void StartServerDiscovery()
         {
-            if (_serverDiscovery != null && _serverDiscovery.IsActive)
-                return;
+            if (Application.isPlaying) return;
 
-            _serverDiscovery = new();
-            _serverDiscovery.OnServerDiscoveryActivated += FireOnServerDiscoveryActivated;
-            _serverDiscovery.OnServerDiscoveryDeactivated += FireOnServerDiscoveryDeactivated;
-            _serverDiscovery.OnOpenServerListUpdated += FireOnOpenServerListUpdated;
-            _serverDiscovery.StartServerDiscovery(NetworkConfiguration);
+            NetworkManager.StartServerDiscovery();
         }
 
         /// <summary>
@@ -267,13 +169,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public static void EndServerDiscovery()
         {
-            if (_serverDiscovery == null || !_serverDiscovery.IsActive)
-                return;
-
-            _serverDiscovery.EndServerDiscovery();
-            _serverDiscovery.OnServerDiscoveryActivated -= FireOnServerDiscoveryActivated;
-            _serverDiscovery.OnServerDiscoveryDeactivated -= FireOnServerDiscoveryDeactivated;
-            _serverDiscovery.OnOpenServerListUpdated -= FireOnOpenServerListUpdated;
+            NetworkManager.EndServerDiscovery();
         }
 
         /// <summary>
@@ -281,40 +177,27 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public static void RestartServerDiscovery()
         {
-            EndServerDiscovery();
-            StartServerDiscovery();
+            NetworkManager.RestartServerDiscovery();
         }
 
         /// <summary>
         /// Registers a callback for received data structs of type <typeparamref name="T"/>. Only works if the local client is currently connected to a server.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="callback">Callback containing the sender ID and synchronised data struct</param>
         public static void RegisterStructData<T>(Action<byte, T> callback) where T : struct, IStructData
         {
-            if (!IsConnected)
-            {
-                Messaging.DebugMessage("The Client is not connected to a server and can't register any data callbacks!");
-                return;
-            }
-
-            _networkSocket.RegisterStructData(callback);
+            NetworkManager.RegisterStructData(callback);
         }
 
         /// <summary>
         /// Unregisters a registered callback for received data structs of type <typeparamref name="T"/>. Only works if the local client is currently connected to a server.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="callback">Callback containing the sender ID and synchronised data struct</param>
         public static void UnregisterStructData<T>(Action<byte, T> callback) where T : struct, IStructData
         {
-            if (!IsConnected)
-            {
-                Messaging.DebugMessage("The Client is not connected to a server and can't unregister any data callbacks!");
-                return;
-            }
-
-            _networkSocket.UnregisterStructData(callback);
+            NetworkManager.UnregisterStructData(callback);
         }
 
         /// <summary>
@@ -324,13 +207,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="callback">Callback containing the sender ID and synchronised data bytes</param>
         public static void RegisterByteData(string dataID, Action<byte, byte[]> callback)
         {
-            if (!IsConnected)
-            {
-                Messaging.DebugMessage("The Client is not connected to a server and can't register any data callbacks!");
-                return;
-            }
-
-            _networkSocket.RegisterByteData(dataID, callback);
+            NetworkManager.RegisterByteData(dataID, callback);
         }
 
         /// <summary>
@@ -340,45 +217,39 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="callback">Callback containing the sender ID and synchronised data bytes</param>
         public static void UnregisterByteData(string dataID, Action<byte, byte[]> callback)
         {
-            if (!IsConnected)
-            {
-                Messaging.DebugMessage("The Client is not connected to a server and can't unregister any data callbacks!");
-                return;
-            }
-
-            _networkSocket.UnregisterByteData(dataID, callback);
+            NetworkManager.UnregisterByteData(dataID, callback);
         }
 
         /// <summary>
         /// Sends a struct over the network to all other connected clients.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="structData"></param>
         /// <param name="networkChannel"></param>
         /// <param name="onDataSend"></param>
         public static void SendStructDataToAll<T>(T structData, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
             Action<bool> onDataSend = null) where T : struct, IStructData
         {
-            SendStructData(0, structData, networkChannel, onDataSend);
+            NetworkManager.SendStructDataToAll(structData, networkChannel, onDataSend);
         }
 
         /// <summary>
         /// Sends a struct over the network to the server.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="structData"></param>
         /// <param name="networkChannel"></param>
         /// <param name="onDataSend"></param>
         public static void SendStructDataToServer<T>(T structData, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
             Action<bool> onDataSend = null) where T : struct, IStructData
         {
-            SendStructData(1, structData, networkChannel, onDataSend);
+            NetworkManager.SendStructDataToServer(structData, networkChannel, onDataSend);
         }
 
         /// <summary>
         /// Sends a struct over the network to a specific client.
         /// </summary>
-        /// <typeparam name="T">A struct implementing IStructData, which containts the to be synchronised data</typeparam>
+        /// <typeparam name="T">A struct implementing IStructData, which contains the to be synchronised data</typeparam>
         /// <param name="receiverID"></param>
         /// <param name="structData"></param>
         /// <param name="networkChannel"></param>
@@ -386,14 +257,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public static void SendStructData<T>(byte receiverID, T structData, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
             Action<bool> onDataSend = null) where T : struct, IStructData
         {
-            if (!IsConnected)
-            {
-                Messaging.DebugMessage("The Client is not connected to a server and can't send any data!");
-                onDataSend?.Invoke(false);
-                return;
-            }
-
-            _networkSocket.SendStructData(receiverID, structData, networkChannel, onDataSend);
+            NetworkManager.SendStructData(receiverID, structData, networkChannel, onDataSend);
         }
 
         /// <summary>
@@ -406,7 +270,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public static void SendByteDataToAll(string dataID, byte[] data, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
             Action<bool> onDataSend = null)
         {
-            SendByteData(0, dataID, data, networkChannel, onDataSend);
+            NetworkManager.SendByteDataToAll(dataID, data, networkChannel, onDataSend);
         }
 
         /// <summary>
@@ -419,7 +283,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public static void SendByteDataToServer(string dataID, byte[] data, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
             Action<bool> onDataSend = null)
         {
-            SendByteData(1, dataID, data, networkChannel, onDataSend);
+            NetworkManager.SendByteDataToServer(dataID, data, networkChannel, onDataSend);
         }
 
         /// <summary>
@@ -433,79 +297,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public static void SendByteData(byte receiverID, string dataID, byte[] data, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
             Action<bool> onDataSend = null)
         {
-            if (!IsConnected)
-            {
-                Messaging.DebugMessage("The Client is not connected to a server and can't send any data!");
-                onDataSend?.Invoke(false);
-                return;
-            }
-
-            _networkSocket.SendByteData(receiverID, dataID, data, networkChannel, onDataSend);
+            NetworkManager.SendByteData(receiverID, dataID, data, networkChannel, onDataSend);
         }
 
         #endregion
 
         #region private methods
-
-        private static void FireOnConnecting() => OnConnecting?.Invoke();
-        private static void FireOnConnected() => OnConnected?.Invoke();
-        private static void FireOnDisconnected() => OnDisconnected?.Invoke();
-        private static void FireOnConnectionStatusUpdated() => OnConnectionStatusUpdated?.Invoke();
-        private static void FireOnServerWasClosed() => OnServerWasClosed?.Invoke();
-        private static void FireOnClientConnected(byte clientID) => OnClientConnected?.Invoke(clientID);
-        private static void FireOnClientDisconnected(byte clientID) => OnClientDisconnected?.Invoke(clientID);
-        private static void FireOnConnectedClientListUpdated() => OnConnectedClientListUpdated?.Invoke();
-        private static void FireOnServerDiscoveryActivated() => OnServerDiscoveryActivated?.Invoke();
-        private static void FireOnServerDiscoveryDeactivated() => OnServerDiscoveryDeactivated?.Invoke();
-        private static void FireOnOpenServerListUpdated() => OnOpenServerListUpdated?.Invoke();
-        private static void FireOnNetworkMessageAdded() => OnNetworkMessageAdded?.Invoke();
-
-        private static T LoadOrCreateConfiguration<T>(string name = "NetworkConfiguration", string path = "Assets/Resources/") where T : ScriptableObject
-        {
-            T configuration = Resources.Load<T>(Path.GetFileNameWithoutExtension(name));
-
-            string fullPath = path + name + ".asset";
-
-            if (!configuration)
-            {
-                if (EditorApplication.isCompiling)
-                {
-                    UnityEngine.Debug.LogError("Can not load settings when editor is compiling!");
-                    return null;
-                }
-                if (EditorApplication.isUpdating)
-                {
-                    UnityEngine.Debug.LogError("Can not load settings when editor is updating!");
-                    return null;
-                }
-
-                configuration = AssetDatabase.LoadAssetAtPath<T>(fullPath);
-            }
-            if (!configuration)
-            {
-                string[] allSettings = AssetDatabase.FindAssets($"t:{name}{".asset"}");
-                if (allSettings.Length > 0)
-                {
-                    configuration = AssetDatabase.LoadAssetAtPath<T>(AssetDatabase.GUIDToAssetPath(allSettings[0]));
-                }
-            }
-            if (!configuration)
-            {
-                configuration = ScriptableObject.CreateInstance<T>();
-                string dir = Path.GetDirectoryName(fullPath);
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
-                AssetDatabase.CreateAsset(configuration, fullPath);
-                AssetDatabase.SaveAssets();
-            }
-
-			if (!configuration)
-			{
-				configuration = ScriptableObject.CreateInstance<T>();
-			}
-
-            return configuration;
-        }
 
         private static void ListenForStateChange(bool isActive)
         {
@@ -518,10 +315,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private static void PreventPlayMode(PlayModeStateChange state)
         {
             if (state == PlayModeStateChange.ExitingEditMode)
+            {
                 EditorApplication.isPlaying = false;
+                Debug.LogWarning("Prevent from exiting edit mode while static network manager is active.");
+            }
         }
 
         #endregion
-
     }
 }
