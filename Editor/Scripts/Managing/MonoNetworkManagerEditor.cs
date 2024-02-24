@@ -1,6 +1,7 @@
+using jKnepel.SimpleUnityNetworking.Networking;
+using jKnepel.SimpleUnityNetworking.Utilities;
 using UnityEngine;
 using UnityEditor;
-using jKnepel.SimpleUnityNetworking.Networking;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
@@ -24,7 +25,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             get
             {
-                if (_settingsEditor == null && NetworkConfiguration)
+                if (_settingsEditor is null && NetworkConfiguration)
                     _settingsEditor = Editor.CreateEditor(NetworkConfiguration);
                 return _settingsEditor;
             }
@@ -35,9 +36,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             get
             {
-                if (_networkManagerEditor == null)
-                    _networkManagerEditor = new();
-                return _networkManagerEditor;
+               return _networkManagerEditor ??= new();
             }
         }
 
@@ -46,7 +45,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             get
             {
-                if (_target == null)
+                if (_target is null)
                 {
                     _target = (MonoNetworkManager)target;
                     NetworkManagerEditor.SubscribeNetworkEvents(_target.Events, Repaint);
@@ -76,7 +75,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             if (!EditorApplication.isPlaying)
                 NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(NetworkConfiguration, typeof(NetworkConfiguration), false) ??
-                    NetworkManager.LoadOrCreateConfiguration<NetworkConfiguration>();
+					UnityUtilities.LoadOrCreateScriptableObject<NetworkConfiguration>("NetworkConfiguration", "Assets/Resources/");
 
             EditorGUILayout.Space();
 

@@ -62,8 +62,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
         #region lifecycle
 
-        public NetworkServer() { }
-
         public void StartServer(NetworkConfiguration config, string servername, byte maxNumberClients, Action<bool> onConnectionEstablished = null)
         {
             ConnectionStatus = EConnectionStatus.IsConnecting;
@@ -145,11 +143,11 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 ClientInformation = new(1, config.Username, config.Color);
                 NetworkConfiguration = config;
 
-                _listenerThread = new(() => ListenerThread()) { IsBackground = true };
+                _listenerThread = new(ListenerThread) { IsBackground = true };
                 _listenerThread.Start();
-                _heartbeatThread = new(() => HeartbeatThread()) { IsBackground = true };
+                _heartbeatThread = new(HeartbeatThread) { IsBackground = true };
                 _heartbeatThread.Start();
-                _senderThread = new(() => SenderThread()) { IsBackground = true };
+                _senderThread = new(SenderThread) { IsBackground = true };
                 _senderThread.Start();
             }
             catch (Exception ex)
@@ -158,10 +156,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 				{
                     case ObjectDisposedException:
                     case SocketException:
-                        Messaging.DebugMessage("An error ocurred when attempting to access the socket!");
+                        Messaging.DebugMessage("An error occurred when attempting to access the socket!");
                         break;
                     case ThreadStartException:
-                        Messaging.DebugMessage("An error ocurred when starting the threads. Please try again later!");
+                        Messaging.DebugMessage("An error occurred when starting the threads. Please try again later!");
                         break;
                     case OutOfMemoryException:
                         Messaging.DebugMessage("Not enough memory available to start the threads!");
@@ -239,7 +237,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             Dispose();
         }
 
-		public override void SendStructData<T>(byte receiverID, T StructData, ENetworkChannel networkChannel, Action<bool> onDataSend = null)
+		public override void SendStructData<T>(byte receiverID, T structData, ENetworkChannel networkChannel, Action<bool> onDataSend = null)
         {
             if (receiverID == ClientInformation.ID)
 			{
@@ -248,7 +246,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 return;
             }
 
-            if (!GetClientById(receiverID, out ClientInformationSocket client) && receiverID != 0)
+            if (!GetClientById(receiverID, out _) && receiverID != 0)
 			{
                 Messaging.DebugMessage("The given Receiver ID is not valid!");
                 onDataSend?.Invoke(false);
@@ -260,20 +258,20 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 				|| NetworkConfiguration.SerialiserConfiguration.CompressQuaternions)
 			{
 				BitWriter structWriter = new(NetworkConfiguration.SerialiserConfiguration);
-				structWriter.Write(StructData);
+				structWriter.Write(structData);
 				structBuffer = structWriter.GetBuffer();
 			}
 			else
 			{
 				Writer structWriter = new(NetworkConfiguration.SerialiserConfiguration);
-				structWriter.Write(StructData);
+				structWriter.Write(structData);
 				structBuffer = structWriter.GetBuffer();
 			}
 
             Writer writer = new();
-			DataPacket DataPacket = new(true, Hashing.GetFNV1Hash32(typeof(T).Name), ClientInformation.ID, structBuffer);
+			DataPacket dataPacket = new(true, Hashing.GetFNV1Hash32(typeof(T).Name), ClientInformation.ID, structBuffer);
             writer.Clear();
-            writer.Write(DataPacket);
+            writer.Write(dataPacket);
             _packetsToSend.Enqueue(new(receiverID, networkChannel, EPacketType.Data, writer.GetBuffer(), onDataSend));
         }
 
@@ -286,16 +284,16 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 return;
             }
 
-            if (!GetClientById(receiverID, out ClientInformationSocket client) && receiverID != 0)
+            if (!GetClientById(receiverID, out _) && receiverID != 0)
             {
                 Messaging.DebugMessage("The given Receiver ID is not valid!");
                 onDataSend?.Invoke(false);
                 return;
             }
 
-            DataPacket DataPacket = new(false, Hashing.GetFNV1Hash32(id), ClientInformation.ID, data);
+            DataPacket dataPacket = new(false, Hashing.GetFNV1Hash32(id), ClientInformation.ID, data);
             Writer writer = new(NetworkConfiguration.SerialiserConfiguration);
-			writer.Write(DataPacket);
+			writer.Write(dataPacket);
             _packetsToSend.Enqueue(new(receiverID, networkChannel, EPacketType.Data, writer.GetBuffer(), onDataSend));
         }
 
@@ -384,7 +382,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                                     HandleSequencedPacket(client, header, reader);
                                 break;
                             }
-                        default: break;
                     }
                 }
                 catch (Exception ex)
@@ -399,10 +396,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                         case SocketException:
                         case ObjectDisposedException:
                             Messaging.DebugMessage(ex.ToString());
-                            MainThreadQueue.Enqueue(() => Dispose());
+                            MainThreadQueue.Enqueue(Dispose);
                             return;
                         default:
-                            MainThreadQueue.Enqueue(() => Dispose());
+                            MainThreadQueue.Enqueue(Dispose);
                             ExceptionDispatchInfo.Capture(ex).Throw();
                             throw;
                     }
@@ -630,7 +627,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                         DataPacket packet = reader.Read<DataPacket>();
                         if (packet.ClientID > 1)
                         {
-                            if (GetClientById(packet.ClientID, out ClientInformationSocket targetClient))
+                            if (GetClientById(packet.ClientID, out _))
                             {   // forward packet to specified client
                                 DataPacket forwardedPacket = new(packet.IsStructData, packet.DataID, sender.ID, packet.Data);
                                 Writer writer = new();
@@ -663,7 +660,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                             MainThreadQueue.Enqueue(() => ReceiveByteData(packet.DataID, sender.ID, packet.Data));
                         break;
 					}
-                default: break;
             }
         }
 
@@ -717,7 +713,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                     case ThreadAbortException:
                         return;
                     default:
-                        MainThreadQueue.Enqueue(() => Dispose());
+                        MainThreadQueue.Enqueue(Dispose);
                         ExceptionDispatchInfo.Capture(ex).Throw();
                         throw;
                 }
@@ -740,7 +736,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 }
                 catch (Exception ex)
                 {
-                    MainThreadQueue.Enqueue(() => Dispose());
+                    MainThreadQueue.Enqueue(Dispose);
                     ExceptionDispatchInfo.Capture(ex).Throw();
                     throw;
                 }
@@ -819,7 +815,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                     case SocketException:
                     case ObjectDisposedException:
                         Messaging.DebugMessage(ex.ToString());
-                        MainThreadQueue.Enqueue(() => Dispose());
+                        MainThreadQueue.Enqueue(Dispose);
                         return;
                 }
 			}
@@ -960,7 +956,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                     case SocketException:
                     case ObjectDisposedException:
                         Messaging.DebugMessage(ex.ToString());
-                        MainThreadQueue.Enqueue(() => Dispose());
+                        MainThreadQueue.Enqueue(Dispose);
                         return;
                 }
             }
@@ -969,7 +965,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         /// <summary>
         /// Retry sending a Packet Slice after a Delay and within a maximum number of retries
         /// </summary>
-        /// <param name="client"></param>
+        /// <param name="clientEndpoint"></param>
         /// <param name="sequence"></param>
         /// <param name="retries"></param>
         /// <returns></returns>
@@ -991,7 +987,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         /// <summary>
         /// Retry sending a Packet after a Delay and within a maximum number of retries
         /// </summary>
-        /// <param name="client"></param>
+        /// <param name="clientEndpoint"></param>
         /// <param name="sequence"></param>
         /// <param name="retries"></param>
         /// <returns></returns>
@@ -1101,6 +1097,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         /// </summary>
         /// <param name="clientID"></param>
         /// <param name="saveClient"></param>
+        /// <param name="reason"></param>
         /// <returns></returns>
         private bool RemoveClient(byte clientID, bool saveClient, ClosedReason reason = ClosedReason.Unknown)
         {
@@ -1109,7 +1106,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
             _connectedClients.TryRemove(client.Endpoint, out _);
 
-            List<IPEndPoint> remainingClients = _connectedClients.Values.Select(client => client.Endpoint).ToList();
+            List<IPEndPoint> remainingClients = _connectedClients.Values.Select(c => c.Endpoint).ToList();
             Writer writer = new();
             writer.Write(new ClientDisconnectedPacket(clientID));
             SendConnectionPacket(remainingClients, EPacketType.ClientDisconnected, writer.GetBuffer());
