@@ -13,25 +13,25 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             get => Target.NetworkConfiguration;
             set
             {
-                if (Target.NetworkConfiguration != value)
-                    _settingsEditor = null;
-
+                if (Target.NetworkConfiguration == value) return;
+                
+                _settingsEditor = null;
                 Target.NetworkConfiguration = value;
             }
         }
 
-        private Editor _settingsEditor = null;
-        public Editor SettingsEditor
+        private Editor _settingsEditor;
+        private Editor SettingsEditor
         {
             get
             {
-                if (_settingsEditor is null && NetworkConfiguration)
+                if (_settingsEditor == null && NetworkConfiguration)
                     _settingsEditor = Editor.CreateEditor(NetworkConfiguration);
                 return _settingsEditor;
             }
         }
 
-        private NetworkManagerEditor _networkManagerEditor = null;
+        private NetworkManagerEditor _networkManagerEditor;
         private NetworkManagerEditor NetworkManagerEditor
         {
             get
@@ -40,12 +40,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
-        [SerializeField] private MonoNetworkManager _target = null;
+        [SerializeField] private MonoNetworkManager _target;
         private MonoNetworkManager Target
         {
             get
             {
-                if (_target is null)
+                if (_target == null)
                 {
                     _target = (MonoNetworkManager)target;
                     NetworkManagerEditor.SubscribeNetworkEvents(_target.Events, Repaint);
@@ -54,38 +54,33 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
+        public void OnEnable()
+        {
+            NetworkConfiguration = NetworkConfiguration != null 
+                ? NetworkConfiguration 
+                : UnityUtilities.LoadOrCreateScriptableObject<NetworkConfiguration>("NetworkConfiguration", "Assets/Resources/");
+        }
+
         private void OnDestroy()
         {
             NetworkManagerEditor.UnsubscribeNetworkEvents(Target.Events, Repaint);
         }
 
-        public override void OnInspectorGUI()
+        public override void OnInspectorGUI()                   
         {
-            if (EditorApplication.isCompiling)
-            {
-                GUILayout.Label("The editor is compiling...\nSettings will show up after recompile.", EditorStyles.largeLabel);
-                return;
-            }
-
             if (Target.NetworkManager == null)
             {
                 GUILayout.Label("The network manager is null. Can not show settings.", EditorStyles.largeLabel);
                 return;
             }
+            
+            NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(NetworkConfiguration, typeof(NetworkConfiguration), false);
 
-            if (!EditorApplication.isPlaying)
-                NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(NetworkConfiguration, typeof(NetworkConfiguration), false) ??
-					UnityUtilities.LoadOrCreateScriptableObject<NetworkConfiguration>("NetworkConfiguration", "Assets/Resources/");
-
+            if (SettingsEditor == null) return;
+            
             EditorGUILayout.Space();
-
-            if (GUILayout.Button(new GUIContent("Randomize User Information"), GUILayout.ExpandWidth(false)))
-            {
-                NetworkConfiguration.Username = $"User_{Random.Range(0, 100)}";
-                NetworkConfiguration.Color = new Color(Random.value, Random.value, Random.value);
-            }
-
-            SettingsEditor?.OnInspectorGUI();
+            
+            SettingsEditor.OnInspectorGUI();
 
             EditorGUILayout.Space();
             EditorGUILayout.Space();

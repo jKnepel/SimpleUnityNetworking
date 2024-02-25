@@ -12,7 +12,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking
         private bool _debugSettingsIsVisible = false;
 
         private SerializedProperty _serialiserSettings;
-
         private SerializedProperty SerialiserSettings
         {
             get
@@ -54,12 +53,14 @@ namespace jKnepel.SimpleUnityNetworking.Networking
                 EditorGUI.indentLevel--;
             }
 
+            // serialiser settings
             _serialiserSettingsIsVisible = EditorGUILayout.Foldout(_serialiserSettingsIsVisible, "Serialiser Configuration Settings", EditorStyles.foldoutHeader);
             if (_serialiserSettingsIsVisible)
             {
                 EditorGUILayout.PropertyField(SerialiserSettings);
             }
 
+            // server discovery settings
             _serverDiscoverySettingsIsVisible = EditorGUILayout.Foldout(_serverDiscoverySettingsIsVisible, "Server Discovery Settings", EditorStyles.foldoutHeader);
             if (_serverDiscoverySettingsIsVisible)
             {
@@ -80,7 +81,16 @@ namespace jKnepel.SimpleUnityNetworking.Networking
                 settings.ShowDebugMessages = EditorGUILayout.Toggle(new GUIContent("Show Debug Messages:", "Allows the display of debug messages."), settings.ShowDebugMessages);
                 settings.AllowVirtualIPs = EditorGUILayout.Toggle("Allow Virtual IPs:", settings.AllowVirtualIPs);
                 settings.AllowLocalConnections = EditorGUILayout.Toggle(new GUIContent("Allow Local Connection:", "Allows connection from the local IP."), settings.AllowLocalConnections);
-
+                
+                GUILayout.BeginHorizontal();
+                GUILayout.Space(EditorGUI.indentLevel * 15f);
+                if (GUILayout.Button(new GUIContent("Randomise User Information"), GUILayout.ExpandWidth(false)))
+                {
+                    settings.Username = $"User_{Random.Range(0, 100)}";
+                    settings.Color = new Color(Random.value, Random.value, Random.value);
+                }
+                GUILayout.EndHorizontal();
+                
                 EditorGUI.indentLevel--;
             }
 
