@@ -1,10 +1,10 @@
+using jKnepel.SimpleUnityNetworking.Networking;
+using jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery;
+using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Net;
-using jKnepel.SimpleUnityNetworking.Networking;
-using jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery;
-using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using UnityEditor;
 using UnityEngine;
 
@@ -84,9 +84,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             get
             {
-                if (_networkManager == null)
-                    _networkManager = new(false);
-                return _networkManager;
+                return _networkManager ??= new(false);
             }
         }
 
@@ -101,10 +99,15 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             EditorApplication.playModeStateChanged += state =>
             {
-                if (state == PlayModeStateChange.EnteredPlayMode)
-                    EndServerDiscovery();
-                if (state == PlayModeStateChange.EnteredEditMode)
-                    StartServerDiscovery();
+                switch (state)
+                {
+                    case PlayModeStateChange.EnteredPlayMode:
+                        EndServerDiscovery();
+                        break;
+                    case PlayModeStateChange.EnteredEditMode:
+                        StartServerDiscovery();
+                        break;
+                }
             };
         }
 
@@ -314,11 +317,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private static void PreventPlayMode(PlayModeStateChange state)
         {
-            if (state == PlayModeStateChange.ExitingEditMode)
-            {
-                EditorApplication.isPlaying = false;
-                Debug.LogWarning("Prevent from exiting edit mode while static network manager is active.");
-            }
+            if (state != PlayModeStateChange.ExitingEditMode) return;
+            
+            EditorApplication.isPlaying = false;
+            Debug.LogWarning("Play mode is not possible while the static network manager is connected to a network.");
         }
 
         #endregion

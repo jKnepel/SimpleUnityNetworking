@@ -157,7 +157,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         public void EndServerDiscovery()
         {
-            if (_serverDiscovery == null || !_serverDiscovery.IsActive)
+            if (_serverDiscovery is not { IsActive: true })
                 return;
 
             _serverDiscovery.EndServerDiscovery();

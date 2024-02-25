@@ -1,13 +1,13 @@
-using System.Linq;
-using System.Net;
-using UnityEngine;
-using UnityEditor;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery;
 using jKnepel.SimpleUnityNetworking.Serialisation;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using jKnepel.SimpleUnityNetworking.Utilities;
 using System;
+using System.Linq;
+using System.Net;
+using UnityEngine;
+using UnityEditor;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {

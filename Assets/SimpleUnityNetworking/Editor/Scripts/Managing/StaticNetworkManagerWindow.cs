@@ -1,32 +1,30 @@
-using UnityEngine;
-using UnityEditor;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Utilities;
+using UnityEngine;
+using UnityEditor;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
     public class StaticNetworkManagerWindow : EditorWindow
     {
-        [SerializeField] private NetworkConfiguration _cachedNetworkConfiguration = null;
         private NetworkConfiguration NetworkConfiguration
         {
             get => StaticNetworkManager.NetworkConfiguration;
             set
             {
-                if (_cachedNetworkConfiguration != value)
-                    _settingsEditor = null;
-
-                _cachedNetworkConfiguration = value;
-                StaticNetworkManager.NetworkConfiguration = _cachedNetworkConfiguration;
+                if (StaticNetworkManager.NetworkConfiguration == value) return;
+                
+                _settingsEditor = null;
+                StaticNetworkManager.NetworkConfiguration = value;
             }
         }
 
-        private Editor _settingsEditor = null;
+        private Editor _settingsEditor;
         public Editor SettingsEditor
         {
             get
             {
-                if (_settingsEditor is null && NetworkConfiguration)
+                if (_settingsEditor == null && NetworkConfiguration)
                     _settingsEditor = Editor.CreateEditor(NetworkConfiguration);
                 return _settingsEditor;
             }
@@ -34,15 +32,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private Vector2 _scrollViewPosition = Vector2.zero;
 
-        private NetworkManagerEditor _networkManagerEditor = null;
+        private NetworkManagerEditor _networkManagerEditor;
+
         private NetworkManagerEditor NetworkManagerEditor
         {
             get
             {
-                if (_networkManagerEditor == null)
-                    _networkManagerEditor = new();
-                return _networkManagerEditor;
-            }
+                return _networkManagerEditor ??= new();
+            } 
         }
 
         [MenuItem("Window/SimpleUnityNetworking/Network Manager")]
@@ -54,6 +51,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private void OnEnable()
         {
             NetworkManagerEditor.SubscribeNetworkEvents(StaticNetworkManager.Events, Repaint);
+            NetworkConfiguration = NetworkConfiguration != null ? NetworkConfiguration : UnityUtilities.LoadOrCreateScriptableObject<NetworkConfiguration>("NetworkConfiguration", "Assets/Resources/");
         }
 
         private void OnDisable()
@@ -65,7 +63,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             if (EditorApplication.isCompiling)
             {
-                GUILayout.Label("The editor is compiling...\nSettings will show up after recompile.", EditorStyles.largeLabel);
+                GUILayout.Label("The editor is compiling...", EditorStyles.largeLabel);
                 return;
             }
 
@@ -80,32 +78,27 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             GUILayout.Label("Network Manager", EditorStyles.largeLabel);
 
-            if (!StaticNetworkManager.IsConnected)
-                NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(_cachedNetworkConfiguration, typeof(NetworkConfiguration), false) ??
-                    UnityUtilities.LoadOrCreateScriptableObject<NetworkConfiguration>("NetworkConfiguration", "Assets/Resources/");
+            NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(StaticNetworkManager.NetworkConfiguration, typeof(NetworkConfiguration), false);
 
-            if (NetworkConfiguration is not null)
-                StaticNetworkManager.StartServerDiscovery();
-            
-            EditorGUILayout.Space();
-
-            if (GUILayout.Button(new GUIContent("Randomize User Information"), GUILayout.ExpandWidth(false)))
+            if (NetworkConfiguration != null)
             {
-                NetworkConfiguration.Username = $"User_{Random.Range(0, 100)}";
-                NetworkConfiguration.Color = new Color(Random.value, Random.value, Random.value);
+                if (!StaticNetworkManager.IsServerDiscoveryActive)
+                    StaticNetworkManager.StartServerDiscovery();
+                
+                EditorGUILayout.Space();
+
+                SettingsEditor.OnInspectorGUI();
+
+                EditorGUILayout.Space();
+                EditorGUILayout.Space();
+
+                if (Application.isPlaying)
+                    GUILayout.Label("Functionality is disabled in play mode.");
+
+                EditorGUI.BeginDisabledGroup(Application.isPlaying);
+                NetworkManagerEditor.OnInspectorGUI(StaticNetworkManager.NetworkManager);
+                EditorGUI.EndDisabledGroup();
             }
-
-            SettingsEditor?.OnInspectorGUI();
-
-            EditorGUILayout.Space();
-            EditorGUILayout.Space();
-
-            if (Application.isPlaying)
-                GUILayout.Label("Functionality is disabled in play mode.");
-
-            EditorGUI.BeginDisabledGroup(Application.isPlaying);
-            NetworkManagerEditor.OnInspectorGUI(StaticNetworkManager.NetworkManager);
-            EditorGUI.EndDisabledGroup();
 
             EditorGUILayout.EndVertical();
             EditorGUILayout.EndScrollView();

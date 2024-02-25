@@ -17,29 +17,29 @@ namespace jKnepel.SimpleUnityNetworking.Managing
     {
         #region public members
 
-        [SerializeField] private NetworkConfiguration _cachedNetworkConfiguration = null;
+        [SerializeField] private NetworkConfiguration _cachedNetworkConfiguration;
         public NetworkConfiguration NetworkConfiguration
         {
             get => _cachedNetworkConfiguration;
             set
             {
-                if (Application.isPlaying)
+                if (_cachedNetworkConfiguration == value) return;
+                
+                if (IsConnected)
                 {
-                    Debug.LogWarning($"Can not change {nameof(NetworkConfiguration)} when in play mode.");
+                    Debug.LogError($"Can not change {nameof(NetworkConfiguration)} when connected to a network.");
                     return;
                 }
 
-                if (_cachedNetworkConfiguration != value)
-                {
-                    _cachedNetworkConfiguration = value;
-                    NetworkManager.NetworkConfiguration = _cachedNetworkConfiguration;
+                _cachedNetworkConfiguration = value;
+                NetworkManager.NetworkConfiguration = _cachedNetworkConfiguration;
 
 #if UNITY_EDITOR
-                    // This is needed for changes inside prefabs
-                    EditorSceneManager.MarkSceneDirty(gameObject.scene);
+                // This is needed for changes inside prefabs
+                EditorSceneManager.MarkSceneDirty(gameObject.scene);
+                if (value != null)
                     EditorUtility.SetDirty(_cachedNetworkConfiguration);
 #endif
-                }
             }
         }
         public NetworkEvents Events => NetworkManager.Events;
@@ -65,11 +65,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             get
             {
-                if (_networkManager == null)
-                {
-                    _networkManager = new(false);
-                    _networkManager.NetworkConfiguration = NetworkConfiguration;
-                }
+                if (_networkManager != null) return _networkManager;
+                
+                _networkManager = new(false);
+                _networkManager.NetworkConfiguration = NetworkConfiguration;
                 return _networkManager;
             }
         }
