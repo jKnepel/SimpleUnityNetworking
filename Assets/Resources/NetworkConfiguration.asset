@@ -12,18 +12,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab5daf6cd0c3f494aa5eb9161f250432, type: 3}
   m_Name: NetworkConfiguration
   m_EditorClassIdentifier: 
-  Color:
+  _username: Username
+  _color:
     serializedVersion: 2
     rgba: 4294967295
   _allowVirtualIPs: 0
-  LocalStringIPAddresses:
-  - 192.168.2.153
-  MTU: 1200
-  RTT: 200
-  ServerConnectionTimeout: 5000
-  ServerHeartbeatDelay: 1000
-  ServerDiscoveryTimeout: 3000
-  MaxNumberResendReliablePackets: 5
-  DiscoveryIP: 239.240.240.149
+  _mtu: 1200
+  _rtt: 200
+  _serverConnectionTimeout: 5000
+  _serverHeartbeatDelay: 1000
+  _serverDiscoveryTimeout: 3000
+  _maxNumberResendReliablePackets: 5
+  _serialiserConfiguration:
+    _compressFloats: 1
+    _floatMinValue: -1000
+    _floatMaxValue: 1000
+    _floatResolution: 0.001
+    _compressQuaternions: 1
+    _bitsPerComponent: 9
+  _discoveryIP: 239.240.240.149
+  _discoveryPort: 26824
   _showDebugMessages: 1
-  AllowLocalConnections: 1
+  _allowLocalConnections: 1

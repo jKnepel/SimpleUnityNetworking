@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using UnityEngine;
+using jKnepel.SimpleUnityNetworking.Serialisation;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -19,16 +20,20 @@ namespace jKnepel.SimpleUnityNetworking.Utilities
         {
             Start();
             EditorApplication.update += Update;
+            Reader.Init();
+            Writer.Init();
         }
 #else
         [RuntimeInitializeOnLoadMethod]
         private static void InitRuntime()
         {
             MainThreadQueueRuntime.Instance.OnUpdate += Update;
+            Reader.Init();
+            Writer.Init();
         }
 #endif
 
-        private static void Start()
+		private static void Start()
         {
 
         }
@@ -63,9 +68,8 @@ namespace jKnepel.SimpleUnityNetworking.Utilities
 
                     if (_instance == null)
                     {
-                        GameObject singletonObject = new();
-                        singletonObject.hideFlags = HideFlags.HideInHierarchy;
-                        DontDestroyOnLoad(singletonObject);
+						GameObject singletonObject = new() { hideFlags = HideFlags.HideInHierarchy };
+						DontDestroyOnLoad(singletonObject);
                         _instance = singletonObject.AddComponent<MainThreadQueueRuntime>();
                     }
                 }

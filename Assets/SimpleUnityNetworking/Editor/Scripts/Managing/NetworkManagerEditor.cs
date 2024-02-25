@@ -1,29 +1,18 @@
-using System.Linq;
-using System.Net;
-using UnityEngine;
-using UnityEditor;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery;
 using jKnepel.SimpleUnityNetworking.Serialisation;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using jKnepel.SimpleUnityNetworking.Utilities;
+using System;
+using System.Linq;
+using System.Net;
+using UnityEngine;
+using UnityEditor;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
-	[CustomEditor(typeof(NetworkManager))]
-	internal class NetworkManagerEditor : Editor
-	{
-		private Editor _settingsEditor = null;
-		public Editor SettingsEditor
-		{
-			get
-			{
-				if (_settingsEditor == null)
-					_settingsEditor = Editor.CreateEditor(((NetworkManager)target).NetworkConfiguration);
-				return _settingsEditor;
-			}
-		}
-
+    internal class NetworkManagerEditor
+    {
         private string _joinServerIP = string.Empty;
         private int _joinServerPort = 0;
 
@@ -51,35 +40,24 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private const float ROW_HEIGHT = 20;
 
-		private void OnEnable()
-		{
-            var manager = (NetworkManager)target;
-            manager.OnConnectionStatusUpdated += Repaint;
-            manager.OnConnectedClientListUpdated += Repaint;
-            manager.OnOpenServerListUpdated += Repaint;
-            manager.OnNetworkMessageAdded += Repaint;
+        public void SubscribeNetworkEvents(NetworkEvents events, Action repaintEditorWindow)
+        {
+            events.OnConnectionStatusUpdated += repaintEditorWindow;
+            events.OnConnectedClientListUpdated += repaintEditorWindow;
+            events.OnOpenServerListUpdated += repaintEditorWindow;
+            events.OnNetworkMessageAdded += repaintEditorWindow;
         }
 
-		private void OnDisable()
-		{
-            var manager = (NetworkManager)target;
-            manager.OnConnectionStatusUpdated -= Repaint;
-            manager.OnConnectedClientListUpdated -= Repaint;
-            manager.OnOpenServerListUpdated -= Repaint;
-            manager.OnNetworkMessageAdded -= Repaint;
+        public void UnsubscribeNetworkEvents(NetworkEvents events, Action repaintEditorWindow)
+        {
+            events.OnConnectionStatusUpdated -= repaintEditorWindow;
+            events.OnConnectedClientListUpdated -= repaintEditorWindow;
+            events.OnOpenServerListUpdated -= repaintEditorWindow;
+            events.OnNetworkMessageAdded -= repaintEditorWindow;
         }
 
-		public override void OnInspectorGUI()
-		{
-			var manager = (NetworkManager)target;
-
-			manager.NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(manager.NetworkConfiguration, typeof(NetworkConfiguration), true);
-			if (manager.NetworkConfiguration != null)
-				SettingsEditor.OnInspectorGUI();
-
-            EditorGUILayout.Space();
-            EditorGUILayout.Space();
-
+        public void OnInspectorGUI(NetworkManager manager)
+        {
             if (manager.IsConnected)
                 ShowConnectedGUI(manager);
             else
@@ -93,7 +71,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         }
 
         private void ShowConnectedGUI(NetworkManager manager)
-		{
+        {
             // connected clients list
             GUILayout.Label($"Current Server: {manager.ServerInformation.Servername}");
             _clientsViewPos = EditorGUILayout.BeginScrollView(_clientsViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(150));
@@ -126,12 +104,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         }
 
         private void ShowDisconnectedGUI(NetworkManager manager)
-		{
+        {
             // open servers list
-            _serversViewPos = EditorGUILayout.BeginScrollView(_serversViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(200));
+            _serversViewPos = EditorGUILayout.BeginScrollView(_serversViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MinHeight(50), GUILayout.MaxHeight(200));
             {
                 if (manager.IsServerDiscoveryActive)
-				{
+                {
                     EditorGUILayout.BeginHorizontal();
                     GUILayout.Label("Server Discovery", EditorStyles.boldLabel);
                     GUILayout.FlexibleSpace();
@@ -152,7 +130,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     }
                 }
                 else
-				{
+                {
                     GUILayout.Label("Server Discovery", EditorStyles.boldLabel);
                     GUILayout.Label("Server Discovery is currently inactive!");
                 }
@@ -166,14 +144,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 _joinServerIP = EditorGUILayout.TextField(new GUIContent("Server IP"), _joinServerIP);
                 _joinServerPort = EditorGUILayout.IntField(new GUIContent("Server Port"), _joinServerPort);
                 if (GUILayout.Button(new GUIContent("Join")))
-				{
+                {
                     if (IPAddress.TryParse(_joinServerIP, out IPAddress address))
                     {
                         Messaging.DebugMessage("The given Server IP is not valid!");
                         return;
-					}
+                    }
                     manager.JoinServer(address, _joinServerPort);
-				}
+                }
             }
             EditorGUILayout.EndVertical();
 
@@ -190,14 +168,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         }
 
         private void ShowSystemMessages()
-		{
+        {
             EditorGUILayout.BeginHorizontal();
             GUILayout.Label($"Network Messages:");
             GUILayout.FlexibleSpace();
             _isAutoscroll = EditorGUILayout.Toggle(new GUIContent(" ", "Is Autoscrolling Messages"), _isAutoscroll);
             EditorGUILayout.EndHorizontal();
             _messagesViewPos = EditorGUILayout.BeginScrollView(_messagesViewPos,
-                EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(200));
+                EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MinHeight(100), GUILayout.MaxHeight(200));
             {
                 Color defaultColor = _style.normal.textColor;
                 for (int i = 0; i < Messaging.Messages.Count; i++)
@@ -246,13 +224,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Text = msg;
         }
 
-        public static TestMessage ReadTestMessage(Reader reader)
+        public TestMessage ReadTestMessage(Reader reader)
         {
             string text = reader.ReadString();
             return new(text);
         }
 
-        public static void WriteTestMessage(Writer writer, TestMessage value)
+        public void WriteTestMessage(Writer writer, TestMessage value)
         {
             writer.WriteString(value.Text);
         }

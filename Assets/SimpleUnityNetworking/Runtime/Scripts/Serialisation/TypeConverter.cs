@@ -2,8 +2,8 @@ using System.Runtime.InteropServices;
 
 namespace jKnepel.SimpleUnityNetworking.Serialisation
 {
-    // memory layout inspired by https://stackoverflow.com/a/619307
-    internal static class TypeConverter
+    // memory layout conversion inspired by https://stackoverflow.com/a/619307
+    public static class TypeConverter
     {
         [StructLayout(LayoutKind.Explicit)]
         internal struct UIntToFloat

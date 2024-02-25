@@ -43,14 +43,13 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
         #region private fields
 
-        private NetworkConfiguration _config;
         private IPEndPoint _localEndpoint;
         private IPEndPoint _serverEndpoint;
         private Action<bool> _onConnectionEstablished;
 
         private readonly ConcurrentDictionary<byte, ClientInformation> _connectedClients = new();
 
-        private readonly ConcurrentQueue<DataPacketContainer> _packetsToSend = new();
+        private readonly ConcurrentQueue<SequencedPacketContainer> _packetsToSend = new();
 
         private readonly ConcurrentDictionary<ushort, (PacketHeader, byte[])> _receivedPacketsBuffer = new();
         private readonly ConcurrentDictionary<ushort, ConcurrentDictionary<ushort, byte[]>> _receivedChunksBuffer = new();
@@ -58,16 +57,14 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         private readonly ConcurrentDictionary<ushort, byte[]> _sendPacketsBuffer = new();
         private readonly ConcurrentDictionary<(ushort, ushort), byte[]> _sendChunksBuffer = new();
 
-        private ushort _unreliableLocalSequence = 0;
-        private ushort _unreliableRemoteSequence = 0;
-        private ushort _reliableLocalSequence = 0;
-        private ushort _reliableRemoteSequence = 0;
+        private ushort _unreliableLocalSequence;
+        private ushort _unreliableRemoteSequence;
+        private ushort _reliableLocalSequence;
+        private ushort _reliableRemoteSequence;
 
         #endregion
 
         #region lifecycle
-
-        public NetworkClient() { }
 
         public void ConnectToServer(NetworkConfiguration config, IPAddress serverIP, int serverPort, Action<bool> onConnectionEstablished = null)
         {
@@ -125,19 +122,19 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 _udpClient.Client.Bind(_localEndpoint);
                 _udpClient.Connect(_serverEndpoint);
 
-                _config = config;
+                NetworkConfiguration = config;
                 _onConnectionEstablished = onConnectionEstablished;
 
-                _listenerThread = new(() => ListenerThread()) { IsBackground = true };
+                _listenerThread = new(ListenerThread) { IsBackground = true };
                 _listenerThread.Start();
-                _senderThread = new(() => SenderThread()) { IsBackground = true };
+                _senderThread = new(SenderThread) { IsBackground = true };
                 _senderThread.Start();
 
                 Messaging.SystemMessage("Connecting to Server...");
                 Writer writer = new();
                 writer.Write(new ConnectionRequestPacket());
                 SendConnectionPacket(EPacketType.ConnectionRequest, writer.GetBuffer());
-                _ = TimeoutEstablishConnection(onConnectionEstablished);
+                _ = TimeoutEstablishConnection();
             }
             catch (Exception ex)
             {
@@ -145,10 +142,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 {
                     case ObjectDisposedException:
                     case SocketException:
-                        Messaging.DebugMessage("An error ocurred when attempting to access the socket!");
+                        Messaging.DebugMessage("An error occurred when attempting to access the socket!");
                         break;
                     case ThreadStartException:
-                        Messaging.DebugMessage("An error ocurred when starting the threads. Please try again later!");
+                        Messaging.DebugMessage("An error occurred when starting the threads. Please try again later!");
                         break;
                     case OutOfMemoryException:
                         Messaging.DebugMessage("Not enough memory available to start the threads!");
@@ -158,7 +155,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                         ExceptionDispatchInfo.Capture(ex).Throw();
                         throw;
                 }
-                ConnectionStatus = EConnectionStatus.IsDisconnected;
                 onConnectionEstablished?.Invoke(false);
                 Dispose();
             }
@@ -185,9 +181,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                     _udpClient.Dispose();
                 }
 
-                if (_config != null)
+                if (NetworkConfiguration != null)
 				{
-                    _config.LocalPort = 0;
+                    NetworkConfiguration.LocalPort = 0;
 				}
 
                 ConnectionStatus = EConnectionStatus.IsDisconnected;
@@ -213,20 +209,34 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             Dispose();
         }
 
-        public override void SendStructData<T>(byte receiverID, T StructData, ENetworkChannel networkChannel, Action<bool> onDataSend = null)
+        public override void SendStructData<T>(byte receiverID, T structData, ENetworkChannel networkChannel, Action<bool> onDataSend = null)
         {
             if (receiverID == ClientInformation.ID)
             {
-                Messaging.DebugMessage("The Receiver ID is the same as the local Clients ID!");
+                Messaging.DebugMessage("The Receiver ID is the same as the local Client's ID!");
                 onDataSend?.Invoke(false);
                 return;
             }
 
+            byte[] structBuffer;
+			if (NetworkConfiguration.SerialiserConfiguration.CompressFloats
+				|| NetworkConfiguration.SerialiserConfiguration.CompressQuaternions)
+            {
+                BitWriter structWriter = new(NetworkConfiguration.SerialiserConfiguration);
+				structWriter.Write(structData);
+				structBuffer = structWriter.GetBuffer();
+			}
+            else
+            {
+				Writer structWriter = new(NetworkConfiguration.SerialiserConfiguration);
+				structWriter.Write(structData);
+				structBuffer = structWriter.GetBuffer();
+			}
+
             Writer writer = new();
-            writer.Write(StructData);
-            DataPacket DataPacket = new(true, Hashing.GetFNV1Hash32(typeof(T).Name), receiverID, writer.GetBuffer());
+            DataPacket dataPacket = new(true, Hashing.GetFNV1Hash32(typeof(T).Name), receiverID, structBuffer);
             writer.Clear();
-            writer.Write(DataPacket);
+            writer.Write(dataPacket);
             _packetsToSend.Enqueue(new(receiverID, networkChannel, EPacketType.Data, writer.GetBuffer(), onDataSend));
         }
 
@@ -234,14 +244,14 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         {
             if (receiverID == ClientInformation.ID)
             {
-                Messaging.DebugMessage("The Receiver ID is the same as the local Clients ID!");
+                Messaging.DebugMessage("The Receiver ID is the same as the local Client's ID!");
                 onDataSend?.Invoke(false);
                 return;
             }
 
-            DataPacket DataPacket = new(false, Hashing.GetFNV1Hash32(id), receiverID, data);
-            Writer writer = new();
-            writer.Write(DataPacket);
+            DataPacket dataPacket = new(false, Hashing.GetFNV1Hash32(id), receiverID, data);
+            Writer writer = new(NetworkConfiguration.SerialiserConfiguration);
+			writer.Write(dataPacket);
             _packetsToSend.Enqueue(new(receiverID, networkChannel, EPacketType.Data, writer.GetBuffer(), onDataSend));
         }
 
@@ -264,6 +274,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
                     // check crc32
                     uint crc32 = reader.ReadUInt32();
+                    int typePosition = reader.Position;
                     byte[] bytesToHash = new byte[reader.Length];
                     Buffer.BlockCopy(NetworkConfiguration.ProtocolBytes, 0, bytesToHash, 0, 4);
                     reader.BlockCopy(ref bytesToHash, 4, reader.Remaining);
@@ -271,7 +282,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                         continue;
 
                     // check packet type
-                    reader.Position = 4;
+                    reader.Position = typePosition;
                     PacketHeader header = reader.Read<PacketHeader>();
 
                     // handle individual packet types
@@ -329,9 +340,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                         case EPacketType.ClientInfo:
                             {
                                 if (header.IsChunkedPacket)
-                                    HandleChunkedDataPacket(header, reader);
+                                    HandleChunkedSequencedPacket(header, reader);
                                 else
-                                    HandleDataPacket(header, reader);
+									HandleSequencedPacket(header, reader);
                                 break;
                             }
                         default: break;
@@ -349,10 +360,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                         case SocketException:
                         case ObjectDisposedException:
                             Messaging.DebugMessage(ex.ToString());
-                            MainThreadQueue.Enqueue(() => Dispose());
+                            MainThreadQueue.Enqueue(Dispose);
                             return;
                         default:
-                            MainThreadQueue.Enqueue(() => Dispose());
+                            MainThreadQueue.Enqueue(Dispose);
                             ExceptionDispatchInfo.Capture(ex).Throw();
                             throw;
                     }
@@ -389,9 +400,11 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 return;
 
             SHA256 h = SHA256.Create();
-            byte[] hashedChallenge = h.ComputeHash(BitConverter.GetBytes(packet.Challenge));
             Writer writer = new();
-            writer.Write(new ChallengeAnswerPacket(hashedChallenge, _config.Username, _config.Color));
+            writer.WriteUInt64(packet.Challenge);
+            byte[] hashedChallenge = h.ComputeHash(writer.GetBuffer());
+            writer.Clear();
+            writer.Write(new ChallengeAnswerPacket(hashedChallenge, NetworkConfiguration.Username, NetworkConfiguration.Color));
             SendConnectionPacket(EPacketType.ChallengeAnswer, writer.GetBuffer());
         }
 
@@ -400,10 +413,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             if (ConnectionStatus != EConnectionStatus.IsConnecting)
                 return;
 
-            ClientInformation = new(packet.ClientID, _config.Username, _config.Color);
+            ClientInformation = new(packet.ClientID, NetworkConfiguration.Username, NetworkConfiguration.Color);
             ServerInformation = new(_serverEndpoint, packet.Servername, packet.MaxNumberConnectedClients);
 
-            MainThreadQueue.Enqueue(() => _onConnectionEstablished?.Invoke(true));
+            MainThreadQueue.Enqueue(EstablishConnection);
             MainThreadQueue.Enqueue(() => ConnectionStatus = EConnectionStatus.IsConnected);
 
             Messaging.SystemMessage("Connected to Server!");
@@ -415,7 +428,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 return;
 
             MainThreadQueue.Enqueue(() => _onConnectionEstablished?.Invoke(false));
-            MainThreadQueue.Enqueue(() => Dispose());
+            MainThreadQueue.Enqueue(Dispose);
 
             switch (packet.Reason)
 			{
@@ -428,6 +441,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 case DeniedReason.NoSpace:
                     Messaging.SystemMessage("Connection has been denied because server has no space available!");
                     break;
+				default:
+					Messaging.SystemMessage("Something went wrong. Try again later!");
+					break;
 			}
         }
 
@@ -436,13 +452,12 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             if (!IsConnected)
                 return;
 
-            MainThreadQueue.Enqueue(() => Dispose());
+            MainThreadQueue.Enqueue(Dispose);
 
             switch (packet.Reason)
 			{
                 case ClosedReason.Unknown:
                     Messaging.SystemMessage("Client was disconnected from the host!");
-                    OnServerWasClosed?.Invoke();
                     break;
                 case ClosedReason.ServerWasClosed:
                     Messaging.SystemMessage("Server was closed by the host!");
@@ -450,11 +465,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                     break;
                 case ClosedReason.FailedACK:
                     Messaging.SystemMessage("Client dropped too many packets!");
-                    OnServerWasClosed?.Invoke();
                     break;
                 default:
                     Messaging.SystemMessage("Something went wrong. Try again later!");
-                    OnServerWasClosed?.Invoke();
                     break;
             }
         }
@@ -473,7 +486,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             Messaging.SystemMessage($"Client {client} disconnected!");
         }
 
-        private void HandleDataPacket(PacketHeader header, Reader reader)
+        private void HandleSequencedPacket(PacketHeader header, Reader reader)
         {
             ushort sequence = reader.ReadUInt16();
 
@@ -485,7 +498,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
                 // update sequence and consume packet
                 _unreliableRemoteSequence = sequence;
-                ConsumeSequencedPacket(header, reader.ReadRemainingBytes());
+                ConsumeSequencedPacket(header, reader.ReadRemainingBuffer());
                 return;
             }
 
@@ -502,15 +515,15 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
 
                 if (!IsNextPacket(sequence, _reliableRemoteSequence) && IsOrderedChannel(header.NetworkChannel))
                 {   // if a packet is missing in the sequence keep it in the buffer
-                    _receivedPacketsBuffer.TryAdd(sequence, (header, reader.ReadRemainingBytes()));
+                    _receivedPacketsBuffer.TryAdd(sequence, (header, reader.ReadRemainingBuffer()));
                     return;
                 }
 
                 // update sequence and consume packet
                 _reliableRemoteSequence = sequence;
-                ConsumeSequencedPacket(header, reader.ReadRemainingBytes());
+                ConsumeSequencedPacket(header, reader.ReadRemainingBuffer());
 
-                // apply all packets from that senders buffer that are now next in the sequence
+                // apply all packets from that sender's buffer that are now next in the sequence
                 while (_receivedPacketsBuffer.Count > 0)
                 {
                     sequence++;
@@ -524,7 +537,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             }
         }
 
-        private void HandleChunkedDataPacket(PacketHeader header, Reader reader)
+        private void HandleChunkedSequencedPacket(PacketHeader header, Reader reader)
         {
             if (!IsReliableChannel(header.NetworkChannel))
             {
@@ -535,7 +548,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             ushort sequence = reader.ReadUInt16();
             ushort numberOfSlices = reader.ReadUInt16();
             ushort sliceNumber = reader.ReadUInt16();
-            byte[] sliceData = reader.ReadRemainingBytes();
+            byte[] sliceData = reader.ReadRemainingBuffer();
 
             // send ACK
             Writer writer = new();
@@ -577,7 +590,19 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             // update sequence and consume packet
             _reliableRemoteSequence = sequence;
             ConsumeSequencedPacket(header, chunkData);
-        }
+
+			// apply all packets from that sender's buffer that are now next in the sequence
+			while (_receivedPacketsBuffer.Count > 0)
+			{
+				sequence++;
+				if (!_receivedPacketsBuffer.TryRemove(sequence, out (PacketHeader, byte[]) bufferedPacket))
+					break;
+
+				// update sequence and consume packet
+				_reliableRemoteSequence = sequence;
+				ConsumeSequencedPacket(bufferedPacket.Item1, bufferedPacket.Item2);
+			}
+		}
 
         private void ConsumeSequencedPacket(PacketHeader header, byte[] data)
         {
@@ -616,7 +641,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                             MainThreadQueue.Enqueue(() => ReceiveByteData(packet.DataID, packet.ClientID, packet.Data));
                         break;
 					}
-                default: break;
             }
         }
 
@@ -630,7 +654,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             {
                 try
                 {
-                    if (_packetsToSend.Count == 0 || !_packetsToSend.TryDequeue(out DataPacketContainer packet))
+                    if (_packetsToSend.Count == 0 || !_packetsToSend.TryDequeue(out SequencedPacketContainer packet))
                         continue;
 
                     if (IsReliableChannel(packet.NetworkChannel))
@@ -640,27 +664,27 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 }
                 catch (Exception ex)
                 {
-                    MainThreadQueue.Enqueue(() => Dispose());
+                    MainThreadQueue.Enqueue(Dispose);
                     ExceptionDispatchInfo.Capture(ex).Throw();
                     throw;
                 }
             }
         }
 
-        private void SendUnreliablePacket(DataPacketContainer packet)
+        private void SendUnreliablePacket(SequencedPacketContainer packet)
 		{
             try
             {
                 // write header, sequence and body to buffer 
                 Writer writer = new();
-                writer.Skip(4); // skip crc32 
+                writer.Skip(writer.Int32); // skip crc32 
                 writer.Write(new PacketHeader(false, false, packet.NetworkChannel, packet.PacketType));
                 writer.WriteUInt16((ushort)(_unreliableLocalSequence + 1));
                 writer.BlockCopy(ref packet.Body, 0, packet.Body.Length);
 
-                if (writer.Length > _config.MTU)
+                if (writer.Length > NetworkConfiguration.MTU)
                 {   // only allow unreliable packets smaller than the mtu
-                    Messaging.DebugMessage($"No unreliable packet can be larger than the MTU of {_config.MTU} bytes!");
+                    Messaging.DebugMessage($"No unreliable packet can be larger than the MTU of {NetworkConfiguration.MTU} bytes!");
                     MainThreadQueue.Enqueue(() => packet.OnPacketSend?.Invoke(false));
                     return;
                 }
@@ -691,21 +715,21 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                     case SocketException:
                     case ObjectDisposedException:
                         Messaging.DebugMessage(ex.ToString());
-                        MainThreadQueue.Enqueue(() => Dispose());
+                        MainThreadQueue.Enqueue(Dispose);
                         return;
                 }
             }
         }
 
-        private void SendReliablePacket(DataPacketContainer packet)
+        private void SendReliablePacket(SequencedPacketContainer packet)
 		{
             try
             {
-                if (packet.Body.Length < _config.MTU)
+                if (packet.Body.Length < NetworkConfiguration.MTU)
                 {   // send as complete packet
                     // write header and body to buffer
                     Writer writer = new();
-                    writer.Skip(4); // skip crc32
+                    writer.Skip(writer.Int32); // skip crc32
                     writer.Write(new PacketHeader(false, false, packet.NetworkChannel, packet.PacketType));
                     writer.WriteUInt16((ushort)(_reliableLocalSequence + 1));
                     writer.BlockCopy(ref packet.Body, 0, packet.Body.Length);
@@ -728,33 +752,33 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                 }
                 else
                 {   // send as chunked packet
-                    if (packet.Body.Length > _config.MTU * ushort.MaxValue)
+                    if (packet.Body.Length > NetworkConfiguration.MTU * ushort.MaxValue)
                     {
-                        Messaging.DebugMessage($"No packet can be larger than {_config.MTU * ushort.MaxValue} bytes!");
+                        Messaging.DebugMessage($"No packet can be larger than {NetworkConfiguration.MTU * ushort.MaxValue} bytes!");
                         MainThreadQueue.Enqueue(() => packet.OnPacketSend?.Invoke(false));
                         return;
                     }
 
-                    ushort numberOfSlices = (ushort)(packet.Body.Length % _config.MTU == 0
-                            ? packet.Body.Length / _config.MTU
-                            : packet.Body.Length / _config.MTU + 1);
+                    ushort numberOfSlices = (ushort)(packet.Body.Length % NetworkConfiguration.MTU == 0
+                            ? packet.Body.Length / NetworkConfiguration.MTU
+                            : packet.Body.Length / NetworkConfiguration.MTU + 1);
 
                     // write header, sequence and number of slices to buffer
                     Writer writer = new();
-                    writer.Skip(4); // skip crc32
+                    writer.Skip(writer.Int32); // skip crc32
                     writer.Write(new PacketHeader(false, true, packet.NetworkChannel, packet.PacketType));
                     writer.WriteUInt16((ushort)(_reliableLocalSequence + 1));
                     writer.WriteUInt16(numberOfSlices);
-                    int startPosition = writer.Position;
+                    int slicePosition = writer.Position;
 
                     // send slices individually to client
                     for (ushort i = 0; i < numberOfSlices; i++)
                     {   // reset body in writer buffer and fill with new slice
-                        writer.Position = startPosition;
+                        writer.Position = slicePosition;
                         writer.WriteUInt16(i);
 
-                        int length = i < numberOfSlices - 1 ? _config.MTU : packet.Body.Length % _config.MTU;
-                        writer.BlockCopy(ref packet.Body, i * _config.MTU, length);
+                        int length = i < numberOfSlices - 1 ? NetworkConfiguration.MTU : packet.Body.Length % NetworkConfiguration.MTU;
+                        writer.BlockCopy(ref packet.Body, i * NetworkConfiguration.MTU, length);
 
                         // calculate crc32 from buffer and write to it
                         writer.Position = 0;
@@ -790,7 +814,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
                     case SocketException:
                     case ObjectDisposedException:
                         Messaging.DebugMessage(ex.ToString());
-                        MainThreadQueue.Enqueue(() => Dispose());
+                        MainThreadQueue.Enqueue(Dispose);
                         return;
                 }
             }
@@ -799,17 +823,16 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         /// <summary>
         /// Retry sending a Packet Slice after a Delay and within a maximum number of retries
         /// </summary>
-        /// <param name="client"></param>
         /// <param name="sequence"></param>
         /// <param name="retries"></param>
         /// <returns></returns>
         private async Task ResendSliceData((ushort, ushort) sequence, int retries = 0)
         {
-            await Task.Delay((int)(_config.RTT * 1.25f));
+            await Task.Delay((int)(NetworkConfiguration.RTT * 1.25f));
             if (_sendChunksBuffer.TryGetValue(sequence, out byte[] data))
             {
                 _udpClient.Send(data, data.Length);
-                if (retries < _config.MaxNumberResendReliablePackets)
+                if (retries < NetworkConfiguration.MaxNumberResendReliablePackets)
                     _ = ResendSliceData(sequence, retries + 1);
                 else
                     DisconnectFromServer();
@@ -820,17 +843,16 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         /// <summary>
         /// Retry sending a Packet after a Delay and within a maximum number of retries
         /// </summary>
-        /// <param name="client"></param>
         /// <param name="sequence"></param>
         /// <param name="retries"></param>
         /// <returns></returns>
         private async Task ResendPacketData(ushort sequence, int retries = 0)
         {
-            await Task.Delay((int)(_config.RTT * 1.25f));
+            await Task.Delay((int)(NetworkConfiguration.RTT * 1.25f));
             if (_sendPacketsBuffer.TryGetValue(sequence, out byte[] data))
             {
                 _udpClient.Send(data, data.Length);
-                if (retries < _config.MaxNumberResendReliablePackets)
+                if (retries < NetworkConfiguration.MaxNumberResendReliablePackets)
                     _ = ResendPacketData(sequence, retries + 1);
                 else
                     DisconnectFromServer();
@@ -845,20 +867,26 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
         /// Stops the process of establishing a Connection, if it did not success within a given timeout.
         /// </summary>
         /// <returns></returns>
-        private async Task TimeoutEstablishConnection(Action<bool> onConnectionEstablished)
+        private async Task TimeoutEstablishConnection()
         {
-            await Task.Delay(_config.ServerConnectionTimeout);
-            if (!IsConnected)
+            await Task.Delay(NetworkConfiguration.ServerConnectionTimeout);
+            if (!IsConnected && _onConnectionEstablished != null)
             {
                 Dispose();
-                onConnectionEstablished?.Invoke(false);
+                _onConnectionEstablished?.Invoke(false);
             }
+        }
+
+        private void EstablishConnection()
+        {
+            _onConnectionEstablished?.Invoke(true);
+            _onConnectionEstablished = null;
         }
 
         private void SendConnectionPacket(EPacketType packetType, byte[] data)
         {   // set packet type and packet bytes
             Writer writer = new();
-            writer.Skip(4);
+            writer.Skip(writer.Int32);
             writer.Write<PacketHeader>(new(packetType));
             writer.BlockCopy(ref data, 0, data.Length);
 
@@ -867,7 +895,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Sockets
             Buffer.BlockCopy(NetworkConfiguration.ProtocolBytes, 0, bytesToHash, 0, 4);
             Buffer.BlockCopy(writer.GetBuffer(), 4, bytesToHash, 4, bytesToHash.Length - 4);
             writer.Position = 0;
-            writer.WriteUInt32(Hashing.GetCRC32Hash(bytesToHash));
+			writer.WriteUInt32(Hashing.GetCRC32Hash(bytesToHash));
 
             // send to server
             _udpClient.Send(writer.GetBuffer(), writer.Length);

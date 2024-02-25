@@ -73,7 +73,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery
                 _udpClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(_discoveryIP, _localIP));
                 _udpClient.Client.Bind(new IPEndPoint(_localIP, config.DiscoveryPort));
 
-                _discoveryThread = new(() => DiscoveryThread()) { IsBackground = true };
+                _discoveryThread = new(DiscoveryThread) { IsBackground = true };
                 _discoveryThread.Start();
 
                 OnServerDiscoveryActivated?.Invoke();
@@ -91,10 +91,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery
                         break;
                     case ObjectDisposedException:
                     case SocketException:
-                        Messaging.DebugMessage("An error ocurred when attempting to access the socket!");
+                        Messaging.DebugMessage("An error occurred when attempting to access the socket!");
                         break;
                     case ThreadStartException:
-                        Messaging.DebugMessage("An error ocurred when starting the threads. Please try again later!");
+                        Messaging.DebugMessage("An error occurred when starting the threads. Please try again later!");
                         break;
                     case OutOfMemoryException:
                         Messaging.DebugMessage("Not enough memory available to start the threads!");
@@ -155,6 +155,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery
 
                     // check crc32
                     uint crc32 = reader.ReadUInt32();
+                    int typePosition = reader.Position;
                     byte[] bytesToHash = new byte[reader.Length];
                     Buffer.BlockCopy(NetworkConfiguration.ProtocolBytes, 0, bytesToHash, 0, 4);
                     reader.BlockCopy(ref bytesToHash, 4, reader.Remaining);
@@ -162,7 +163,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery
                         continue;
 
                     // check packet type
-                    reader.Position = 4;
+                    reader.Position = typePosition;
                     PacketHeader header = reader.Read<PacketHeader>();
                     if (header.PacketType != EPacketType.ServerInformation)
                         continue;
@@ -214,8 +215,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery
 
         private bool ShouldAcceptConnection(IPEndPoint endpoint)
 		{
-            if (_config.LocalPort == 0)
-                return true;
             if (endpoint.Address.Equals(_localIP) && endpoint.Port == _config.LocalPort)
                 return false;
             return !endpoint.Address.Equals(_localIP) || _config.AllowLocalConnections;
