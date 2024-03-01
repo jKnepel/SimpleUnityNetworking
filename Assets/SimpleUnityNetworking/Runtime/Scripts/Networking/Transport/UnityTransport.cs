@@ -252,11 +252,11 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                 while (_driver.PopEventForConnection(conn, out _) != NetworkEvent.Type.Empty) {}
             }
 
+            _driver.ScheduleUpdate().Complete();
             _clientIDToConnection = null;
             _connectionToClientID = null;
             _clientIDs = 0;
-            _driver.Dispose();
-            _networkSettings.Dispose();
+            DisposeDrivers();
 
             SetLocalServerState(ELocalConnectionState.Stopped);
         }
@@ -317,6 +317,9 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             if (_driver.Disconnect(_serverConnection) == 0)
             {
             }
+            
+            _driver.ScheduleUpdate().Complete();
+            DisposeDrivers();
 
             SetLocalClientState(ELocalConnectionState.Stopped);
         }
@@ -574,14 +577,14 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
 
                     if (result == data.Length)
                     {
-                        sendQueue.Dequeue();
+                        sendQueue.Dequeue().Dispose();
                         continue;
                     }
 
                     if (result != (int)StatusCode.NetworkSendQueueFull)
                     {
                         Debug.LogError("Error sending a message!");
-                        sendQueue.Dequeue();
+                        sendQueue.Dequeue().Dispose();
                         // TODO : handle error
                     }
 
