@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using jKnepel.SimpleUnityNetworking.Networking;
+using Unity.Networking.Transport;
 using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Transporting
@@ -11,6 +13,9 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         public abstract bool IsServer { get; }
         public abstract bool IsClient { get; }
         public abstract bool IsHost { get; }
+
+        public abstract ELocalConnectionState LocalServerState { get; }
+        public abstract ELocalConnectionState LocalClientState { get; }
         
         public abstract event Action<ServerReceivedData> OnServerReceivedData;
         public abstract event Action<ClientReceivedData> OnClientReceivedData;
@@ -25,31 +30,54 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         public abstract void StopNetwork();
         public abstract void IterateIncoming();
         public abstract void IterateOutgoing();
-        public abstract void SendDataToServer(byte[] data);
-        public abstract void SendDataToClient(int clientID, byte[] data);
+        public abstract void SendDataToServer(byte[] data, ENetworkChannel channel = ENetworkChannel.ReliableOrdered);
+        public abstract void SendDataToClient(int clientID, byte[] data, ENetworkChannel channel = ENetworkChannel.ReliableOrdered);
         public abstract void DisconnectClient(int clientID);
     }
     
     [Serializable]
     public class ConnectionData
     {
-        public string LocalAddress = "127.0.0.1";
-        public ushort LocalPort = 0;
         public string Address = "127.0.0.1";
-        public ushort Port = 0;
+        public ushort Port = 24856;
+        public string ServerListenAddress = string.Empty;
+        
+        public static NetworkEndpoint ParseNetworkEndpoint(string ip, ushort port)
+        {
+            if (NetworkEndpoint.TryParse(ip, port, out var endpoint) ||
+                NetworkEndpoint.TryParse(ip, port, out endpoint, NetworkFamily.Ipv6)) return endpoint;
+
+            return endpoint;
+        }
+
+        public virtual NetworkEndpoint ParseServerListenEndpoint()
+        {
+            if (!string.IsNullOrEmpty(ServerListenAddress))
+            {
+                return ParseNetworkEndpoint(ServerListenAddress, Port);
+            }
+            
+            var endpoint = !string.IsNullOrEmpty(Address) &&
+                           ParseNetworkEndpoint(Address, Port).Family == NetworkFamily.Ipv6
+                ? NetworkEndpoint.LoopbackIpv6
+                : NetworkEndpoint.LoopbackIpv4;
+            return endpoint.WithPort(Port);
+        }
     }
     
-    public class ServerReceivedData
+    public struct ServerReceivedData
     {
         public int ClientID;
         public byte[] Data;
         public DateTime Timestamp;
+        public ENetworkChannel Channel;
     }
 
-    public class ClientReceivedData
+    public struct ClientReceivedData
     {
         public byte[] Data;
         public DateTime Timestamp;
+        public ENetworkChannel Channel;
     }
 
     public enum ELocalConnectionState

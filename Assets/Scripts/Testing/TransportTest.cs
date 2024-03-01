@@ -1,4 +1,5 @@
 using jKnepel.SimpleUnityNetworking.Serialisation;
+using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Transporting;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -68,30 +69,30 @@ public class TransportTest : MonoBehaviour
         _config.Transport.StopClient();
     }
 
-    public void SendToServer()
+    public void SendToServer(ENetworkChannel channel = ENetworkChannel.ReliableOrdered)
     {
         Writer writer = new();
         writer.WriteString(_message);
-        _config.Transport.SendDataToServer(writer.GetBuffer());
+        _config.Transport.SendDataToServer(writer.GetBuffer(), channel);
     }
 
-    public void SendToClient()
+    public void SendToClient(ENetworkChannel channel = ENetworkChannel.ReliableOrdered)
     {
         Writer writer = new();
         writer.WriteString(_message);
-        _config.Transport.SendDataToClient(_targetClientID, writer.GetBuffer());
+        _config.Transport.SendDataToClient(_targetClientID, writer.GetBuffer(), channel);
     }
 
     private void DataFromClient(ServerReceivedData data)
     {
         Reader reader = new(data.Data);
-        Debug.Log($"Server: {reader.ReadString()}");
+        Debug.Log($"Server: {reader.ReadString()} {data.Channel}");
     }
     
     private void DataFromServer(ClientReceivedData data)
     {
         Reader reader = new(data.Data);
-        Debug.Log($"Client: {reader.ReadString()}");
+        Debug.Log($"Client: {reader.ReadString()} {data.Channel}");
     }
 
     private void RemoteConnectionUpdated(int clientID, ERemoteConnectionState state)
@@ -104,6 +105,8 @@ public class TransportTest : MonoBehaviour
 [CustomEditor(typeof(TransportTest))]
 public class TransportTestEditor : Editor
 {
+    private ENetworkChannel _channel;
+    
 	public override void OnInspectorGUI()
 	{
 		base.OnInspectorGUI();
@@ -113,6 +116,7 @@ public class TransportTestEditor : Editor
         GUILayout.Label($"IsServer: {test.IsServer}");
         GUILayout.Label($"IsClient: {test.IsClient}");
         GUILayout.Label($"IsHost: {test.IsHost}");
+        _channel = (ENetworkChannel)EditorGUILayout.EnumPopup(_channel);
 
         if (GUILayout.Button("CreateServer"))
             test.CreateServer();
@@ -123,9 +127,9 @@ public class TransportTestEditor : Editor
         if (GUILayout.Button("StopClient"))
             test.StopClient();
         if (GUILayout.Button("SendServer"))
-            test.SendToServer();
+            test.SendToServer(_channel);
         if (GUILayout.Button("SendClient"))
-            test.SendToClient();
+            test.SendToClient(_channel);
     }
 }
 #endif

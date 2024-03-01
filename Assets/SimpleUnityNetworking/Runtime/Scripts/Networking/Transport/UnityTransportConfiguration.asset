@@ -13,7 +13,6 @@ MonoBehaviour:
   m_Name: UnityTransportConfiguration
   m_EditorClassIdentifier: 
   _connectionData:
-    LocalAddress: 127.0.0.1
-    LocalPort: 64303
     Address: 127.0.0.1
-    Port: 0
+    Port: 24856
+    ServerListenAddress: 
