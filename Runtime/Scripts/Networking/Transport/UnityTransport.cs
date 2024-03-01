@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using jKnepel.SimpleUnityNetworking.Networking;
+using jKnepel.SimpleUnityNetworking.Utilities;
 using UnityEngine;
 using Unity.Burst;
 using Unity.Collections;
@@ -9,6 +10,7 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Networking.Transport;
 using Unity.Networking.Transport.Error;
+using Unity.Networking.Transport.Utilities;
 
 namespace jKnepel.SimpleUnityNetworking.Transporting
 {
@@ -122,7 +124,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         
         private bool _disposed;
         
-        private readonly ConnectionData _connectionData;
+        private TransportSettings _settings;
         
         private NetworkDriver _driver;
         private NetworkSettings _networkSettings;
@@ -162,9 +164,9 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         
         #region lifecycle
         
-        public UnityTransport(ConnectionData config)
+        public UnityTransport(TransportSettings settings)
         {
-            _connectionData = config;
+            _settings = settings;
         }
         
         ~UnityTransport()
@@ -198,6 +200,11 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             _disposed = true;
         }
 
+        public override void SetTransportSettings(TransportSettings settings)
+        {
+            _settings = settings;
+        }
+
         public override void StartServer()
         {
             if (LocalServerState is ELocalConnectionState.Starting or ELocalConnectionState.Started)
@@ -207,8 +214,20 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             }
 
             SetLocalServerState(ELocalConnectionState.Starting);
+
+            var port = _settings.Port == 0 ? NetworkUtilities.FindNextAvailablePort() : _settings.Port;
+            NetworkEndpoint endpoint = default;
             
-            var endpoint = _connectionData.ParseServerListenEndpoint();
+            if (!string.IsNullOrEmpty(_settings.ServerListenAddress))
+            {
+                if (!NetworkEndpoint.TryParse(_settings.Address, port, out endpoint))
+                    NetworkEndpoint.TryParse(_settings.Address, port, out endpoint, NetworkFamily.Ipv6);
+            }
+            else
+            {
+                endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(port);
+            }
+            
             if (endpoint.Family == NetworkFamily.Invalid)
             {
                 SetLocalServerState(ELocalConnectionState.Stopping);
@@ -276,8 +295,9 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             }
             
             SetLocalClientState(ELocalConnectionState.Starting);
-            
-            var serverEndpoint = ConnectionData.ParseNetworkEndpoint(_connectionData.Address, _connectionData.Port);
+
+            if (!NetworkEndpoint.TryParse(_settings.Address, _settings.Port, out var serverEndpoint))
+                NetworkEndpoint.TryParse(_settings.Address, _settings.Port, out serverEndpoint, NetworkFamily.Ipv6);
             if (serverEndpoint == default || serverEndpoint.Family == NetworkFamily.Invalid)
             {
                 SetLocalClientState(ELocalConnectionState.Stopping);
@@ -614,7 +634,20 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         private void InitialiseDrivers()
         {
             _networkSettings = new(Allocator.Persistent);
-            // TODO : settings
+            _networkSettings.WithNetworkConfigParameters(
+                connectTimeoutMS: _settings.ConnectTimeoutMS,
+                maxConnectAttempts: _settings.MaxConnectAttempts,
+                disconnectTimeoutMS: _settings.DisconnectTimeoutMS,
+                heartbeatTimeoutMS: _settings.HeartbeatTimeoutMS
+            );
+            _networkSettings.WithFragmentationStageParameters(
+                payloadCapacity: _settings.PayloadCapacity
+            );
+            _networkSettings.WithReliableStageParameters(
+                windowSize: _settings.WindowSize,
+                minimumResendTime: _settings.MinimumResendTime,
+                maximumResendTime: _settings.MaximumResendTime
+            );
             
             _driver = NetworkDriver.Create(_networkSettings);
             _unreliableSequencedPipeline = _driver.CreatePipeline(typeof(UnreliableSequencedPipelineStage));

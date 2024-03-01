@@ -8,13 +8,11 @@ namespace jKnepel.SimpleUnityNetworking.Utilities
 {
     internal static class NetworkUtilities
     {
-        public static int FindNextAvailablePort()
+        public static ushort FindNextAvailablePort()
         {
-            using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp))
-            {
-                socket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
-                return ((IPEndPoint)socket.LocalEndPoint).Port;
-            }
+            using var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            socket.Bind(new IPEndPoint(IPAddress.Loopback, 0));
+            return (ushort)((IPEndPoint)socket.LocalEndPoint).Port;
         }
 
         public static IPAddress[] GetLocalIPAddresses(bool allowVirtualIPs = false)

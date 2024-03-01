@@ -12,12 +12,12 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         private UnityTransport _transport;
         public override Transport Transport => _transport;
 
-        [SerializeField] private ConnectionData _connectionData;
+        [SerializeField] private TransportSettings _settings;
 
         public UnityTransportConfiguration()
         {
-            _connectionData = new();
-            _transport = new UnityTransport(_connectionData);
+            _settings = new();
+            _transport = new UnityTransport(_settings);
         }
     }
 }
