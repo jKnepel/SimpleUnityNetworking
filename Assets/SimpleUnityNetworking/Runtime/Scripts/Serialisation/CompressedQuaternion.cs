@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Serialisation
 {
-    public class CompressedQuaternion
+    public struct CompressedQuaternion
 	{   // thanks to Glenn Fiedler https://gafferongames.com/post/snapshot_compression/
 		private const float MINIMUM = -0.70710678f; // -1 / sqrt(2)
 		private const float MAXIMUM = +0.70710678f; // +1 / sqrt(2)
@@ -92,8 +92,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         {
             Bits = bits;
             Largest = largest;
-            A = a; 
-            B = b; 
+            A = a;
+            B = b;
             C = c;
 
 			float scale = (1 << bits) - 1;

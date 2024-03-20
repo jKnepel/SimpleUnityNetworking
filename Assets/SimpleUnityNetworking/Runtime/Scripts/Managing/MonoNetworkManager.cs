@@ -1,196 +1,145 @@
 using jKnepel.SimpleUnityNetworking.Networking;
-using jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
+using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Net;
 using UnityEngine;
-#if UNITY_EDITOR
-using UnityEditor;
-using UnityEditor.SceneManagement;
-#endif
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
     public class MonoNetworkManager : MonoBehaviour, INetworkManager
     {
-        #region public members
+	    public Transport Transport
+	    {
+		    get => _networkManager.Transport; 
+		    set => _networkManager.Transport = value;
+	    }
 
-        [SerializeField] private NetworkConfiguration _cachedNetworkConfiguration;
-        public NetworkConfiguration NetworkConfiguration
-        {
-            get => _cachedNetworkConfiguration;
-            set
-            {
-                if (_cachedNetworkConfiguration == value) return;
-                
-                if (IsConnected)
-                {
-                    Debug.LogError($"Can not change {nameof(NetworkConfiguration)} when connected to a network.");
-                    return;
-                }
+	    public bool IsOnline => _networkManager?.IsOnline ?? false;
+	    public bool IsServer => _networkManager?.IsServer ?? false;
+	    public bool IsClient => _networkManager?.IsClient ?? false;
+	    public bool IsHost => _networkManager?.IsHost ?? false;
+	    
+	    public ServerInformation ServerInformation => _networkManager.ServerInformation;
+	    public ELocalConnectionState Server_LocalState => _networkManager.Server_LocalState;
+	    public ConcurrentDictionary<uint, ClientInformation> Server_ConnectedClients => _networkManager.Server_ConnectedClients;
+	    public ClientInformation ClientInformation => _networkManager.ClientInformation;
+	    public ELocalClientConnectionState Client_LocalState => _networkManager.Client_LocalState;
+	    public ConcurrentDictionary<uint, ClientInformation> Client_ConnectedClients => _networkManager.Client_ConnectedClients;
 
-                _cachedNetworkConfiguration = value;
-                NetworkManager.NetworkConfiguration = _cachedNetworkConfiguration;
+	    
+	    public event Action<ELocalConnectionState> Server_OnLocalStateUpdated;
+	    public event Action<uint> Server_OnRemoteClientConnected;
+	    public event Action<uint> Server_OnRemoteClientDisconnected;
+	    public event Action<uint> Server_OnRemoteClientUpdated;
+	    
+	    public event Action<ELocalClientConnectionState> Client_OnLocalStateUpdated;
+	    public event Action<uint> Client_OnRemoteClientConnected;
+	    public event Action<uint> Client_OnRemoteClientDisconnected;
+	    public event Action<uint> Client_OnRemoteClientUpdated;
 
-#if UNITY_EDITOR
-                // This is needed for changes inside prefabs
-                EditorSceneManager.MarkSceneDirty(gameObject.scene);
-                if (value != null)
-                    EditorUtility.SetDirty(_cachedNetworkConfiguration);
-#endif
-            }
-        }
-        public NetworkEvents Events => NetworkManager.Events;
+	    private NetworkManager _networkManager;
 
-        public bool IsConnected => NetworkManager.IsConnected;
-        public bool IsHost => NetworkManager.IsHost;
-        public EConnectionStatus ConnectionStatus => NetworkManager.ConnectionStatus;
-        public ServerInformation ServerInformation => NetworkManager.ServerInformation;
-        public ClientInformation ClientInformation => NetworkManager.ClientInformation;
-        public ConcurrentDictionary<byte, ClientInformation> ConnectedClients => NetworkManager.ConnectedClients;
-        public byte NumberConnectedClients => NetworkManager.NumberConnectedClients;
+	    private void Awake()
+	    {
+		    _networkManager = new();
+		    _networkManager.Server_OnLocalStateUpdated += state => Server_OnLocalStateUpdated?.Invoke(state);
+		    _networkManager.Server_OnRemoteClientConnected += id => Server_OnRemoteClientConnected?.Invoke(id);
+		    _networkManager.Server_OnRemoteClientDisconnected += id => Server_OnRemoteClientDisconnected?.Invoke(id);
+		    _networkManager.Server_OnRemoteClientUpdated += id => Server_OnRemoteClientUpdated?.Invoke(id);
+		    _networkManager.Client_OnLocalStateUpdated += state => Client_OnLocalStateUpdated?.Invoke(state);
+		    _networkManager.Client_OnRemoteClientConnected += id => Client_OnRemoteClientConnected?.Invoke(id);
+		    _networkManager.Client_OnRemoteClientDisconnected += id => Client_OnRemoteClientDisconnected?.Invoke(id);
+		    _networkManager.Client_OnRemoteClientUpdated += id => Client_OnRemoteClientUpdated?.Invoke(id);
+	    }
 
-        public bool IsServerDiscoveryActive => NetworkManager.IsServerDiscoveryActive;        
-        public List<OpenServer> OpenServers => NetworkManager.OpenServers;
+	    public void Update()
+	    {
+		    _networkManager?.Update();
+	    }
 
-        #endregion
+	    private void OnDestroy()
+	    {
+		    _networkManager.Dispose();
+	    }
 
-        #region private members
+	    public void StartServer(string servername, uint maxNumberConnectedClients)
+	    {
+		    _networkManager?.StartServer(servername, maxNumberConnectedClients);
+	    }
 
-        [SerializeField] private NetworkManager _networkManager;
+	    public void StopServer()
+	    {
+		    _networkManager?.StopServer();
+	    }
 
-        public NetworkManager NetworkManager
-        {
-            get
-            {
-                if (_networkManager != null) return _networkManager;
-                
-                _networkManager = new(false);
-                _networkManager.NetworkConfiguration = NetworkConfiguration;
-                return _networkManager;
-            }
-        }
+	    public void StartClient(string username, Color32 userColor)
+	    {
+		    _networkManager?.StartClient(username, userColor);
+	    }
 
-        #endregion
+	    public void StopClient()
+	    {
+		    _networkManager?.StopClient();
+	    }
 
-        #region lifecycle
+	    public void StopNetwork()
+	    {
+		    _networkManager?.StopNetwork();
+	    }
 
-        private void Start()
-        {
-            StartServerDiscovery();
-        }
+	    public void RegisterByteData(string byteID, Action<uint, byte[]> callback)
+	    {
+		    _networkManager?.RegisterByteData(byteID, callback);
+	    }
 
-        private void OnDestroy()
-        {
-            NetworkManager.Dispose();
-        }
+	    public void UnregisterByteData(string byteID, Action<uint, byte[]> callback)
+	    {
+		    _networkManager?.UnregisterByteData(byteID, callback);
+	    }
 
-        #endregion
+	    public void SendByteDataToClient(uint clientID, uint byteID, byte[] byteData,
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+	    {
+		    _networkManager?.SendByteDataToClient(clientID, byteID, byteData, channel);
+	    }
 
-        #region public methods
+	    public void SendByteDataToAll(uint byteID, byte[] byteData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+	    {
+		    _networkManager?.SendByteDataToAll(byteID, byteData, channel);
+	    }
 
-        public void CreateServer(string servername, byte maxNumberClients, Action<bool> onConnectionEstablished = null)
-        {
-            if (!Application.isPlaying)
-            {
-                Debug.LogWarning("Can not create server with mono network manager while in edit mode.");
-                return;
-            }
-            
-            NetworkManager.CreateServer(servername, maxNumberClients, onConnectionEstablished);
-        }
+	    public void SendByteDataToClients(uint[] clientIDs, uint byteID, byte[] byteData,
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+	    {
+		    _networkManager?.SendByteDataToClients(clientIDs, byteID, byteData, channel);
+	    }
 
-        public void JoinServer(IPAddress serverIP, int serverPort, Action<bool> onConnectionEstablished = null)
-        {
-            if (!Application.isPlaying)
-            {
-                Debug.LogWarning("Can not join server with mono network manager while in edit mode.");
-                return;
-            }
-            
-            NetworkManager.JoinServer(serverIP, serverPort, onConnectionEstablished);
-        }
-        
-        public void DisconnectFromServer()
-        {
-            NetworkManager.DisconnectFromServer();
-        }
+	    public void RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+	    {
+		    _networkManager?.RegisterStructData(callback);
+	    }
 
-        public void StartServerDiscovery()
-        {
-            if (!Application.isPlaying) return;
+	    public void UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+	    {
+		    _networkManager?.UnregisterStructData(callback);
+	    }
 
-            NetworkManager.StartServerDiscovery();
-        }
+	    public void SendStructDataToClient<T>(uint clientID, T structData,
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+	    {
+		    _networkManager?.SendStructDataToClient(clientID, structData, channel);
+	    }
 
-        public void EndServerDiscovery()
-        {
-            NetworkManager.EndServerDiscovery();
-        }
+	    public void SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+	    {
+		    _networkManager?.SendStructDataToAll(structData, channel);
+	    }
 
-        public void RestartServerDiscovery()
-        {
-            NetworkManager.RestartServerDiscovery();
-        }
-
-        public void RegisterStructData<T>(Action<byte, T> callback) where T : struct, IStructData
-        {
-            NetworkManager.RegisterStructData(callback);
-        }
-
-        public void UnregisterStructData<T>(Action<byte, T> callback) where T : struct, IStructData
-        {
-            NetworkManager.UnregisterStructData(callback);
-        }
-
-        public void RegisterByteData(string dataID, Action<byte, byte[]> callback)
-        {
-            NetworkManager.RegisterByteData(dataID, callback);
-        }
-
-        public void UnregisterByteData(string dataID, Action<byte, byte[]> callback)
-        {
-            NetworkManager.UnregisterByteData(dataID, callback);
-        }
-
-        public void SendStructDataToAll<T>(T structData, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
-            Action<bool> onDataSend = null) where T : struct, IStructData
-        {
-            NetworkManager.SendStructDataToAll(structData, networkChannel, onDataSend);
-        }
-
-        public void SendStructDataToServer<T>(T structData, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
-            Action<bool> onDataSend = null) where T : struct, IStructData
-        {
-            NetworkManager.SendStructDataToServer(structData, networkChannel, onDataSend);
-        }
-
-        public void SendStructData<T>(byte receiverID, T structData, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
-            Action<bool> onDataSend = null) where T : struct, IStructData
-        {
-            NetworkManager.SendStructData(receiverID, structData, networkChannel, onDataSend);
-        }
-
-        public void SendByteDataToAll(string dataID, byte[] data, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
-            Action<bool> onDataSend = null)
-        {
-            NetworkManager.SendByteDataToAll(dataID, data, networkChannel, onDataSend);
-        }
-
-        public void SendByteDataToServer(string dataID, byte[] data, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
-            Action<bool> onDataSend = null)
-        {
-            NetworkManager.SendByteDataToServer(dataID, data, networkChannel, onDataSend);
-        }
-
-        public void SendByteData(byte receiverID, string dataID, byte[] data, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
-            Action<bool> onDataSend = null)
-        {
-            NetworkManager.SendByteData(receiverID, dataID, data, networkChannel, onDataSend);
-        }
-
-		#endregion
-	}
+	    public void SendStructDataToClients<T>(uint[] clientIDs, T structData,
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+	    {
+		    _networkManager?.SendStructDataToClients(clientIDs, structData, channel);
+	    }
+    }
 }

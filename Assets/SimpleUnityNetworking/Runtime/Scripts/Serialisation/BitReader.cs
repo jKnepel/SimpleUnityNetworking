@@ -140,7 +140,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         private static Func<BitReader, object> CreateTypeHandlerDelegate(Type type, bool useCustomReader = false)
         {   // find implemented or custom read method
             var readerMethod = useCustomReader
-                ?           type.GetMethod($"Read{SerialiserHelper.GetTypeName(type)}", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                ?           type.GetMethod("Deserialise", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
                 : typeof(BitReader).GetMethod($"Read{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (readerMethod == null)
                 return null;
