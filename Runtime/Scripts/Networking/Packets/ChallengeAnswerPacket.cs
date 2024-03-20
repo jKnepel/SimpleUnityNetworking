@@ -3,9 +3,9 @@ using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 {
-	internal struct ChallengeAnswerPacket : IConnectionPacket
+	internal struct ChallengeAnswerPacket
 	{
-		public EPacketType PacketType => EPacketType.ChallengeAnswer;
+		public static byte PacketType => (byte)EPacketType.ChallengeAnswer;
 		public byte[] ChallengeAnswer;
 		public string Username;
 		public Color32 Color;
@@ -19,7 +19,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 			Color = color;
 		}
 
-		public static ChallengeAnswerPacket ReadChallengeAnswerPacket(Reader reader)
+		public static ChallengeAnswerPacket Deserialise(Reader reader)
 		{
 			byte[] challengeAnswer = reader.ReadByteArray(CHALLENGE_ANSWER_LENGTH);
 			string username = reader.ReadString();
@@ -27,7 +27,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 			return new(challengeAnswer, username, color);
 		}
 
-		public static void WriteChallengeAnswerPacket(Writer writer, ChallengeAnswerPacket packet)
+		public static void Serialise(Writer writer, ChallengeAnswerPacket packet)
 		{
 			writer.BlockCopy(ref packet.ChallengeAnswer, 0, CHALLENGE_ANSWER_LENGTH);
 			writer.WriteString(packet.Username);

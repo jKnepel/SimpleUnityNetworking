@@ -24,7 +24,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <summary>
 		/// The highest byte position to which the writer has written a value.
 		/// </summary>
-		public int Length { get; private set; }
+		public int Length { get; set; }
 		/// <summary>
 		/// The max capacity of the internal buffer.
 		/// </summary>
@@ -149,7 +149,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         private static Action<Writer, object> CreateTypeHandlerDelegate(Type type, bool useCustomWriter = false)
         {   // find implemented or custom write method
             var writerMethod = useCustomWriter
-                ?           type.GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                ?           type.GetMethod("Serialise", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
                 : typeof(Writer).GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (writerMethod == null)
                 return null;

@@ -14,7 +14,7 @@ using Unity.Networking.Transport.Utilities;
 
 namespace jKnepel.SimpleUnityNetworking.Transporting
 {
-    public class UnityTransport : Transport, IDisposable
+    public sealed class UnityTransport : Transport
     {
         private readonly struct SendTarget : IEquatable<SendTarget>
         {
@@ -125,6 +125,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         private bool _disposed;
         
         private TransportSettings _settings;
+        private int _maxNumberOfClients;
         
         private NetworkDriver _driver;
         private NetworkSettings _networkSettings;
@@ -135,13 +136,13 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         private NetworkPipeline _reliablePipeline;
         private NetworkPipeline _reliableSequencedPipeline;
 
-        private Dictionary<int, NetworkConnection> _clientIDToConnection;
-        private Dictionary<NetworkConnection, int> _connectionToClientID;
-        private int _clientIDs;
+        private Dictionary<uint, NetworkConnection> _clientIDToConnection;
+        private Dictionary<NetworkConnection, uint> _connectionToClientID;
+        private uint _clientIDs;
         
         private NetworkConnection _serverConnection;
         
-        private int _hostClientID; // client ID that the hosting server assigns its local client
+        private uint _hostClientID; // client ID that the hosting server assigns its local client
 
         private ELocalConnectionState _serverState = ELocalConnectionState.Stopped;
         private ELocalConnectionState _clientState = ELocalConnectionState.Stopped;
@@ -158,7 +159,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         public override event Action<ClientReceivedData> OnClientReceivedData;
         public override event Action<ELocalConnectionState> OnServerStateUpdated;
         public override event Action<ELocalConnectionState> OnClientStateUpdated;
-        public override event Action<int, ERemoteConnectionState> OnConnectionUpdated;
+        public override event Action<uint, ERemoteConnectionState> OnConnectionUpdated;
 
         #endregion
         
@@ -166,21 +167,10 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         
         public UnityTransport(TransportSettings settings)
         {
-            _settings = settings;
+            SetTransportSettings(settings);
         }
         
-        ~UnityTransport()
-        {
-            Dispose(false);
-        }
-        
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        private void Dispose(bool disposing)
+        protected override void Dispose(bool disposing)
         {
             if (_disposed) return;
             
@@ -195,6 +185,9 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                 _hostClientID = 0;
             }
 
+            foreach (var queue in _outgoingMessages.Values)
+                queue.Dispose();
+            // TODO : clean/flush outgoing messages
             DisposeDrivers();
 
             _disposed = true;
@@ -247,6 +240,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                 return;
             }
 
+            _maxNumberOfClients = _settings.MaxNumberOfClients;
             _clientIDToConnection = new();
             _connectionToClientID = new();
             _driver.Listen();
@@ -339,6 +333,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             }
             
             _driver.ScheduleUpdate().Complete();
+            _serverConnection = default;
             DisposeDrivers();
 
             SetLocalClientState(ELocalConnectionState.Stopped);
@@ -353,9 +348,18 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         private void StartHostClient()
         {
             SetLocalClientState(ELocalConnectionState.Starting);
-            _hostClientID = ++_clientIDs;
-            OnConnectionUpdated?.Invoke(_hostClientID, ERemoteConnectionState.Connected);
+            
+            if (_clientIDToConnection.Count >= _maxNumberOfClients)
+            {
+                SetLocalClientState(ELocalConnectionState.Stopping);
+                Debug.LogError("Maximum number of clients reached. Server cannot accept the connection.");
+                SetLocalClientState(ELocalConnectionState.Stopped);
+                return;
+            }
+            
+            _hostClientID = _clientIDs++;
             SetLocalClientState(ELocalConnectionState.Started);
+            OnConnectionUpdated?.Invoke(_hostClientID, ERemoteConnectionState.Connected);
         }
 
         private void StopHostClient()
@@ -366,7 +370,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             SetLocalClientState(ELocalConnectionState.Stopped);
         }
 
-        public override void DisconnectClient(int clientID)
+        public override void DisconnectClient(uint clientID)
         {
             if (!IsServer)
             {
@@ -418,9 +422,16 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         {
             var conn = _driver.Accept();
             if (conn == default) return false;
+
+            int numberOfConnectedClients = _clientIDToConnection.Count;
+            if (IsHost) numberOfConnectedClients++;
+            if (numberOfConnectedClients >= _maxNumberOfClients)
+            {
+                _driver.Disconnect(conn);
+                while (_driver.PopEventForConnection(conn, out _) != NetworkEvent.Type.Empty) {}
+            }
             
-            // TODO : check if space is left
-            int clientID = ++_clientIDs;
+            uint clientID = _clientIDs++;
             _clientIDToConnection[clientID] = conn;
             _connectionToClientID[conn] = clientID;
             OnConnectionUpdated?.Invoke(clientID, ERemoteConnectionState.Connected);
@@ -442,7 +453,8 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                     SetLocalClientState(ELocalConnectionState.Started);
                     break;
                 case NetworkEvent.Type.Disconnect:
-                    if (LocalClientState is ELocalConnectionState.Starting or ELocalConnectionState.Started)
+                    if (LocalClientState is ELocalConnectionState.Starting or ELocalConnectionState.Started
+                        && conn.Equals(_serverConnection))
                     {
                         SetLocalClientState(ELocalConnectionState.Stopping);
                         // TODO : flush send queues
@@ -467,6 +479,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
 
         private void HandleData(NetworkConnection conn, DataStreamReader reader, NetworkPipeline pipe)
         {
+            Debug.Log(1);
             byte[] data = new byte[reader.Length];
             unsafe
             {
@@ -475,8 +488,18 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                     reader.ReadBytesUnsafe(dataPtr, reader.Length);
                 }
             }
+            Debug.Log(2);
 
-            if (IsServer)
+            if (IsClient && conn.Equals(_serverConnection))
+            {
+                OnClientReceivedData?.Invoke(new()
+                {
+                    Data = data,
+                    Timestamp = DateTime.Now,
+                    Channel = ParseChannelPipeline(pipe)
+                });
+            }
+            else if (IsServer)
             {
                 OnServerReceivedData?.Invoke(new()
                 {
@@ -486,22 +509,14 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                     Channel = ParseChannelPipeline(pipe)
                 });
             }
-            else if (IsClient)
-            {
-                OnClientReceivedData?.Invoke(new()
-                {
-                    Data = data,
-                    Timestamp = DateTime.Now,
-                    Channel = ParseChannelPipeline(pipe)
-                });
-            }
+            Debug.Log(3);
         }
         
         #endregion
         
         #region outgoing
 
-        public override void SendDataToServer(byte[] data, ENetworkChannel channel = ENetworkChannel.ReliableOrdered)
+        public override void SendDataToServer(byte[] data, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
         {
             if (IsHost)
             {
@@ -530,14 +545,8 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             queue.Enqueue(new(data, Allocator.Persistent));
         }
 
-        public override void SendDataToClient(int clientID, byte[] data, ENetworkChannel channel = ENetworkChannel.ReliableOrdered)
+        public override void SendDataToClient(uint clientID, byte[] data, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
         {
-            if (!IsServer)
-            {
-                Debug.LogError("The server has to be started to send data to clients.");
-                return;
-            }
-
             if (IsHost && clientID == _hostClientID)
             {
                 OnClientReceivedData?.Invoke(new()
@@ -548,14 +557,22 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                 });
                 return;
             }
+            
+            if (!IsServer)
+            {
+                Debug.LogError("The server has to be started to send data to clients.");
+                return;
+            }
 
+            Debug.Log(4);
             if (!_clientIDToConnection.TryGetValue(clientID, out var conn))
             {
-                Debug.LogError($"The client with the ID {clientID} does not exist");
+                Debug.LogError($"The client with the ID {clientID} does not exist!");
                 // TODO : handle failed sends
                 return;
             }
             
+            Debug.Log(5);
             SendTarget target = new(conn, ParseChannelPipeline(channel));
             if (!_outgoingMessages.TryGetValue(target, out var queue))
             {
@@ -563,6 +580,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             }
 
             queue.Enqueue(new(data, Allocator.Persistent));
+            Debug.Log(6);
         }
 
         public override void IterateOutgoing()

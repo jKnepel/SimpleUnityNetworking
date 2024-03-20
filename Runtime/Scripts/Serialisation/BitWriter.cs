@@ -137,7 +137,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         private static Action<BitWriter, object> CreateTypeHandlerDelegate(Type type, bool useCustomWriter = false)
         {   // find implemented or custom write method
             var writerMethod = useCustomWriter
-                ?           type.GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                ?           type.GetMethod("Serialise", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
                 : typeof(BitWriter).GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (writerMethod == null)
                 return null;
