@@ -7,13 +7,13 @@ namespace jKnepel.SimpleUnityNetworking.Networking
 		public readonly uint ID;
 
 		public string Username;
-		public Color32 Color;
+		public Color32 Colour;
 		
-		public ClientInformation(uint id, string username, Color32 color)
+		public ClientInformation(uint id, string username, Color32 colour)
 		{
 			ID = id;
 			Username = username;
-			Color = color;
+			Colour = colour;
 		}
 
 		public override string ToString()

@@ -165,7 +165,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         
         #region lifecycle
         
-        public UnityTransport(TransportSettings settings)
+        public UnityTransport(TransportSettings settings = null)
         {
             SetTransportSettings(settings);
         }

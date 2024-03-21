@@ -22,7 +22,6 @@ public class StructTest : MonoBehaviour
     
     private void Start()
     {
-        _manager.Transport = _config.Transport;
         _manager.Server_OnLocalStateUpdated += state =>
         {
             Debug.Log($"Server: {state}");

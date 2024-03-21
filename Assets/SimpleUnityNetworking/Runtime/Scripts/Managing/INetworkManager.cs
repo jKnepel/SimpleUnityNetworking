@@ -13,9 +13,10 @@ namespace jKnepel.SimpleUnityNetworking
         #region fields
         
         /// <summary>
-        /// The <see cref="Transport"/> which will be used for sending and receiving data
+        /// The configuration containing the instance of the <see cref="Transport"/>,
+        /// which will be used for sending and receiving data
         /// </summary>
-        Transport Transport { get; set; }
+        TransportConfiguration TransportConfiguration { get; set; }
         
         /// <summary>
         /// Whether a local server is started or a client is authenticated

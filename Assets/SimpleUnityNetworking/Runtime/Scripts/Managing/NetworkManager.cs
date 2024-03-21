@@ -2,7 +2,6 @@ using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Utilities;
 using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
-using System.Collections.Concurrent;
 using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
@@ -11,15 +10,18 @@ namespace jKnepel.SimpleUnityNetworking.Managing
     {
         #region fields
 
-        private Transport _transport;
-        public Transport Transport
+        private Transport _transport => _transportConfiguration?.Transport;
+        private TransportConfiguration _transportConfiguration;
+        public TransportConfiguration TransportConfiguration
         {
-            get => _transport;
+            get => _transportConfiguration;
             set
             {
-                if (value == _transport) return;
+                if (value == _transportConfiguration) return;
                 _transport?.Dispose();
-                _transport = value;
+                _transportConfiguration = value;
+
+                if (_transportConfiguration is null) return;
                 _transport.OnServerStateUpdated += HandleTransportServerStateUpdate;
                 _transport.OnClientStateUpdated += HandleTransportClientStateUpdate;
                 _transport.OnServerReceivedData += OnServerReceivedData;
@@ -29,7 +31,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         }
         
         public bool IsOnline => IsServer || IsClient;
-        public bool IsServer => Transport?.IsServer ?? false;
+        public bool IsServer => _transport?.IsServer ?? false;
         public bool IsClient => Client_LocalState == ELocalClientConnectionState.Authenticated;
         public bool IsHost => IsServer && IsClient;
         
@@ -41,11 +43,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         #endregion
 
         #region lifecycle
-
-        public NetworkManager(Transport transport = null)
-        {
-            Transport = transport;
-        }
 
         ~NetworkManager()
         {
@@ -72,8 +69,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             if (_transport != null)
             {
-                _transport.IterateIncoming();
-                _transport.IterateOutgoing();
+                _transport?.IterateIncoming();
+                _transport?.IterateOutgoing();
             }
         }
 
@@ -91,7 +88,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             _cachedServername = servername;
             _cachedMaxNumberClients = maxNumberConnectedClients;
-            _transport.StartServer();
+            _transport?.StartServer();
         }
 
         public void StopServer()
@@ -109,7 +106,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             _cachedUsername = username;
             _cachedColor = userColor;
-            _transport.StartClient();
+            _transport?.StartClient();
         }
         
         public void StopClient()
