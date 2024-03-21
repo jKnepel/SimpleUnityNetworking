@@ -134,7 +134,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     break;
                 case ClientUpdatePacket.UpdateType.Updated:
                     Client_ConnectedClients[clientID].Username = packet.Username;
-                    Client_ConnectedClients[clientID].Color = packet.Color;
+                    Client_ConnectedClients[clientID].Colour = packet.Color;
                     Client_OnRemoteClientUpdated?.Invoke(clientID);
                     break;
             }

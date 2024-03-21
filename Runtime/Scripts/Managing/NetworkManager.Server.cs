@@ -14,7 +14,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
     {
         public ConcurrentDictionary<uint, ClientInformation> Server_ConnectedClients { get; } = new();
         
-        public ELocalConnectionState Server_LocalState => Transport?.LocalServerState ?? ELocalConnectionState.Stopped;
+        public ELocalConnectionState Server_LocalState => _transport?.LocalServerState ?? ELocalConnectionState.Stopped;
         
         public event Action<ELocalConnectionState> Server_OnLocalStateUpdated;
         public event Action<uint> Server_OnRemoteClientConnected;
@@ -147,7 +147,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 writer.Position = pos;
                 var clientInfo = kvp.Value;
                 ClientUpdatePacket existingClient = new(clientInfo.ID, ClientUpdatePacket.UpdateType.Connected,
-                    clientInfo.Username, clientInfo.Color);
+                    clientInfo.Username, clientInfo.Colour);
                 ClientUpdatePacket.Serialise(writer, existingClient);
                 _transport.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
             }
@@ -180,7 +180,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             
             // apply update
             Server_ConnectedClients[clientID].Username = packet.Username;
-            Server_ConnectedClients[clientID].Color = packet.Color;
+            Server_ConnectedClients[clientID].Colour = packet.Color;
             Server_OnRemoteClientUpdated?.Invoke(clientID);
 
             // inform other clients of update
