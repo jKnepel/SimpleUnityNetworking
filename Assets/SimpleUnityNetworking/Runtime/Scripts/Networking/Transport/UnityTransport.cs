@@ -479,7 +479,6 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
 
         private void HandleData(NetworkConnection conn, DataStreamReader reader, NetworkPipeline pipe)
         {
-            Debug.Log(1);
             byte[] data = new byte[reader.Length];
             unsafe
             {
@@ -488,7 +487,6 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                     reader.ReadBytesUnsafe(dataPtr, reader.Length);
                 }
             }
-            Debug.Log(2);
 
             if (IsClient && conn.Equals(_serverConnection))
             {
@@ -509,7 +507,6 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                     Channel = ParseChannelPipeline(pipe)
                 });
             }
-            Debug.Log(3);
         }
         
         #endregion
@@ -564,7 +561,6 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                 return;
             }
 
-            Debug.Log(4);
             if (!_clientIDToConnection.TryGetValue(clientID, out var conn))
             {
                 Debug.LogError($"The client with the ID {clientID} does not exist!");
@@ -572,7 +568,6 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                 return;
             }
             
-            Debug.Log(5);
             SendTarget target = new(conn, ParseChannelPipeline(channel));
             if (!_outgoingMessages.TryGetValue(target, out var queue))
             {
@@ -580,7 +575,6 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             }
 
             queue.Enqueue(new(data, Allocator.Persistent));
-            Debug.Log(6);
         }
 
         public override void IterateOutgoing()

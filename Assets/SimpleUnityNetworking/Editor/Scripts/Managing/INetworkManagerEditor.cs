@@ -139,6 +139,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             else
             {
+                GUILayout.Label($"ID: {_manager.ClientInformation.ID}");
                 GUILayout.Label($"Username: {_manager.ClientInformation.Username}");
                 EditorGUILayout.ColorField("User colour:", _manager.ClientInformation.Colour);
                 GUILayout.Label($"Servername: {_manager.ServerInformation.Servername}");
