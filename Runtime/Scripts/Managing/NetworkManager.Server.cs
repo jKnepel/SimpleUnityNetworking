@@ -26,7 +26,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private readonly ConcurrentDictionary<uint, byte[]> _authenticatingClients = new();
 
         private string _cachedServername;
-        private uint _cachedMaxNumberClients;
+        private int _cachedMaxNumberClients;
         
         private void HandleTransportServerStateUpdate(ELocalConnectionState state)
         {
@@ -68,10 +68,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             _authenticatingClients[clientID] = hashedChallenge;
 
             // send challenge to client
-            Writer writer = new(_serialiserConfiguration);
+            Writer writer = new(SerialiserConfiguration);
             writer.WriteByte(ConnectionChallengePacket.PacketType);
             ConnectionChallengePacket.Write(writer, new(challenge));
             _transport.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
+            
+            // TODO : add timeout based on RTT
         }
 
         private void HandleRemoteClientDisconnected(uint clientID)
@@ -83,7 +85,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Server_OnRemoteClientDisconnected?.Invoke(clientID);
 
             // inform other clients of disconnected client
-            Writer writer = new(_serialiserConfiguration);
+            Writer writer = new(SerialiserConfiguration);
             writer.WriteByte(ClientUpdatePacket.PacketType);
             ClientUpdatePacket.Write(writer, new(clientID));
             foreach (var id in Server_ConnectedClients.Keys)
@@ -94,7 +96,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             try
             {
-                Reader reader = new(data.Data, _serialiserConfiguration);
+                Reader reader = new(data.Data, SerialiserConfiguration);
                 var packetType = (EPacketType)reader.ReadByte();
                 Debug.Log($"Server Packet: {packetType} from {data.ClientID}");
 
@@ -133,7 +135,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             
             // inform client of authentication
-            Writer writer = new(_serialiserConfiguration);
+            Writer writer = new(SerialiserConfiguration);
             writer.WriteByte(ConnectionAuthenticatedPacket.PacketType);
             ConnectionAuthenticatedPacket authentication = new(clientID, ServerInformation.Servername,
                 ServerInformation.MaxNumberConnectedClients);
@@ -186,7 +188,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Server_OnRemoteClientUpdated?.Invoke(clientID);
 
             // inform other clients of update
-            Writer writer = new(_serialiserConfiguration);
+            Writer writer = new(SerialiserConfiguration);
             writer.WriteByte(ClientUpdatePacket.PacketType);
             ClientUpdatePacket.Write(writer, packet);
             var data = writer.GetBuffer();
@@ -218,7 +220,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             
             // forward data to defined clients
-            Writer writer = new(_serialiserConfiguration);
+            Writer writer = new(SerialiserConfiguration);
             writer.WriteByte(DataPacket.PacketType);
             DataPacket forwardedPacket = new(DataPacket.DataPacketType.Forwarded, clientID, packet.IsStructData,
                 packet.DataID, packet.Data);
