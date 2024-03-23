@@ -49,32 +49,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             SerialiserConfiguration = config ?? new();
 		}
 
-	    static Writer()
-	    {   // caches all implemented type handlers during compilation
-		    CreateTypeHandlerDelegate(typeof(bool));
-		    CreateTypeHandlerDelegate(typeof(byte));
-		    CreateTypeHandlerDelegate(typeof(sbyte));
-		    CreateTypeHandlerDelegate(typeof(ushort));
-		    CreateTypeHandlerDelegate(typeof(short));
-		    CreateTypeHandlerDelegate(typeof(uint));
-		    CreateTypeHandlerDelegate(typeof(int));
-		    CreateTypeHandlerDelegate(typeof(ulong));
-		    CreateTypeHandlerDelegate(typeof(long));
-		    CreateTypeHandlerDelegate(typeof(string));
-		    CreateTypeHandlerDelegate(typeof(char));
-		    CreateTypeHandlerDelegate(typeof(float));
-		    CreateTypeHandlerDelegate(typeof(double));
-		    CreateTypeHandlerDelegate(typeof(decimal));
-		    CreateTypeHandlerDelegate(typeof(Vector2));
-		    CreateTypeHandlerDelegate(typeof(Vector3));
-		    CreateTypeHandlerDelegate(typeof(Vector4));
-		    CreateTypeHandlerDelegate(typeof(Matrix4x4));
-		    CreateTypeHandlerDelegate(typeof(Color));
-		    CreateTypeHandlerDelegate(typeof(Color32));
-		    CreateTypeHandlerDelegate(typeof(DateTime));
-	    }
-
-
 		internal static void Init() { }
 
 		#endregion
@@ -91,11 +65,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		{
             if (!_unknownTypes.Contains(type))
             {   
-                if (_typeHandlerCache.TryGetValue(type, out Action<Writer, object> handler))
-                {   // check for already cached type handler delegates
-                    handler(this, val);
-                    return;
-                }
+                if (WriteBuildInType(val))
+					return;
 
                 var customHandler = CreateTypeHandlerDelegate(type, true);
                 if (customHandler != null)
@@ -133,14 +104,82 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 Write(fieldInfo.GetValue(val), fieldInfo.FieldType);
         }
 
+        private bool WriteBuildInType<T>(T val)
+        {
+	        switch (val)
+	        {
+		        case bool boolValue:
+			        WriteBoolean(boolValue);
+			        return true;
+		        case byte byteValue:
+			        WriteByte(byteValue);
+			        return true;
+		        case sbyte sbyteValue:
+			        WriteSByte(sbyteValue);
+			        return true;
+		        case ushort ushortValue:
+			        WriteUInt16(ushortValue);
+			        return true;
+		        case short shortValue:
+			        WriteInt16(shortValue);
+			        return true;
+		        case uint uintValue:
+			        WriteUInt32(uintValue);
+			        return true;
+		        case int intValue:
+			        WriteInt32(intValue);
+			        return true;
+		        case ulong ulongValue:
+			        WriteUInt64(ulongValue);
+			        return true;
+		        case long longValue:
+			        WriteInt64(longValue);
+			        return true;
+		        case string stringValue:
+			        WriteString(stringValue);
+			        return true;
+		        case char charValue:
+			        WriteChar(charValue);
+			        return true;
+		        case float floatValue:
+			        WriteSingle(floatValue);
+			        return true;
+		        case double doubleValue:
+			        WriteDouble(doubleValue);
+			        return true;
+		        case decimal decimalValue:
+			        WriteDecimal(decimalValue);
+			        return true;
+		        case Vector2 vector2Value:
+			        WriteVector2(vector2Value);
+			        return true;
+		        case Vector3 vector3Value:
+			        WriteVector3(vector3Value);
+			        return true;
+		        case Vector4 vector4Value:
+			        WriteVector4(vector4Value);
+			        return true;
+		        case Matrix4x4 matrix4X4Value:
+			        WriteMatrix4x4(matrix4X4Value);
+			        return true;
+		        case Color colorValue:
+			        WriteColor(colorValue);
+			        return true;
+		        case Color32 color32Value:
+			        WriteColor32(color32Value);
+			        return true;
+		        case DateTime dateTimeValue:
+			        WriteDateTime(dateTimeValue);
+			        return true;
+		        default: return false;
+	        }
+        }
+
         /// <summary>
         /// Constructs and caches pre-compiled expression delegate of type handlers.
         /// </summary>
-        /// <remarks>
-        /// TODO : also cache generic handlers during compilation
-        /// </remarks>
         /// <param name="type">The type of the variable for which the writer is defined</param>
-        /// <param name="useCustomWriter">Wether the writer method is an instance of the Writer class or a custom static method in the type</param>
+        /// <param name="useCustomWriter">Whether the writer method is an instance of the Writer class or a custom static method in the type</param>
         /// <returns></returns>
         private static Action<Writer, object> CreateTypeHandlerDelegate(Type type, bool useCustomWriter = false)
         {   // find implemented or custom write method

@@ -170,8 +170,8 @@ MonoBehaviour:
   _cachedTransportConfiguration: {fileID: 11400000, guid: d4731c567fc16c04d8efd1a7fc1c13e0, type: 2}
   _cachedSerialiserConfiguration:
     _useCompression: 1
-    _numberOfDecimalPlaces: 43
-    _bitsPerComponent: 220
+    _numberOfDecimalPlaces: 3
+    _bitsPerComponent: 10
 --- !u!1 &556541961
 GameObject:
   m_ObjectHideFlags: 0
@@ -609,7 +609,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1872444376}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 78c3dc5ec407acc44aa407c16f478e05, type: 3}
   m_Name: 
@@ -630,10 +630,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _manager: {fileID: 516821387}
-  _managerSerialiserConfiguration:
-    _useCompression: 1
-    _numberOfDecimalPlaces: 3
-    _bitsPerComponent: 10
   _serialiserConfiguration:
     _useCompression: 1
     _numberOfDecimalPlaces: 3
@@ -646,16 +642,12 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1872444376}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 44112ce6d5c6d7b46b4ea2518beab688, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   _manager: {fileID: 516821387}
-  _managerSerialiserConfiguration:
-    _useCompression: 0
-    _numberOfDecimalPlaces: 3
-    _bitsPerComponent: 10
   _serialiserConfiguration:
     _useCompression: 1
     _numberOfDecimalPlaces: 3

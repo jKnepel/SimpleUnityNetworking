@@ -1,4 +1,3 @@
-using System;
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
@@ -91,18 +90,46 @@ public class StructTest : MonoBehaviour
 
     public void SendToClient(ENetworkChannel channel = ENetworkChannel.ReliableOrdered)
     {
-        MessageStruct message = new() { Message = _message };
-        _manager.SendStructDataToClient<MessageStruct>(_targetClientID, message, channel);
+        MessageStruct message = new()
+        {
+            String = _message,
+            Byte = 1,
+            Short = -2,
+            UShort = 5,
+            Int = -998,
+            UInt = 213,
+            Long = -12313123,
+            ULong = 123123,
+            Ints = new [] { 1, 2, 3 }
+        };
+        _manager.SendStructDataToClient(_targetClientID, message, channel);
     }
 
     private void ReceiveStruct(uint clientID, MessageStruct message)
     {
-        Debug.Log($"Received {message.Message} from {clientID}");
+        Debug.Log($"Received from {clientID}: " +
+                  $"String = {message.String},\n" +
+                  $"Byte = {message.Byte},\n" +
+                  $"Short = {message.Short},\n" +
+                  $"UShort = {message.UShort},\n" +
+                  $"Int = {message.Int},\n" +
+                  $"UInt = {message.UInt},\n" +
+                  $"Long = {message.Long},\n" +
+                  $"ULong = {message.ULong}\n" +
+                  $"Ints = {string.Join(",", message.Ints)},\n");
     }
 
     private struct MessageStruct : IStructData
     {
-        public string Message;
+        public string String;
+        public byte Byte;
+        public short Short;
+        public ushort UShort;
+        public int Int;
+        public uint UInt;
+        public long Long;
+        public ulong ULong;
+        public int[] Ints;
     }
 }
 

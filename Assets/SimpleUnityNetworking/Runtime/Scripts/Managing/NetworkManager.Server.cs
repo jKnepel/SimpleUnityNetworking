@@ -160,7 +160,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             // inform other clients of new client
             writer.WriteByte(ClientUpdatePacket.PacketType);
             ClientUpdatePacket update = new(clientID, ClientUpdatePacket.UpdateType.Connected, packet.Username,
-                packet.Color);
+                packet.Colour);
             ClientUpdatePacket.Write(writer, update);
             var data = writer.GetBuffer();
             foreach (var id in Server_ConnectedClients.Keys)
@@ -168,7 +168,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             writer.Clear();
             
             // authenticate client
-            Server_ConnectedClients[clientID] = new(clientID, packet.Username, packet.Color);
+            Server_ConnectedClients[clientID] = new(clientID, packet.Username, packet.Colour);
             _authenticatingClients.TryRemove(clientID, out _);
             Server_OnRemoteClientConnected?.Invoke(clientID);
         }
@@ -184,7 +184,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             
             // apply update
             Server_ConnectedClients[clientID].Username = packet.Username;
-            Server_ConnectedClients[clientID].Colour = packet.Color;
+            Server_ConnectedClients[clientID].Colour = packet.Colour;
             Server_OnRemoteClientUpdated?.Invoke(clientID);
 
             // inform other clients of update

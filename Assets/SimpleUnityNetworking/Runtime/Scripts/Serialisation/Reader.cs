@@ -55,31 +55,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			SerialiserConfiguration = config ?? new();
 		}
 
-        static Reader()
-        {   // caches all implemented type handlers during compilation
-            CreateTypeHandlerDelegate(typeof(bool));
-            CreateTypeHandlerDelegate(typeof(byte));
-            CreateTypeHandlerDelegate(typeof(sbyte));
-            CreateTypeHandlerDelegate(typeof(ushort));
-            CreateTypeHandlerDelegate(typeof(short));
-            CreateTypeHandlerDelegate(typeof(uint));
-            CreateTypeHandlerDelegate(typeof(int));
-            CreateTypeHandlerDelegate(typeof(ulong));
-            CreateTypeHandlerDelegate(typeof(long));
-            CreateTypeHandlerDelegate(typeof(string));
-            CreateTypeHandlerDelegate(typeof(char));
-            CreateTypeHandlerDelegate(typeof(float));
-            CreateTypeHandlerDelegate(typeof(double));
-            CreateTypeHandlerDelegate(typeof(decimal));
-            CreateTypeHandlerDelegate(typeof(Vector2));
-            CreateTypeHandlerDelegate(typeof(Vector3));
-            CreateTypeHandlerDelegate(typeof(Vector4));
-            CreateTypeHandlerDelegate(typeof(Matrix4x4));
-            CreateTypeHandlerDelegate(typeof(Color));
-            CreateTypeHandlerDelegate(typeof(Color32));
-            CreateTypeHandlerDelegate(typeof(DateTime));
-        }
-
         internal static void Init() { }
 
 		#endregion
@@ -95,11 +70,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         private object Read(Type type)
 		{
             if (!_unknownTypes.Contains(type))
-			{
-                if (_typeHandlerCache.TryGetValue(type, out Func<Reader, object> handler))
-                {   // check for already cached type handler delegates
-                    return handler(this);
-                }
+            {
+	            if (ReadBuildInType(type, out var result))
+		            return result;
 
                 var customHandler = CreateTypeHandlerDelegate(type, true);
                 if (customHandler != null)
@@ -136,13 +109,83 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 fieldInfo.SetValue(obj, Read(fieldInfo.FieldType));
             return obj;
         }
+        
+        private bool ReadBuildInType(Type val, out object result)
+        {
+	        switch (val)
+	        {
+		        case not null when val == typeof(bool):
+			        result = ReadBoolean();
+			        return true;
+		        case not null when val == typeof(byte):
+			        result = ReadByte();
+			        return true;
+		        case not null when val == typeof(sbyte):
+			        result = ReadSByte();
+			        return true;
+		        case not null when val == typeof(ushort):
+			        result = ReadUInt16();
+			        return true;
+		        case not null when val == typeof(short):
+			        result = ReadInt16();
+			        return true;
+		        case not null when val == typeof(uint):
+			        result = ReadUInt32();
+			        return true;
+		        case not null when val == typeof(int):
+			        result = ReadInt32();
+			        return true;
+		        case not null when val == typeof(ulong):
+			        result = ReadUInt64();
+			        return true;
+		        case not null when val == typeof(long):
+			        result = ReadInt64();
+			        return true;
+		        case not null when val == typeof(string):
+			        result = ReadString();
+			        return true;
+		        case not null when val == typeof(char):
+			        result = ReadChar();
+			        return true;
+		        case not null when val == typeof(float):
+			        result = ReadSingle();
+			        return true;
+		        case not null when val == typeof(double):
+			        result = ReadDouble();
+			        return true;
+		        case not null when val == typeof(decimal):
+			        result = ReadDecimal();
+			        return true;
+		        case not null when val == typeof(Vector2):
+			        result = ReadVector2();
+			        return true;
+		        case not null when val == typeof(Vector3):
+			        result = ReadVector3();
+			        return true;
+		        case not null when val == typeof(Vector4):
+			        result = ReadVector4();
+			        return true;
+		        case not null when val == typeof(Matrix4x4):
+			        result = ReadMatrix4x4();
+			        return true;
+		        case not null when val == typeof(Color):
+			        result = ReadColor();
+			        return true;
+		        case not null when val == typeof(Color32):
+			        result = ReadColor32();
+			        return true;
+		        case not null when val == typeof(DateTime):
+			        result = ReadDateTime();
+			        return true;
+		        default:
+			        result = null;
+			        return false;
+	        }
+        }
 
         /// <summary>
         /// Constructs and caches pre-compiled expression delegate of type handlers.
         /// </summary>
-        /// <remarks>
-        /// TODO : also cache generic handlers during compilation
-        /// </remarks>
         /// <param name="type">The type of the variable for which the writer is defined</param>
         /// <param name="useCustomReader">Whether the reader method is an instance of the Reader class or a custom static method in the type</param>
         /// <returns></returns>
@@ -440,14 +483,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Matrix4x4 ReadMatrix4x4()
 		{
-            Matrix4x4 result = new()
+            return new()
 			{
                 m00 = ReadSingle(), m01 = ReadSingle(), m02 = ReadSingle(), m03 = ReadSingle(),
                 m10 = ReadSingle(), m11 = ReadSingle(), m12 = ReadSingle(), m13 = ReadSingle(),
                 m20 = ReadSingle(), m21 = ReadSingle(), m22 = ReadSingle(), m23 = ReadSingle(),
                 m30 = ReadSingle(), m31 = ReadSingle(), m32 = ReadSingle(), m33 = ReadSingle()
             };
-            return result;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

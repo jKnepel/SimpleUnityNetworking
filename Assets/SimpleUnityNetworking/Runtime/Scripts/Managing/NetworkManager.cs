@@ -104,7 +104,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             _transport?.StopServer();
         }
 
-        public void StartClient(string username, Color32 userColor)
+        public void StartClient(string username, Color32 userColour)
         {
             if (_transport == null)
             {
@@ -113,7 +113,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
 
             _cachedUsername = username;
-            _cachedColor = userColor;
+            _cachedColour = userColour;
             _transport?.StartClient();
         }
         

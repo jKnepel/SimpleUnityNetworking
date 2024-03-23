@@ -115,9 +115,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    NetworkManager.StopServer();
 	    }
 
-	    public void StartClient(string username, Color32 userColor)
+	    public void StartClient(string username, Color32 userColour)
 	    {
-		    NetworkManager.StartClient(username, userColor);
+		    NetworkManager.StartClient(username, userColour);
 	    }
 
 	    public void StopClient()
