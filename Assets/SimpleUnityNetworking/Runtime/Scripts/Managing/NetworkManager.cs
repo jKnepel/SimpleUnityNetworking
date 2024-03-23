@@ -1,5 +1,6 @@
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Utilities;
+using jKnepel.SimpleUnityNetworking.Serialisation;
 using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using UnityEngine;
@@ -28,6 +29,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 _transport.OnClientReceivedData += OnClientReceivedData;
                 _transport.OnConnectionUpdated += OnRemoteConnectionStateUpdated;
             }
+        }
+
+        private SerialiserConfiguration _serialiserConfiguration;
+        public SerialiserConfiguration SerialiserConfiguration
+        {
+            get => _serialiserConfiguration;
+            set => _serialiserConfiguration = value;
         }
         
         public bool IsOnline => IsServer || IsClient;

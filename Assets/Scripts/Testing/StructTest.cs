@@ -2,7 +2,6 @@ using System;
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
-using jKnepel.SimpleUnityNetworking.Transporting;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -11,14 +10,13 @@ using UnityEditor;
 public class StructTest : MonoBehaviour
 {
     [SerializeField] private MonoNetworkManager _manager;
-    [SerializeField] private TransportConfiguration _config;
     [SerializeField] private uint _targetClientID;
     [SerializeField] private string _message;
     
-    public bool IsOnline => _manager.IsOnline;
-    public bool IsServer => _manager.IsServer;
-    public bool IsClient => _manager.IsClient;
-    public bool IsHost => _manager.IsHost;
+    public bool IsOnline => _manager?.IsOnline ?? false;
+    public bool IsServer => _manager?.IsServer ?? false;
+    public bool IsClient => _manager?.IsClient ?? false;
+    public bool IsHost => _manager?.IsHost ?? false;
     
     private void Start()
     {

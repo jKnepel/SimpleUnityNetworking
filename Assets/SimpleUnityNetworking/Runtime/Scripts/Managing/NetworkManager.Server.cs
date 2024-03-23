@@ -5,6 +5,8 @@ using jKnepel.SimpleUnityNetworking.Transporting;
 using jKnepel.SimpleUnityNetworking.Utilities;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using UnityEngine;
 
@@ -66,9 +68,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             _authenticatingClients[clientID] = hashedChallenge;
 
             // send challenge to client
-            Writer writer = new();
+            Writer writer = new(_serialiserConfiguration);
             writer.WriteByte(ConnectionChallengePacket.PacketType);
-            ConnectionChallengePacket.Serialise(writer, new(challenge));
+            ConnectionChallengePacket.Write(writer, new(challenge));
             _transport.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
         }
 
@@ -81,9 +83,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Server_OnRemoteClientDisconnected?.Invoke(clientID);
 
             // inform other clients of disconnected client
-            Writer writer = new();
+            Writer writer = new(_serialiserConfiguration);
             writer.WriteByte(ClientUpdatePacket.PacketType);
-            ClientUpdatePacket.Serialise(writer, new(clientID));
+            ClientUpdatePacket.Write(writer, new(clientID));
             foreach (var id in Server_ConnectedClients.Keys)
                 _transport.SendDataToClient(id, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
         }
@@ -92,7 +94,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             try
             {
-                Reader reader = new(data.Data);
+                Reader reader = new(data.Data, _serialiserConfiguration);
                 var packetType = (EPacketType)reader.ReadByte();
                 Debug.Log($"Server Packet: {packetType} from {data.ClientID}");
 
@@ -121,8 +123,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             if (!_authenticatingClients.TryGetValue(clientID, out var challenge))
                 return;
-                    
-            var packet = ChallengeAnswerPacket.Deserialise(reader);
+
+            var packet = ChallengeAnswerPacket.Read(reader);
             if (!CompareByteArrays(challenge, packet.ChallengeAnswer))
             {
                 _transport.DisconnectClient(clientID);
@@ -131,11 +133,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             
             // inform client of authentication
-            Writer writer = new();
+            Writer writer = new(_serialiserConfiguration);
             writer.WriteByte(ConnectionAuthenticatedPacket.PacketType);
             ConnectionAuthenticatedPacket authentication = new(clientID, ServerInformation.Servername,
                 ServerInformation.MaxNumberConnectedClients);
-            ConnectionAuthenticatedPacket.Serialise(writer, authentication);
+            ConnectionAuthenticatedPacket.Write(writer, authentication);
             _transport.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
             writer.Clear();
             
@@ -148,7 +150,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 var clientInfo = kvp.Value;
                 ClientUpdatePacket existingClient = new(clientInfo.ID, ClientUpdatePacket.UpdateType.Connected,
                     clientInfo.Username, clientInfo.Colour);
-                ClientUpdatePacket.Serialise(writer, existingClient);
+                ClientUpdatePacket.Write(writer, existingClient);
                 _transport.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
             }
             writer.Clear();
@@ -157,7 +159,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             writer.WriteByte(ClientUpdatePacket.PacketType);
             ClientUpdatePacket update = new(clientID, ClientUpdatePacket.UpdateType.Connected, packet.Username,
                 packet.Color);
-            ClientUpdatePacket.Serialise(writer, update);
+            ClientUpdatePacket.Write(writer, update);
             var data = writer.GetBuffer();
             foreach (var id in Server_ConnectedClients.Keys)
                 _transport.SendDataToClient(id, data, ENetworkChannel.ReliableOrdered);
@@ -174,7 +176,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             if (!Server_ConnectedClients.ContainsKey(clientID))
                 return;
 
-            var packet = ClientUpdatePacket.Deserialise(reader);
+            var packet = ClientUpdatePacket.Read(reader);
             if (packet.ClientID != clientID || packet.Type != ClientUpdatePacket.UpdateType.Updated)
                 return;
             
@@ -184,9 +186,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Server_OnRemoteClientUpdated?.Invoke(clientID);
 
             // inform other clients of update
-            Writer writer = new();
+            Writer writer = new(_serialiserConfiguration);
             writer.WriteByte(ClientUpdatePacket.PacketType);
-            ClientUpdatePacket.Serialise(writer, packet);
+            ClientUpdatePacket.Write(writer, packet);
             var data = writer.GetBuffer();
             foreach (var id in Server_ConnectedClients.Keys)
             {
@@ -200,7 +202,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             if (!Server_ConnectedClients.TryGetValue(clientID, out _))
                 return;
 
-            var packet = DataPacket.ReadDataPacket(reader);
+            var packet = DataPacket.Read(reader);
             uint[] targetIDs = { };
             switch (packet.DataType)
             {
@@ -216,11 +218,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             
             // forward data to defined clients
-            Writer writer = new();
+            Writer writer = new(_serialiserConfiguration);
             writer.WriteByte(DataPacket.PacketType);
             DataPacket forwardedPacket = new(DataPacket.DataPacketType.Forwarded, clientID, packet.IsStructData,
                 packet.DataID, packet.Data);
-            DataPacket.WriteDataPacket(writer, forwardedPacket);
+            DataPacket.Write(writer, forwardedPacket);
             var data = writer.GetBuffer();
             foreach (var id in targetIDs)
             {
@@ -229,7 +231,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
         
-        private static bool CompareByteArrays(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
+        private static bool CompareByteArrays(IEnumerable<byte> a, IEnumerable<byte> b)
         {
             return a.SequenceEqual(b);
         }

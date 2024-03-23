@@ -12,13 +12,13 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
             Challenge = challenge;
 		}
 
-        public static ConnectionChallengePacket Deserialise(Reader reader)
+        public static ConnectionChallengePacket Read(Reader reader)
 		{
             ulong challenge = reader.ReadUInt64();
             return new(challenge);
 		}
 
-        public static void Serialise(Writer writer, ConnectionChallengePacket packet)
+        public static void Write(Writer writer, ConnectionChallengePacket packet)
 		{
             writer.WriteUInt64(packet.Challenge);
 		}

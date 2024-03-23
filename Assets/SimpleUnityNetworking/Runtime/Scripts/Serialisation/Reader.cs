@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text;
 using UnityEngine;
@@ -18,7 +19,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// The current byte position of the writer header within the buffer.
 		/// </summary>
 		/// <remarks>
-		/// IMPORTANT! Do not use this position unless you know what you are doing! 
+		/// Do not use this position unless you know what you are doing! 
 		/// Setting the position manually will not check for buffer bounds.
 		/// </remarks>
 		public int Position;
@@ -35,13 +36,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// </summary>
 		public SerialiserConfiguration SerialiserConfiguration { get; }
 
-		protected byte[] _buffer;
-
-		public readonly int Boolean = 1;
-		public readonly int Byte = 1;
-		public readonly int Int16 = 2;
-		public readonly int Int32 = 4;
-		public readonly int Int64 = 8;
+		private readonly byte[] _buffer;
 
         private static readonly ConcurrentDictionary<Type, Func<Reader, object>> _typeHandlerCache = new();
         private static readonly HashSet<Type> _unknownTypes = new();
@@ -50,17 +45,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 		#region lifecycle
 
-		public Reader(byte[] bytes, SerialiserConfiguration config = null) 
-            : this(new ArraySegment<byte>(bytes), config) { }
-
-        public Reader(ArraySegment<byte> bytes, SerialiserConfiguration config = null)
+		public Reader(byte[] bytes, SerialiserConfiguration config = null)
 		{
-            if (bytes.Array == null)
-                return;
+			if (bytes == null)
+				return;
 
-            Position = bytes.Offset;
-            _buffer = bytes.Array;
-            SerialiserConfiguration = config ?? new();
+			Position = 0;
+			_buffer = bytes;
+			SerialiserConfiguration = config ?? new();
 		}
 
         static Reader()
@@ -96,11 +88,11 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 		public T Read<T>()
 		{
-            Type type = typeof(T);
+            var type = typeof(T);
             return (T)Read(type);
         }
 
-        protected virtual object Read(Type type)
+        private object Read(Type type)
 		{
             if (!_unknownTypes.Contains(type))
 			{
@@ -109,14 +101,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                     return handler(this);
                 }
 
-                Func<Reader, object> customHandler = CreateTypeHandlerDelegate(type, true);
+                var customHandler = CreateTypeHandlerDelegate(type, true);
                 if (customHandler != null)
                 {   // use custom type handler if user defined method was found
                     return customHandler(this);
                 }
 
                 // TODO : remove this once pre-compile cached generic handlers are supported
-                Func<Reader, object> implementedHandler = CreateTypeHandlerDelegate(type, false);
+                var implementedHandler = CreateTypeHandlerDelegate(type, false);
                 if (implementedHandler != null)
                 {   // use implemented type handler
                     return implementedHandler(this);
@@ -131,16 +123,16 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             // TODO : add attributes for serialisation
             // TODO : add serialisation options to handle size, circular dependencies etc. 
             // TODO : handle properties
-            FieldInfo[] fieldInfos = type.GetFields();
-            if (fieldInfos.Length == 0 || fieldInfos.Where(x => x.FieldType == type).Any())
+            var fieldInfos = type.GetFields();
+            if (fieldInfos.Length == 0 || fieldInfos.Any(x => x.FieldType == type))
             {   // TODO : circular dependencies will cause crash
-                string typeName = SerialiserHelper.GetTypeName(type);
+                var typeName = SerialiserHelper.GetTypeName(type);
                 throw new SerialiseNotImplemented($"No read method implemented for the type {typeName}!"
                     + $" Implement a Read{typeName} method or use an extension method in the parent type!");
 			}
 
-            object obj = FormatterServices.GetUninitializedObject(type);
-            foreach (FieldInfo fieldInfo in fieldInfos)
+            var obj = FormatterServices.GetUninitializedObject(type);
+            foreach (var fieldInfo in fieldInfos)
                 fieldInfo.SetValue(obj, Read(fieldInfo.FieldType));
             return obj;
         }
@@ -152,12 +144,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         /// TODO : also cache generic handlers during compilation
         /// </remarks>
         /// <param name="type">The type of the variable for which the writer is defined</param>
-        /// <param name="useCustomReader">Wether the reader method is an instance of the Reader class or a custom static method in the type</param>
+        /// <param name="useCustomReader">Whether the reader method is an instance of the Reader class or a custom static method in the type</param>
         /// <returns></returns>
         private static Func<Reader, object> CreateTypeHandlerDelegate(Type type, bool useCustomReader = false)
         {   // find implemented or custom read method
             var readerMethod = useCustomReader
-                ?           type.GetMethod("Deserialise", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                ?           type.GetMethod("Read", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
                 : typeof(Reader).GetMethod($"Read{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (readerMethod == null)
                 return null;
@@ -199,7 +191,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// Skips the reader header ahead by the given number of bytes.
 		/// </summary>
 		/// <param name="bytes"></param>
-		public virtual void Skip(int bytes)
+		public void Skip(int bytes)
 		{
             if (bytes < 1 || bytes > Remaining)
                 return;
@@ -211,7 +203,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// Reverts the reader header back by the given number of bytes.
 		/// </summary>
 		/// <param name="bytes"></param>
-		public virtual void Revert(int bytes)
+		public void Revert(int bytes)
         {
             Position -= bytes; 
             Position = Mathf.Max(Position, 0);
@@ -220,13 +212,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <summary>
 		/// Clears the reader buffer.
 		/// </summary>
-		public virtual void Clear()
+		public void Clear()
 		{
             Position += Remaining;
 		}
 
 		/// <returns>The full internal buffer.</returns>
-		public virtual byte[] GetFullBuffer()
+		public byte[] GetFullBuffer()
 		{
             return _buffer;
 		}
@@ -237,14 +229,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <param name="dst"></param>
 		/// <param name="dstOffset"></param>
 		/// <param name="count"></param>
-		public virtual void BlockCopy(ref byte[] dst, int dstOffset, int count)
+		public void BlockCopy(ref byte[] dst, int dstOffset, int count)
 		{
             Buffer.BlockCopy(_buffer, Position, dst, dstOffset, count);
             Position += count;
 		}
 
 		/// <returns>Reads and returns a byte segment of the specified length.</returns>
-		public virtual ArraySegment<byte> ReadByteSegment(int count)
+		public ArraySegment<byte> ReadByteSegment(int count)
 		{
             if (count > Remaining)
                 throw new IndexOutOfRangeException("The count exceeds the remaining length!");
@@ -255,15 +247,15 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         }
 
 		/// <returns>Reads and returns a byte array of the specified length.</returns>
-        public virtual byte[] ReadByteArray(int count)
+        public byte[] ReadByteArray(int count)
         {
             return ReadByteSegment(count).ToArray();
         }
 
 		/// <returns>The remaining bytes.</returns>
-		public virtual byte[] ReadRemainingBuffer()
+		public byte[] ReadRemainingBuffer()
 		{
-            byte[] remaining = new byte[Remaining];
+            var remaining = new byte[Remaining];
             BlockCopy(ref remaining, 0, Remaining);
             return remaining;
 		}
@@ -272,88 +264,139 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 		#region primitives
 
-        public virtual bool ReadBoolean()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool ReadBoolean()
 		{
-            byte result = _buffer[Position++];
+            var result = _buffer[Position++];
             return result == 1;
         }
 
-        public virtual byte ReadByte()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public byte ReadByte()
 		{
-            byte result = _buffer[Position++];
+            var result = _buffer[Position++];
             return result;
 		}
 
-        public virtual sbyte ReadSByte()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public sbyte ReadSByte()
 		{
-            sbyte result = (sbyte)_buffer[Position++];
+            var result = (sbyte)_buffer[Position++];
             return result;
 		}
 
-        public virtual ushort ReadUInt16()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ushort ReadUInt16()
 		{
-            ushort result = _buffer[Position++];
-            result |= (ushort)(_buffer[Position++] << 8);
-            return result;
+			if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+				return (ushort)ReadVLQCompression();
+			
+			ushort result = _buffer[Position++];
+			result |= (ushort)(_buffer[Position++] << 8);
+			return result;
 		}
 
-        public virtual short ReadInt16()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public short ReadInt16()
 		{
-            return (short)ReadUInt16();
+			if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+				return (short)ZigZagDecode(ReadVLQCompression());
+			
+			short result = _buffer[Position++];
+			result |= (short)(_buffer[Position++] << 8);
+			return result;
 		}
 
-        public virtual uint ReadUInt32()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public uint ReadUInt32()
 		{
-            uint result = _buffer[Position++];
-            result |= (uint)(_buffer[Position++] << 8);
-            result |= (uint)(_buffer[Position++] << 16);
-            result |= (uint)(_buffer[Position++] << 24);
-            return result;
+			if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+				return (uint)ReadVLQCompression();
+			
+			uint result = _buffer[Position++];
+			result |= (uint)(_buffer[Position++] << 8);
+			result |= (uint)(_buffer[Position++] << 16);
+			result |= (uint)(_buffer[Position++] << 24);
+			return result;
 		}
 
-        public virtual int ReadInt32()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public int ReadInt32()
 		{
-            return (int)ReadUInt32();
+			if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+				return (int)ZigZagDecode(ReadVLQCompression());
+			
+			int result = _buffer[Position++];
+			result |= _buffer[Position++] << 8;
+			result |= _buffer[Position++] << 16;
+			result |= _buffer[Position++] << 24;
+			return result;
 		}
 
-        public virtual ulong ReadUInt64()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public ulong ReadUInt64()
 		{
-            ulong result = _buffer[Position++];
-            result |= (ulong)_buffer[Position++] << 8;
-            result |= (ulong)_buffer[Position++] << 16;
-            result |= (ulong)_buffer[Position++] << 24;
-            result |= (ulong)_buffer[Position++] << 32;
-            result |= (ulong)_buffer[Position++] << 40;
-            result |= (ulong)_buffer[Position++] << 48;
-            result |= (ulong)_buffer[Position++] << 56;
-            return result;
+			if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+				return ReadVLQCompression();
+			
+			ulong result = _buffer[Position++];
+			result |= (ulong)_buffer[Position++] << 8;
+			result |= (ulong)_buffer[Position++] << 16;
+			result |= (ulong)_buffer[Position++] << 24;
+			result |= (ulong)_buffer[Position++] << 32;
+			result |= (ulong)_buffer[Position++] << 40;
+			result |= (ulong)_buffer[Position++] << 48;
+			result |= (ulong)_buffer[Position++] << 56;
+			return result;
         }
 
-        public virtual long ReadInt64()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public long ReadInt64()
 		{
-            return (long)ReadUInt64();
+			if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+				return ZigZagDecode(ReadVLQCompression());
+			
+			long result = _buffer[Position++];
+			result |= (long)_buffer[Position++] << 8;
+			result |= (long)_buffer[Position++] << 16;
+			result |= (long)_buffer[Position++] << 24;
+			result |= (long)_buffer[Position++] << 32;
+			result |= (long)_buffer[Position++] << 40;
+			result |= (long)_buffer[Position++] << 48;
+			result |= (long)_buffer[Position++] << 56;
+			return result;
 		}
 
-        public virtual char ReadChar()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public char ReadChar()
 		{
-            char result = (char)_buffer[Position++];
+            var result = (char)_buffer[Position++];
             result |= (char)(_buffer[Position++] << 8);
             return result;
         }
 
-        public virtual float ReadSingle()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public float ReadSingle()
 		{
-            TypeConverter.UIntToFloat converter = new() { UInt = ReadUInt32() };
-            return converter.Float;
+			if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+			{
+				var compressed = ZigZagDecode(ReadVLQCompression());
+				return compressed / Mathf.Pow(10, SerialiserConfiguration.NumberOfDecimalPlaces);
+			}
+			
+			TypeConverter.UIntToFloat converter = new() { UInt = ReadUInt32() };
+			return converter.Float;
         }
 
-        public virtual double ReadDouble()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public double ReadDouble()
 		{
             TypeConverter.ULongToDouble converter = new() { ULong = ReadUInt64() };
             return converter.Double;
         }
 
-        public virtual decimal ReadDecimal()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public decimal ReadDecimal()
 		{
             TypeConverter.ULongsToDecimal converter = new() { ULong1 = ReadUInt64(), ULong2 = ReadUInt64() };
             return converter.Decimal;
@@ -363,27 +406,39 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 		#region unity objects
 
-        public virtual Vector2 ReadVector2()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Vector2 ReadVector2()
 		{
-            return new Vector2(ReadSingle(), ReadSingle());
+            return new(ReadSingle(), ReadSingle());
 		}
 
-        public virtual Vector3 ReadVector3()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Vector3 ReadVector3()
 		{
-            return new Vector3(ReadSingle(), ReadSingle(), ReadSingle());
+            return new(ReadSingle(), ReadSingle(), ReadSingle());
 		}
 
-        public virtual Vector4 ReadVector4()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Vector4 ReadVector4()
 		{
-            return new Vector4(ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle());
+            return new(ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle());
 		}
 
-        public virtual Quaternion ReadQuaternion()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Quaternion ReadQuaternion()
 		{
-            return new Quaternion(ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle());
+			if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+			{
+				var packed = ReadVLQCompression();
+				CompressedQuaternion q = new(packed, SerialiserConfiguration.BitsPerComponent);
+				return q.Quaternion;
+			}
+			
+            return new(ReadSingle(), ReadSingle(), ReadSingle(), ReadSingle());
 		}
 
-        public virtual Matrix4x4 ReadMatrix4x4()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Matrix4x4 ReadMatrix4x4()
 		{
             Matrix4x4 result = new()
 			{
@@ -395,80 +450,126 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             return result;
         }
 
-        public virtual Color ReadColor()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Color ReadColor()
 		{
-            float r = (float)(ReadByte() / 100.0f);
-            float g = (float)(ReadByte() / 100.0f);
-            float b = (float)(ReadByte() / 100.0f);
-            float a = (float)(ReadByte() / 100.0f);
-            return new Color(r, g, b, a);
+            var r = ReadByte() / 100f;
+            var g = ReadByte() / 100f;
+            var b = ReadByte() / 100f;
+            var a = ReadByte() / 100f;
+            return new(r, g, b, a);
 		}
 
-        public virtual Color ReadColorWithoutAlpha()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Color ReadColorWithoutAlpha()
 		{
-            float r = (float)(ReadByte() / 100.0f);
-            float g = (float)(ReadByte() / 100.0f);
-            float b = (float)(ReadByte() / 100.0f);
-            return new Color(r, g, b, 1);
+            var r = ReadByte() / 100f;
+            var g = ReadByte() / 100f;
+            var b = ReadByte() / 100f;
+            return new(r, g, b, 1);
         }
 
-        public virtual Color32 ReadColor32()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Color32 ReadColor32()
 		{
-            return new Color32(ReadByte(), ReadByte(), ReadByte(), ReadByte());
+            return new(ReadByte(), ReadByte(), ReadByte(), ReadByte());
 		}
 
-        public virtual Color32 ReadColor32WithoutAlpha()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Color32 ReadColor32WithoutAlpha()
 		{
-            return new Color32(ReadByte(), ReadByte(), ReadByte(), 255);
+            return new(ReadByte(), ReadByte(), ReadByte(), 255);
         }
 
 		#endregion
 
 		#region objects
 
-        public virtual string ReadString()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public string ReadString()
 		{
-            ushort length = ReadUInt16();
-            return Encoding.ASCII.GetString(ReadByteArray(length));
+            return Encoding.ASCII.GetString(ReadByteArray(ReadUInt16()));
 		}
 
-        public virtual string ReadStringWithoutFlag(int length)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public string ReadStringWithoutFlag(int length)
         {
             return Encoding.ASCII.GetString(ReadByteArray(length));
         }
 
-        public virtual T[] ReadArray<T>()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public T[] ReadArray<T>()
 		{
-            int length = ReadInt32();
-            T[] array = new T[length];
-            for (int i = 0; i < length; i++)
+            var length = ReadInt32();
+            var array = new T[length];
+            for (var i = 0; i < length; i++)
                 array[i] = Read<T>();
             return array;
 		}
 
-        public virtual List<T> ReadList<T>()
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public List<T> ReadList<T>()
 		{
-            int count = ReadInt32();
+            var count = ReadInt32();
             List<T> list = new(count);
-            for (int i = 0; i < count; i++)
+            for (var i = 0; i < count; i++)
                 list.Add(Read<T>());
             return list;
         }
 
-        public virtual Dictionary<TKey, TValue> ReadDictionary<TKey, TValue>()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public Dictionary<TKey, TValue> ReadDictionary<TKey, TValue>()
 		{
-            int count = ReadInt32();
+            var count = ReadInt32();
             Dictionary<TKey, TValue> dictionary = new(count);
-            for (int i = 0; i < count; i++)
+            for (var i = 0; i < count; i++)
                 dictionary.Add(Read<TKey>(), Read<TValue>());
             return dictionary;
         }
 
-        public virtual DateTime ReadDateTime()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public DateTime ReadDateTime()
 		{
             return DateTime.FromBinary(ReadInt64());
 		}
 
+        #endregion
+        
+        #region utilities
+        
+		/// <summary>
+		/// "ZigZagEncoding" based on google protocol buffers.
+		/// See for <a href="https://protobuf.dev/programming-guides/encoding/">reference</a>.
+		/// </summary>
+		/// <param name="val"></param>
+		/// <returns></returns>
+        private static long ZigZagDecode(ulong val)
+        {
+	        return ((long)val >> 1) ^ -((long)val & 1);
+        }
+
+        /// <summary>
+        /// Uses a 7-bit VLQ encoding scheme based on the MIDI compression system.
+        /// See for <a href="https://web.archive.org/web/20051129113105/http://www.borg.com/~jglatt/tech/midifile/vari.htm">reference</a>.
+        /// </summary>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private ulong ReadVLQCompression()
+        {
+	        ulong val = 0;
+	        ulong shift = 0;
+	        var left = true;
+	        while (left)
+	        {
+		        ulong lowerBits = ReadByte();
+		        left = (lowerBits & 0x80) != 0;
+		        val |= (lowerBits & 0x7F) << (int)shift;
+		        shift += 7;
+	        }
+	        
+	        return val;
+        }
+        
         #endregion
     }
 }

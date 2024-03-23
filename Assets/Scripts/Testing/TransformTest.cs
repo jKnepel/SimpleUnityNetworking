@@ -1,16 +1,21 @@
+using System;
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Serialisation;
+using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
-public class CompressionTest : MonoBehaviour
+public class TransformTest : MonoBehaviour
 {
     [SerializeField] private MonoNetworkManager _manager;
     [SerializeField] private SerialiserConfiguration _serialiserConfiguration;
     [SerializeField] private uint _targetClientID;
+    [SerializeField] private bool _synchronise;
+    [SerializeField] private Transform _sendObject;
+    [SerializeField] private Transform _receiveObject;
     
     public bool IsOnline => _manager?.IsOnline ?? false;
     public bool IsServer => _manager?.IsServer ?? false;
@@ -56,6 +61,11 @@ public class CompressionTest : MonoBehaviour
     private void Update()
     {
         _manager.Update();
+        if (_sendObject.hasChanged && _synchronise)
+        {
+            SendTransformToClient(ENetworkChannel.UnreliableOrdered);
+            _sendObject.hasChanged = false;
+        }
 	}
 
     public void StartServer()
@@ -80,62 +90,46 @@ public class CompressionTest : MonoBehaviour
 
     public void Register()
     {
-        _manager.RegisterByteData("values", ReceiveValueBytes);
+        _manager.RegisterByteData("transform", ReceiveTransformStruct);
     }
 
     public void Unregister()
     {
-        _manager.UnregisterByteData("values", ReceiveValueBytes);
+        _manager.UnregisterByteData("transform", ReceiveTransformStruct);
     }
 
-    public void SendValuesToClient(ENetworkChannel channel)
+    public void SendTransformToClient(ENetworkChannel channel)
     {
-        ValueStruct data = new()
+        var data = new TransformStruct
         {
-            Byte = 1,
-            Short = -2,
-            UShort = 5,
-            Int = -998,
-            UInt = 213,
-            Long = -12313123,
-            ULong = 123123
+            Position = _sendObject.position,
+            Rotation = _sendObject.rotation
         };
-
+        
         Writer writer = new(_serialiserConfiguration);
         writer.Write(data);
-        _manager.SendByteDataToClient(_targetClientID, "values", writer.GetBuffer(), channel);
+        _manager.SendByteDataToClient(_targetClientID, "transform", writer.GetBuffer(), channel);
     }
 
-    private void ReceiveValueBytes(uint clientID, byte[] data)
+    private void ReceiveTransformStruct(uint clientID, byte[] data)
     {
         Reader reader = new(data, _serialiserConfiguration);
-        var message = reader.Read<ValueStruct>();
+        var message = reader.Read<TransformStruct>();
         
-        Debug.Log($"Received {data.Length} bytes from {clientID}: " +
-                  $"Byte = {message.Byte},\n" +
-                  $"Short = {message.Short},\n" +
-                  $"UShort = {message.UShort},\n" +
-                  $"Int = {message.Int},\n" +
-                  $"UInt = {message.UInt},\n" +
-                  $"Long = {message.Long},\n" +
-                  $"ULong = {message.ULong}");
+        Debug.Log(data.Length);
+        _receiveObject.SetPositionAndRotation(message.Position, message.Rotation);
     }
 
-    private struct ValueStruct
+    private struct TransformStruct : IStructData
     {
-        public byte Byte;
-        public short Short;
-        public ushort UShort;
-        public int Int;
-        public uint UInt;
-        public long Long;
-        public ulong ULong;
+        public Vector3 Position;
+        public Quaternion Rotation;
     }
 }
 
 #if UNITY_EDITOR
-[CustomEditor(typeof(CompressionTest))]
-public class CompressionTestEditor : Editor
+[CustomEditor(typeof(TransformTest))]
+public class TransformTestEditor : Editor
 {
     private ENetworkChannel _channel = ENetworkChannel.ReliableOrdered;
     
@@ -143,7 +137,7 @@ public class CompressionTestEditor : Editor
 	{
 		base.OnInspectorGUI();
 
-        var test = (CompressionTest)target;
+        var test = (TransformTest)target;
         
         GUILayout.Label($"IsOnline: {test.IsOnline}");
         GUILayout.Label($"IsServer: {test.IsServer}");
@@ -163,8 +157,8 @@ public class CompressionTestEditor : Editor
             test.StartClient();
         if (GUILayout.Button("Stop Client"))
             test.StopClient();
-        if (GUILayout.Button("Send Values"))
-            test.SendValuesToClient(_channel);
+        if (GUILayout.Button("Send Transform"))
+            test.SendTransformToClient(_channel);
     }
 }
 #endif

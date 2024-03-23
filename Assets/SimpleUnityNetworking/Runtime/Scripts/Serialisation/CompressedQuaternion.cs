@@ -16,19 +16,21 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         public readonly uint B;
         public readonly uint C;
 
-		public CompressedQuaternion(Quaternion q, int bits = 9)
+        public readonly ulong PackedQuaternion;
+
+		public CompressedQuaternion(Quaternion q, int bits = 10)
         {
             Bits = bits;
             Quaternion = q;
 
-            float absX = Mathf.Abs(q.x);
-            float absY = Mathf.Abs(q.y);
-            float absZ = Mathf.Abs(q.z);
-            float absW = Mathf.Abs(q.w);
+            var absX = Mathf.Abs(q.x);
+            var absY = Mathf.Abs(q.y);
+            var absZ = Mathf.Abs(q.z);
+            var absW = Mathf.Abs(q.w);
 
             Largest = 0;
-            float largestValue = q.x;
-            float largestAbsValue = absX;
+            var largestValue = q.x;
+            var largestAbsValue = absX;
 
             if (absY > largestAbsValue)
             {
@@ -78,33 +80,38 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 a = -a; b = -b; c = -c;
             }
 
-            float normalisedA = (a - MINIMUM) / (MAXIMUM - MINIMUM);
-            float normalisedB = (b - MINIMUM) / (MAXIMUM - MINIMUM);
-            float normalisedC = (c - MINIMUM) / (MAXIMUM - MINIMUM);
+            var normalisedA = (a - MINIMUM) / (MAXIMUM - MINIMUM);
+            var normalisedB = (b - MINIMUM) / (MAXIMUM - MINIMUM);
+            var normalisedC = (c - MINIMUM) / (MAXIMUM - MINIMUM);
 
             float scale = (1 << bits) - 1;
             A = (uint)Mathf.Floor(normalisedA * scale + 0.5f);
             B = (uint)Mathf.Floor(normalisedB * scale + 0.5f);
             C = (uint)Mathf.Floor(normalisedC * scale + 0.5f);
+
+            PackedQuaternion = ((ulong)Largest << Bits * 3) | ((ulong)A << Bits * 2) | ((ulong)B << Bits) | C;
         }
 
-        public CompressedQuaternion(uint largest, uint a, uint b, uint c, int bits = 9)
+        public CompressedQuaternion(ulong packedQuaternion, int bits = 10)
         {
+	        PackedQuaternion = packedQuaternion;
             Bits = bits;
-            Largest = largest;
-            A = a;
-            B = b;
-            C = c;
+            
+	        var mask = (ulong)((1 << Bits) - 1);
+            Largest = (uint)( 0x3 & packedQuaternion >> Bits * 3);
+            A =       (uint)(mask & packedQuaternion >> Bits * 2);
+            B =       (uint)(mask & packedQuaternion >> Bits);
+            C =       (uint)(mask & packedQuaternion);
 
-			float scale = (1 << bits) - 1;
-            float inverseScale = 1 / scale;
+			var scale = (1 << Bits) - 1;
+            var inverseScale = 1f / scale;
 
-            float floatA = a * inverseScale * (MAXIMUM - MINIMUM) + MINIMUM;
-            float floatB = b * inverseScale * (MAXIMUM - MINIMUM) + MINIMUM;
-            float floatC = c * inverseScale * (MAXIMUM - MINIMUM) + MINIMUM;
+            var floatA = A * inverseScale * (MAXIMUM - MINIMUM) + MINIMUM;
+            var floatB = B * inverseScale * (MAXIMUM - MINIMUM) + MINIMUM;
+            var floatC = C * inverseScale * (MAXIMUM - MINIMUM) + MINIMUM;
 
             float x = 0, y = 0, z = 0, w = 0;
-            switch(largest) 
+            switch(Largest) 
             {
                 case 0:
                     x = Mathf.Sqrt(1 - floatA * floatA - floatB * floatB - floatC * floatC);

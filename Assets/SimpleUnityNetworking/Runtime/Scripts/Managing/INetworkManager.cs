@@ -1,6 +1,7 @@
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
+using jKnepel.SimpleUnityNetworking.Serialisation;
 using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using System.Collections.Concurrent;
@@ -17,6 +18,11 @@ namespace jKnepel.SimpleUnityNetworking
         /// which will be used for sending and receiving data
         /// </summary>
         TransportConfiguration TransportConfiguration { get; set; }
+        
+        /// <summary>
+        /// The configuration for the serialiser used by the network manager.
+        /// </summary>
+        SerialiserConfiguration SerialiserConfiguration { get; set; }
         
         /// <summary>
         /// Whether a local server is started or a client is authenticated
@@ -154,7 +160,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <param name="byteID"></param>
         /// <param name="byteData"></param>
         /// <param name="channel"></param>
-        void SendByteDataToClient(uint clientID, uint byteID, byte[] byteData,
+        void SendByteDataToClient(uint clientID, string byteID, byte[] byteData,
             ENetworkChannel channel = ENetworkChannel.UnreliableUnordered);
         /// <summary>
         /// Sends byte data with a given id from the local client to all other remote clients.
@@ -163,7 +169,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <param name="byteID"></param>
         /// <param name="byteData"></param>
         /// <param name="channel"></param>
-        void SendByteDataToAll(uint byteID, byte[] byteData,
+        void SendByteDataToAll(string byteID, byte[] byteData,
             ENetworkChannel channel = ENetworkChannel.UnreliableUnordered);
         /// <summary>
         /// Sends byte data with a given id from the local client to a list of remote clients.
@@ -173,7 +179,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <param name="byteID"></param>
         /// <param name="byteData"></param>
         /// <param name="channel"></param>
-        void SendByteDataToClients(uint[] clientIDs, uint byteID, byte[] byteData,
+        void SendByteDataToClients(uint[] clientIDs, string byteID, byte[] byteData,
             ENetworkChannel channel = ENetworkChannel.UnreliableUnordered);
 
         /// <summary>

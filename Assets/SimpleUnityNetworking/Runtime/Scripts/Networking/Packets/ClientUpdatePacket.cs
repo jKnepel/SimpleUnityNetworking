@@ -34,7 +34,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 			Color = default;
 		}
 
-		public static ClientUpdatePacket Deserialise(Reader reader)
+		public static ClientUpdatePacket Read(Reader reader)
 		{
 			uint clientID = reader.ReadUInt32();
 			UpdateType type = (UpdateType)reader.ReadByte();
@@ -43,7 +43,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 			return new(clientID, type, username, color);
 		}
 
-		public static void Serialise(Writer writer, ClientUpdatePacket packet)
+		public static void Write(Writer writer, ClientUpdatePacket packet)
 		{
 			writer.WriteUInt32(packet.ClientID);
 			writer.WriteByte((byte)packet.Type);

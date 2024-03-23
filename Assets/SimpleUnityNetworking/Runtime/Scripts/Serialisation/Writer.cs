@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using UnityEngine;
 
@@ -17,7 +18,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// The current byte position of the writer header within the buffer.
 		/// </summary>
 		/// <remarks>
-		/// IMPORTANT! Do not use this position unless you know what you are doing! 
+		/// Do not use this position unless you know what you are doing! 
 		/// Setting the position manually will not check for buffer bounds or update the length of the written buffer.
 		/// </remarks>
 		public int Position { get; set; }
@@ -34,13 +35,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// </summary>
 		public SerialiserConfiguration SerialiserConfiguration { get; }
 
-		protected byte[] _buffer = new byte[32];
-
-		public readonly int Boolean = 1;
-		public readonly int Byte = 1;
-		public readonly int Int16 = 2;
-		public readonly int Int32 = 4;
-		public readonly int Int64 = 8;
+		private byte[] _buffer = new byte[32];
 
 		private static readonly ConcurrentDictionary<Type, Action<Writer, object>> _typeHandlerCache = new();
         private static readonly HashSet<Type> _unknownTypes = new();
@@ -54,30 +49,31 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             SerialiserConfiguration = config ?? new();
 		}
 
-		static Writer()
-        {   // caches all implemented type handlers during compilation
-            CreateTypeHandlerDelegate(typeof(bool));
-            CreateTypeHandlerDelegate(typeof(byte));
-            CreateTypeHandlerDelegate(typeof(sbyte));
-            CreateTypeHandlerDelegate(typeof(ushort));
-            CreateTypeHandlerDelegate(typeof(short));
-            CreateTypeHandlerDelegate(typeof(uint));
-            CreateTypeHandlerDelegate(typeof(int));
-            CreateTypeHandlerDelegate(typeof(ulong));
-            CreateTypeHandlerDelegate(typeof(long));
-            CreateTypeHandlerDelegate(typeof(string));
-            CreateTypeHandlerDelegate(typeof(char));
-            CreateTypeHandlerDelegate(typeof(float));
-            CreateTypeHandlerDelegate(typeof(double));
-            CreateTypeHandlerDelegate(typeof(decimal));
-            CreateTypeHandlerDelegate(typeof(Vector2));
-            CreateTypeHandlerDelegate(typeof(Vector3));
-            CreateTypeHandlerDelegate(typeof(Vector4));
-            CreateTypeHandlerDelegate(typeof(Matrix4x4));
-            CreateTypeHandlerDelegate(typeof(Color));
-            CreateTypeHandlerDelegate(typeof(Color32));
-            CreateTypeHandlerDelegate(typeof(DateTime));
-        }
+	    static Writer()
+	    {   // caches all implemented type handlers during compilation
+		    CreateTypeHandlerDelegate(typeof(bool));
+		    CreateTypeHandlerDelegate(typeof(byte));
+		    CreateTypeHandlerDelegate(typeof(sbyte));
+		    CreateTypeHandlerDelegate(typeof(ushort));
+		    CreateTypeHandlerDelegate(typeof(short));
+		    CreateTypeHandlerDelegate(typeof(uint));
+		    CreateTypeHandlerDelegate(typeof(int));
+		    CreateTypeHandlerDelegate(typeof(ulong));
+		    CreateTypeHandlerDelegate(typeof(long));
+		    CreateTypeHandlerDelegate(typeof(string));
+		    CreateTypeHandlerDelegate(typeof(char));
+		    CreateTypeHandlerDelegate(typeof(float));
+		    CreateTypeHandlerDelegate(typeof(double));
+		    CreateTypeHandlerDelegate(typeof(decimal));
+		    CreateTypeHandlerDelegate(typeof(Vector2));
+		    CreateTypeHandlerDelegate(typeof(Vector3));
+		    CreateTypeHandlerDelegate(typeof(Vector4));
+		    CreateTypeHandlerDelegate(typeof(Matrix4x4));
+		    CreateTypeHandlerDelegate(typeof(Color));
+		    CreateTypeHandlerDelegate(typeof(Color32));
+		    CreateTypeHandlerDelegate(typeof(DateTime));
+	    }
+
 
 		internal static void Init() { }
 
@@ -87,11 +83,11 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
 		public void Write<T>(T val)
         {
-            Type type = typeof(T);
+            var type = typeof(T);
             Write(val, type);
         }
 
-        protected virtual void Write<T>(T val, Type type)
+        private void Write<T>(T val, Type type)
 		{
             if (!_unknownTypes.Contains(type))
             {   
@@ -101,7 +97,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                     return;
                 }
 
-                Action<Writer, object> customHandler = CreateTypeHandlerDelegate(type, true);
+                var customHandler = CreateTypeHandlerDelegate(type, true);
                 if (customHandler != null)
                 {   // use custom type handler if user defined method was found
                     customHandler(this, val);
@@ -109,7 +105,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 }
 
                 // TODO : remove this once pre-compile cached generic handlers are supported
-                Action<Writer, object> implementedHandler = CreateTypeHandlerDelegate(type);
+                var implementedHandler = CreateTypeHandlerDelegate(type);
                 if (implementedHandler != null)
                 {   // use implemented type handler
                     implementedHandler(this, val);
@@ -125,15 +121,15 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             // TODO : add attributes for serialisation
             // TODO : add serialisation options to handle size, circular dependencies etc. 
             // TODO : handle properties
-            FieldInfo[] fieldInfos = type.GetFields();               
-            if (fieldInfos.Length == 0 || fieldInfos.Where(x => x.FieldType == type).Any())
+            var fieldInfos = type.GetFields();               
+            if (fieldInfos.Length == 0 || fieldInfos.Any(x => x.FieldType == type))
 			{
-                string typeName = SerialiserHelper.GetTypeName(type);
+                var typeName = SerialiserHelper.GetTypeName(type);
                 throw new SerialiseNotImplemented($"No write method implemented for the type {typeName}!"
                     + $" Implement a Write{typeName} method or use an extension method in the parent type!");
 			}
 
-            foreach (FieldInfo fieldInfo in fieldInfos)
+            foreach (var fieldInfo in fieldInfos)
                 Write(fieldInfo.GetValue(val), fieldInfo.FieldType);
         }
 
@@ -149,7 +145,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         private static Action<Writer, object> CreateTypeHandlerDelegate(Type type, bool useCustomWriter = false)
         {   // find implemented or custom write method
             var writerMethod = useCustomWriter
-                ?           type.GetMethod("Serialise", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                ?           type.GetMethod("Write", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
                 : typeof(Writer).GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (writerMethod == null)
                 return null;
@@ -191,14 +187,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         private void AdjustBufferSize(int size)
 		{
             if (Position + size > _buffer.Length)
-                Array.Resize(ref _buffer, (_buffer.Length * 2) + size);
+                Array.Resize(ref _buffer, _buffer.Length * 2 + size);
 		}
 
 		/// <summary>
 		/// Skips the writer header ahead by the given number of bytes.
 		/// </summary>
 		/// <param name="bytes"></param>
-		public virtual void Skip(int bytes)
+		public void Skip(int bytes)
 		{
             AdjustBufferSize(bytes);
             Position += bytes;
@@ -209,7 +205,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// Reverts the writer header back by the given number of bytes.
 		/// </summary>
 		/// <param name="bytes"></param>
-		public virtual void Revert(int bytes)
+		public void Revert(int bytes)
 		{
 			Position -= bytes;
 			Position = Mathf.Max(Position, 0);
@@ -218,14 +214,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <summary>
 		/// Clears the writer buffer.
 		/// </summary>
-		public virtual void Clear()
+		public void Clear()
 		{
             Position = 0;
             Length = 0;
 		}
 
 		/// <returns>The written buffer.</returns>
-		public virtual byte[] GetBuffer()
+		public byte[] GetBuffer()
         {
             byte[] result = new byte[Length];
             Array.Copy(_buffer, 0, result, 0, Length);
@@ -233,7 +229,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         }
 
 		/// <returns>The entire internal buffer.</returns>
-		public virtual byte[] GetFullBuffer()
+		public byte[] GetFullBuffer()
         {
             return _buffer;
         }
@@ -244,7 +240,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// <param name="src"></param>
 		/// <param name="srcOffset"></param>
 		/// <param name="count"></param>
-		public virtual void BlockCopy(ref byte[] src, int srcOffset, int count)
+		public void BlockCopy(ref byte[] src, int srcOffset, int count)
         {
 			AdjustBufferSize(count);
             Buffer.BlockCopy(src, srcOffset, _buffer, Position, count);
@@ -256,9 +252,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// Writes a source array to the buffer.
 		/// </summary>
 		/// <param name="src"></param>
-		public virtual void WriteByteSegment(ArraySegment<byte> src)
+		public void WriteByteSegment(ArraySegment<byte> src)
         {
-            byte[] srcArray = src.Array;
+            var srcArray = src.Array;
             BlockCopy(ref srcArray, 0, src.Count);
         }
 
@@ -266,7 +262,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		/// Writes a source array to the buffer.
 		/// </summary>
 		/// <param name="src"></param>
-		public virtual void WriteByteArray(byte[] src)
+		public void WriteByteArray(byte[] src)
         {
             BlockCopy(ref src, 0, src.Length);
         }
@@ -275,90 +271,170 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region primitives
 
-        public virtual void WriteBoolean(bool val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteBoolean(bool val)
 		{
             AdjustBufferSize(1);
             _buffer[Position++] = (byte)(val ? 1 : 0);
             Length = Math.Max(Length, Position);
 		}
 
-        public virtual void WriteByte(byte val)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteByte(byte val)
         {
             AdjustBufferSize(1);
             _buffer[Position++] = val;
             Length = Math.Max(Length, Position);
         }
 
-        public virtual void WriteSByte(sbyte val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteSByte(sbyte val)
         {
             WriteByte((byte)val);
         }
 
-        public virtual void WriteUInt16(ushort val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteUInt16(ushort val)
         {
-            AdjustBufferSize(2);
-            _buffer[Position++] = (byte)val;
-            _buffer[Position++] = (byte)(val >> 8);
-            Length = Math.Max(Length, Position);
+	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        {
+				WriteVLQCompression(val);
+	        }
+	        else
+	        {
+	            AdjustBufferSize(2);
+	            _buffer[Position++] = (byte)val;
+	            _buffer[Position++] = (byte)(val >> 8);
+	            Length = Math.Max(Length, Position);
+	        }
         }
 
-        public virtual void WriteInt16(short val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteInt16(short val)
         {
-            WriteUInt16((ushort)val);
+	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        {
+		        WriteVLQCompression(ZigZagEncode(val));
+	        }
+	        else
+	        {
+		        AdjustBufferSize(2);
+		        _buffer[Position++] = (byte)val;
+		        _buffer[Position++] = (byte)(val >> 8);
+		        Length = Math.Max(Length, Position);
+	        }
         }
 
-        public virtual void WriteUInt32(uint val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteUInt32(uint val)
         {
-            AdjustBufferSize(4);
-            _buffer[Position++] = (byte)val;
-            _buffer[Position++] = (byte)(val >> 8);
-            _buffer[Position++] = (byte)(val >> 16);
-            _buffer[Position++] = (byte)(val >> 24);
-            Length = Math.Max(Length, Position);
+	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        {
+		        WriteVLQCompression(val);
+	        }
+	        else
+	        {
+		        AdjustBufferSize(4);
+		        _buffer[Position++] = (byte)val;
+		        _buffer[Position++] = (byte)(val >> 8);
+		        _buffer[Position++] = (byte)(val >> 16);
+		        _buffer[Position++] = (byte)(val >> 24);
+		        Length = Math.Max(Length, Position);
+	        }
         }
 
-        public virtual void WriteInt32(int val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteInt32(int val)
         {
-            WriteUInt32((uint)val);
+	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        {
+		        WriteVLQCompression(ZigZagEncode(val));
+	        }
+	        else
+	        {
+		        AdjustBufferSize(4);
+		        _buffer[Position++] = (byte)val;
+		        _buffer[Position++] = (byte)(val >> 8);
+		        _buffer[Position++] = (byte)(val >> 16);
+		        _buffer[Position++] = (byte)(val >> 24);
+		        Length = Math.Max(Length, Position);
+	        }
         }
 
-        public virtual void WriteUInt64(ulong val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteUInt64(ulong val)
         {
-            AdjustBufferSize(8);
-            _buffer[Position++] = (byte)val;
-            _buffer[Position++] = (byte)(val >> 8);
-            _buffer[Position++] = (byte)(val >> 16);
-            _buffer[Position++] = (byte)(val >> 24);
-            _buffer[Position++] = (byte)(val >> 32);
-            _buffer[Position++] = (byte)(val >> 40);
-            _buffer[Position++] = (byte)(val >> 48);
-            _buffer[Position++] = (byte)(val >> 56);
-            Length = Math.Max(Length, Position);
+	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        {
+		        WriteVLQCompression(val);
+	        }
+	        else
+	        {
+		        AdjustBufferSize(8);
+		        _buffer[Position++] = (byte)val;
+		        _buffer[Position++] = (byte)(val >> 8);
+		        _buffer[Position++] = (byte)(val >> 16);
+		        _buffer[Position++] = (byte)(val >> 24);
+		        _buffer[Position++] = (byte)(val >> 32);
+		        _buffer[Position++] = (byte)(val >> 40);
+		        _buffer[Position++] = (byte)(val >> 48);
+		        _buffer[Position++] = (byte)(val >> 56);
+		        Length = Math.Max(Length, Position);
+	        }
         }
 
-        public virtual void WriteInt64(long val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteInt64(long val)
         {
-            WriteUInt64((ulong)val);
+	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        {
+		        WriteVLQCompression(ZigZagEncode(val));
+	        }
+	        else
+	        {
+		        AdjustBufferSize(8);
+		        _buffer[Position++] = (byte)val;
+		        _buffer[Position++] = (byte)(val >> 8);
+		        _buffer[Position++] = (byte)(val >> 16);
+		        _buffer[Position++] = (byte)(val >> 24);
+		        _buffer[Position++] = (byte)(val >> 32);
+		        _buffer[Position++] = (byte)(val >> 40);
+		        _buffer[Position++] = (byte)(val >> 48);
+		        _buffer[Position++] = (byte)(val >> 56);
+		        Length = Math.Max(Length, Position);
+	        }
         }
 
-        public virtual void WriteChar(char val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteChar(char val)
         {
             WriteUInt16(val);
         }
 
-        public virtual void WriteSingle(float val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteSingle(float val)
         {
-            TypeConverter.UIntToFloat converter = new() { Float = val };
-            WriteUInt32(converter.UInt);
+	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        {
+		        var compressed = val * Mathf.Pow(10, SerialiserConfiguration.NumberOfDecimalPlaces);
+		        WriteVLQCompression(ZigZagEncode((int)compressed));
+	        }
+	        else
+	        {
+	            TypeConverter.UIntToFloat converter = new() { Float = val };
+	            WriteUInt32(converter.UInt);
+	        }
         }
 
-        public virtual void WriteDouble(double val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteDouble(double val)
         {
             TypeConverter.ULongToDouble converter = new() { Double = val };
             WriteUInt64(converter.ULong);
         }
 
-        public virtual void WriteDecimal(decimal val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteDecimal(decimal val)
         {
             TypeConverter.ULongsToDecimal converter = new() { Decimal = val };
             WriteUInt64(converter.ULong1);
@@ -369,28 +445,23 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region unity objects
 
-        public virtual void WriteVector2(Vector2 val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteVector2(Vector2 val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);
         }
 
-        public virtual void WriteVector3(Vector3 val)
-        {
-            WriteSingle(val.x);
-            WriteSingle(val.y);
-            WriteSingle(val.z);
-        }
-
-        public virtual void WriteVector4(Vector4 val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteVector3(Vector3 val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);
             WriteSingle(val.z);
-            WriteSingle(val.w);
         }
 
-        public virtual void WriteQuaternion(Quaternion val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteVector4(Vector4 val)
         {
             WriteSingle(val.x);
             WriteSingle(val.y);
@@ -398,7 +469,25 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteSingle(val.w);
         }
 
-        public virtual void WriteMatrix4x4(Matrix4x4 val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteQuaternion(Quaternion val)
+        {
+	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        {
+		        CompressedQuaternion q = new(val, SerialiserConfiguration.BitsPerComponent);
+		        WriteVLQCompression(q.PackedQuaternion);
+	        }
+	        else
+	        {
+	            WriteSingle(val.x);
+	            WriteSingle(val.y);
+	            WriteSingle(val.z);
+	            WriteSingle(val.w);
+	        }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteMatrix4x4(Matrix4x4 val)
         {
             WriteSingle(val.m00);
             WriteSingle(val.m01);
@@ -414,22 +503,25 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteSingle(val.m23);
         }
 
-        public virtual void WriteColor(Color val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteColor(Color val)
         {
-            WriteByte((byte)(val.r * 100.0f));
-            WriteByte((byte)(val.g * 100.0f));
-            WriteByte((byte)(val.b * 100.0f));
-            WriteByte((byte)(val.a * 100.0f));
+            WriteByte((byte)(val.r * 100f));
+            WriteByte((byte)(val.g * 100f));
+            WriteByte((byte)(val.b * 100f));
+            WriteByte((byte)(val.a * 100f));
         }
 
-        public virtual void WriteColorWithoutAlpha(Color val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteColorWithoutAlpha(Color val)
         {
-            WriteByte((byte)(val.r * 100.0f));
-            WriteByte((byte)(val.g * 100.0f));
-            WriteByte((byte)(val.b * 100.0f));
+            WriteByte((byte)(val.r * 100f));
+            WriteByte((byte)(val.g * 100f));
+            WriteByte((byte)(val.b * 100f));
         }
 
-        public virtual void WriteColor32(Color32 val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteColor32(Color32 val)
         {
             WriteByte(val.r);
             WriteByte(val.g);
@@ -437,7 +529,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             WriteByte(val.a);
         }
 
-        public virtual void WriteColor32WithoutAlpha(Color32 val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteColor32WithoutAlpha(Color32 val)
         {
             WriteByte(val.r);
             WriteByte(val.g);
@@ -448,7 +541,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
         #region objects
 
-        public virtual void WriteString(string val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteString(string val)
         {
             if (string.IsNullOrEmpty(val))
             {
@@ -460,12 +554,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 throw new FormatException($"The string can't be longer than {ushort.MaxValue}!");
 
             WriteUInt16((ushort)val.Length);
-            byte[] bytes = Encoding.ASCII.GetBytes(val);
+            var bytes = Encoding.ASCII.GetBytes(val);
             BlockCopy(ref bytes, 0, bytes.Length);
             Length = Math.Max(Length, Position);
         }
 
-        public virtual void WriteStringWithoutFlag(string val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteStringWithoutFlag(string val)
         {
             if (string.IsNullOrEmpty(val))
 			{
@@ -476,12 +571,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             if (val.Length > ushort.MaxValue)
                 throw new FormatException($"The string can't be longer than {ushort.MaxValue}!");
 
-            byte[] bytes = Encoding.ASCII.GetBytes(val);
+            var bytes = Encoding.ASCII.GetBytes(val);
             BlockCopy(ref bytes, 0, bytes.Length);
             Length = Math.Max(Length, Position);
         }
 
-        public virtual void WriteArray<T>(T[] val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteArray<T>(T[] val)
 		{
             if (val == null)
 			{
@@ -490,11 +586,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			}
 
             WriteInt32(val.Length);
-            foreach (T t in val)
+            foreach (var t in val)
                 Write(t);
         }
 
-		public virtual void WriteList<T>(List<T> val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void WriteList<T>(List<T> val)
         {
             if (val == null)
 			{
@@ -503,11 +600,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			}
 
             WriteInt32(val.Count);
-            foreach (T t in val)
+            foreach (var t in val)
                 Write(t);
         }
 
-        public virtual void WriteDictionary<TKey, TValue>(Dictionary<TKey, TValue> val)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteDictionary<TKey, TValue>(Dictionary<TKey, TValue> val)
 		{
             if (val == null)
             {
@@ -516,18 +614,76 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             }
 
             WriteInt32(val.Count);
-            foreach (KeyValuePair<TKey, TValue> entry in val)
+            foreach (var entry in val)
 			{
                 Write(entry.Key);
                 Write(entry.Value);
 			}
 		}
 
-        public virtual void WriteDateTime(DateTime val)
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void WriteDateTime(DateTime val)
 		{
             WriteInt64(val.ToBinary());
 		}
 
+		#endregion
+		
+		#region utilities
+		
+		/// <summary>
+		/// "ZigZagEncoding" based on google protocol buffers.
+		/// See for <a href="https://protobuf.dev/programming-guides/encoding/">reference</a>.
+		/// </summary>
+		/// <param name="val"></param>
+		/// <returns></returns>
+		private static ulong ZigZagEncode(short val)
+		{
+			return (ulong)((val >> 15) ^ (val << 1));
+		}
+
+		/// <summary>
+		/// "ZigZagEncoding" based on google protocol buffers.
+		/// See for <a href="https://protobuf.dev/programming-guides/encoding/">reference</a>.
+		/// </summary>
+		/// <param name="val"></param>
+		/// <returns></returns>
+		private static ulong ZigZagEncode(int val)
+		{
+			return (ulong)((val >> 31) ^ (val << 1));
+		}
+		
+		/// <summary>
+		/// "ZigZagEncoding" based on google protocol buffers.
+		/// See for <a href="https://protobuf.dev/programming-guides/encoding/">reference</a>.
+		/// </summary>
+		/// <param name="val"></param>
+		/// <returns></returns>
+		private static ulong ZigZagEncode(long val)
+		{
+			return (ulong)((val >> 63) ^ (val << 1));
+		}
+
+		/// <summary>
+		/// Uses a 7-bit VLQ encoding scheme based on the MIDI compression system.
+		/// See for <a href="https://web.archive.org/web/20051129113105/http://www.borg.com/~jglatt/tech/midifile/vari.htm">reference</a>
+		/// </summary>
+		/// <param name="val"></param>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private void WriteVLQCompression(ulong val)
+		{
+			do
+			{
+				var lowerBits = (byte)(val & 0x7F);
+				val >>= 7;
+				if (val > 0)
+					lowerBits |= 0x80;
+				_buffer[Position++] = lowerBits;
+			} while (val > 0);
+
+			Length = Math.Max(Length, Position);
+		}
+		
 		#endregion
 	}
 }

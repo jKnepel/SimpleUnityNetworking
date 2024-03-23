@@ -38,19 +38,19 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             callbacks.Remove(callback.GetHashCode(), out _);
         }
         
-        public void SendByteDataToClient(uint clientID, uint byteID, byte[] byteData, 
+        public void SendByteDataToClient(uint clientID, string byteID, byte[] byteData, 
             ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
         {
             SendByteDataToClients(new [] { clientID }, byteID, byteData, channel);
         }
 
-        public void SendByteDataToAll(uint byteID, byte[] byteData, 
+        public void SendByteDataToAll(string byteID, byte[] byteData, 
             ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
         {
             SendByteDataToClients(Client_ConnectedClients.Keys.ToArray(), byteID, byteData, channel);
         }
 
-        public void SendByteDataToClients(uint[] clientIDs, uint byteID, byte[] byteData, 
+        public void SendByteDataToClients(uint[] clientIDs, string byteID, byte[] byteData, 
             ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
         {
             if (!IsClient)

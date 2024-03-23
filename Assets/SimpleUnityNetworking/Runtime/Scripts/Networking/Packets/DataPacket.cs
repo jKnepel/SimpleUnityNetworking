@@ -59,7 +59,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 			Data = data;
 		}
 
-		public static DataPacket ReadDataPacket(Reader reader)
+		public static DataPacket Read(Reader reader)
 		{
 			var dataType = (DataPacketType)reader.ReadByte();
 			if (dataType == DataPacketType.Targets)
@@ -80,7 +80,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 			}
 		}
 
-		public static void WriteDataPacket(Writer writer, DataPacket packet)
+		public static void Write(Writer writer, DataPacket packet)
 		{
 			writer.WriteByte((byte)packet.DataType);
 			switch (packet.DataType)

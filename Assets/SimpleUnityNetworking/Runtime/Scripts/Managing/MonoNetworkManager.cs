@@ -1,5 +1,6 @@
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
+using jKnepel.SimpleUnityNetworking.Serialisation;
 using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using System.Collections.Concurrent;
@@ -13,20 +14,36 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 {
     public class MonoNetworkManager : MonoBehaviour, INetworkManager
     {
-	    [SerializeField] private TransportConfiguration _cachedConfiguration;
+	    [SerializeField] private TransportConfiguration _cachedTransportConfiguration;
 	    public TransportConfiguration TransportConfiguration
 	    {
-		    get => _cachedConfiguration;
+		    get => _cachedTransportConfiguration;
 		    set
 		    {
-			    if (_cachedConfiguration == value) return;
-			    NetworkManager.TransportConfiguration = _cachedConfiguration = value;
+			    if (_cachedTransportConfiguration == value) return;
+			    NetworkManager.TransportConfiguration = _cachedTransportConfiguration = value;
 			    
 #if UNITY_EDITOR
 				if (value != null)
-				    EditorUtility.SetDirty(_cachedConfiguration);
+				    EditorUtility.SetDirty(_cachedTransportConfiguration);
 			    if (!EditorApplication.isPlaying)
 					EditorSceneManager.MarkSceneDirty(gameObject.scene);
+#endif
+		    }
+	    }
+
+	    [SerializeField] private SerialiserConfiguration _cachedSerialiserConfiguration;
+	    public SerialiserConfiguration SerialiserConfiguration
+	    {
+		    get => _cachedSerialiserConfiguration;
+		    set
+		    {
+			    if (_cachedSerialiserConfiguration == value) return;
+			    NetworkManager.SerialiserConfiguration = _cachedSerialiserConfiguration = value;
+			    
+#if UNITY_EDITOR
+			    if (!EditorApplication.isPlaying)
+				    EditorSceneManager.MarkSceneDirty(gameObject.scene);
 #endif
 		    }
 	    }
@@ -60,7 +77,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    {
 			    if (_networkManager != null) return _networkManager;
 			    _networkManager = new();
-			    _networkManager.TransportConfiguration = _cachedConfiguration;
+			    _networkManager.TransportConfiguration = _cachedTransportConfiguration;
+			    _networkManager.SerialiserConfiguration = _cachedSerialiserConfiguration;
 			    return _networkManager;
 		    }
 	    }
@@ -122,18 +140,18 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    NetworkManager.UnregisterByteData(byteID, callback);
 	    }
 
-	    public void SendByteDataToClient(uint clientID, uint byteID, byte[] byteData,
+	    public void SendByteDataToClient(uint clientID, string byteID, byte[] byteData,
 		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
 	    {
 		    NetworkManager.SendByteDataToClient(clientID, byteID, byteData, channel);
 	    }
 
-	    public void SendByteDataToAll(uint byteID, byte[] byteData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+	    public void SendByteDataToAll(string byteID, byte[] byteData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
 	    {
 		    NetworkManager.SendByteDataToAll(byteID, byteData, channel);
 	    }
 
-	    public void SendByteDataToClients(uint[] clientIDs, uint byteID, byte[] byteData,
+	    public void SendByteDataToClients(uint[] clientIDs, string byteID, byte[] byteData,
 		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
 	    {
 		    NetworkManager.SendByteDataToClients(clientIDs, byteID, byteData, channel);
