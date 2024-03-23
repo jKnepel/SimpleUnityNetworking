@@ -19,7 +19,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         
         private bool _showServerWindow;
         private string _servername = "New Server";
-        private uint _maxNumberClients = 100;
         private Vector2 _serverClientsViewPos;
 
         private bool _showClientWindow;
@@ -114,9 +113,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             if (!_manager.IsServer)
             {
                 _servername = EditorGUILayout.TextField(new GUIContent("Servername:"), _servername);
-                _maxNumberClients = (uint)EditorGUILayout.IntField(new GUIContent("Max Number of Clients:"), (int)_maxNumberClients);
                 if (GUILayout.Button(new GUIContent("Start Server")) && EditorApplication.isPlaying)
-                    _manager.StartServer(_servername, _maxNumberClients);
+                    _manager.StartServer(_servername);
             }
             else
             {

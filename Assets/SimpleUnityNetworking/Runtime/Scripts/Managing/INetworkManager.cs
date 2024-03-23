@@ -117,8 +117,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// Method to start a local server with the given parameters
         /// </summary>
         /// <param name="servername"></param>
-        /// <param name="maxNumberConnectedClients"></param>
-        void StartServer(string servername, uint maxNumberConnectedClients);
+        void StartServer(string servername);
         /// <summary>
         /// Method to stop the local server
         /// </summary>

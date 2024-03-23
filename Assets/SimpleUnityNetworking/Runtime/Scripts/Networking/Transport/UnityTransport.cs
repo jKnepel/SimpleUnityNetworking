@@ -423,7 +423,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             var conn = _driver.Accept();
             if (conn == default) return false;
 
-            int numberOfConnectedClients = _clientIDToConnection.Count;
+            var numberOfConnectedClients = _clientIDToConnection.Count;
             if (IsHost) numberOfConnectedClients++;
             if (numberOfConnectedClients >= _maxNumberOfClients)
             {

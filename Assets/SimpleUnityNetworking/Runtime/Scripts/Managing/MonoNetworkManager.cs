@@ -105,9 +105,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    NetworkManager.Dispose();
 	    }
 
-	    public void StartServer(string servername, uint maxNumberConnectedClients)
+	    public void StartServer(string servername)
 	    {
-		    NetworkManager.StartServer(servername, maxNumberConnectedClients);
+		    NetworkManager.StartServer(servername);
 	    }
 
 	    public void StopServer()

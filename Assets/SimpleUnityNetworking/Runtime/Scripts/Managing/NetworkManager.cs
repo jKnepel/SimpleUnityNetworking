@@ -86,7 +86,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         #region public methods
 
-        public void StartServer(string servername, uint maxNumberConnectedClients)
+        public void StartServer(string servername)
         {
             if (_transport == null)
             {
@@ -95,7 +95,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
 
             _cachedServername = servername;
-            _cachedMaxNumberClients = maxNumberConnectedClients;
+            _cachedMaxNumberClients = TransportConfiguration.TransportSettings.MaxNumberOfClients;
             _transport?.StartServer();
         }
 

@@ -70,7 +70,7 @@ public class TransformTest : MonoBehaviour
 
     public void StartServer()
     {
-        _manager.StartServer("server", 5);
+        _manager.StartServer("server");
     }
 
     public void StopServer()

@@ -42,7 +42,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             try
             {
-                Reader reader = new(data.Data, _serialiserConfiguration);
+                Reader reader = new(data.Data, SerialiserConfiguration);
                 var packetType = (EPacketType)reader.ReadByte();
                 Debug.Log($"Client Packet: {packetType}");
 
@@ -78,10 +78,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             var packet = ConnectionChallengePacket.Read(reader);
             var hashedChallenge = SHA256.Create().ComputeHash(BitConverter.GetBytes(packet.Challenge));
             
-            Writer writer = new(_serialiserConfiguration);
+            Writer writer = new(SerialiserConfiguration);
             writer.WriteByte(ChallengeAnswerPacket.PacketType);
             ChallengeAnswerPacket.Write(writer, new(hashedChallenge, _cachedUsername, _cachedColor));
             _transport.SendDataToServer(writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
+            
             // TODO : implement retries
         }
 
@@ -150,7 +151,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 return;
             }
 
-            Writer writer = new(_serialiserConfiguration);
+            Writer writer = new(SerialiserConfiguration);
             writer.WriteByte(DataPacket.PacketType);
             DataPacket dataPacket = new(clientIDs, false, Hashing.GetFNV1Hash32(byteID), byteData);
             DataPacket.Write(writer, dataPacket);
@@ -167,7 +168,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 return;
             }
 
-            Writer writer = new(_serialiserConfiguration);
+            Writer writer = new(SerialiserConfiguration);
             writer.Write(structData);
             var structBuffer = writer.GetBuffer();
             writer.Clear();
