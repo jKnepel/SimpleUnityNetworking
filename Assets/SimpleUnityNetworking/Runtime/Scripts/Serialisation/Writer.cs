@@ -49,8 +49,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             SerialiserConfiguration = config ?? new();
 		}
 
-		internal static void Init() { }
-
 		#endregion
 
 		#region automatic type handler
@@ -595,7 +593,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 throw new FormatException($"The string can't be longer than {ushort.MaxValue}!");
 
             WriteUInt16((ushort)val.Length);
-            var bytes = Encoding.ASCII.GetBytes(val);
+            var bytes = Encoding.UTF8.GetBytes(val);
             BlockCopy(ref bytes, 0, bytes.Length);
             Length = Math.Max(Length, Position);
         }
