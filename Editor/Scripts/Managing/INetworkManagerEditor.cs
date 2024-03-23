@@ -29,7 +29,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private bool _isAutoscroll = true;
         private Vector2 _messagesViewPos;
         
-        private readonly Color[] _scrollViewColors = { new(0.25f, 0.25f, 0.25f), new(0.23f, 0.23f, 0.23f) };
+        private readonly Color[] _scrollViewColours = { new(0.25f, 0.25f, 0.25f), new(0.23f, 0.23f, 0.23f) };
 
         private Texture2D _texture;
         private Texture2D Texture => _texture ? _texture : _texture = new(1, 1);
@@ -130,7 +130,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 }
                 else
                 {
-                    var defaultColor = _style.normal.textColor;
+                    var defaultColour = _style.normal.textColor;
                     _style.alignment = TextAnchor.MiddleLeft;
                     for (var i = 0; i < _manager.Server_ConnectedClients.Count; i++)
                     {
@@ -142,7 +142,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                         }
                         EditorGUILayout.EndHorizontal();
                     }
-                    _style.normal.textColor = defaultColor;
+                    _style.normal.textColor = defaultColour;
                 }
                 EditorGUILayout.EndScrollView();
             }
@@ -174,7 +174,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 }
                 else
                 {
-                    var defaultColor = _style.normal.textColor;
+                    var defaultColour = _style.normal.textColor;
                     _style.alignment = TextAnchor.MiddleLeft;
                     for (var i = 0; i < _manager.Client_ConnectedClients.Count; i++)
                     {
@@ -186,7 +186,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                         }
                         EditorGUILayout.EndHorizontal();
                     }
-                    _style.normal.textColor = defaultColor;
+                    _style.normal.textColor = defaultColour;
                 }
                 EditorGUILayout.EndScrollView();
             }
@@ -202,11 +202,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             _messagesViewPos = EditorGUILayout.BeginScrollView(_messagesViewPos,
                 EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MinHeight(100), GUILayout.MaxHeight(200));
             {
-                Color defaultColor = _style.normal.textColor;
+                Color defaultColour = _style.normal.textColor;
                 for (int i = 0; i < Messaging.Messages.Count; i++)
                 {
                     Message message = Messaging.Messages.ElementAt(i);
-                    EditorGUILayout.BeginHorizontal(GetScrollviewRowStyle(_scrollViewColors[i % 2]));
+                    EditorGUILayout.BeginHorizontal(GetScrollviewRowStyle(_scrollViewColours[i % 2]));
                     {
                         switch (message.Severity)
                         {
@@ -224,15 +224,15 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     }
                     EditorGUILayout.EndHorizontal();
                 }
-                _style.normal.textColor = defaultColor;
+                _style.normal.textColor = defaultColour;
             }
             EditorGUILayout.EndScrollView();
         }
 
         private const float ROW_HEIGHT = 20;
-        private GUIStyle GetScrollviewRowStyle(Color color)
+        private GUIStyle GetScrollviewRowStyle(Color colour)
         {
-            Texture.SetPixel(0, 0, color);
+            Texture.SetPixel(0, 0, colour);
             Texture.Apply();
             GUIStyle style = new();
             style.normal.background = Texture;
@@ -243,9 +243,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private static void DrawToggleFoldout(string title, ref bool isExpanded, 
             bool? checkbox = null, string checkboxLabel = null)
         {   
-            Color normalColor = new(0.24f, 0.24f, 0.24f);
-            Color hoverColor = new(0.27f, 0.27f, 0.27f);
-            var currentColor = normalColor;
+            Color normalColour = new(0.24f, 0.24f, 0.24f);
+            Color hoverColour = new(0.27f, 0.27f, 0.27f);
+            var currentColour = normalColour;
             
             var backgroundRect = GUILayoutUtility.GetRect(1f, 17f);
             var labelRect = backgroundRect;
@@ -268,8 +268,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             
             var e = Event.current;
             if (labelRect.Contains(e.mousePosition))
-                currentColor = hoverColor;
-            EditorGUI.DrawRect(backgroundRect, currentColor);
+                currentColour = hoverColour;
+            EditorGUI.DrawRect(backgroundRect, currentColour);
 
             if (isExpanded)
             {

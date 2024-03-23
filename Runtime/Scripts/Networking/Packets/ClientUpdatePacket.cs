@@ -16,14 +16,14 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 		public uint ClientID;
 		public UpdateType Type;
 		public string Username;
-		public Color32 Color;
+		public Color32 Colour;
 
-		public ClientUpdatePacket(uint clientID, UpdateType type, string username, Color32 color)
+		public ClientUpdatePacket(uint clientID, UpdateType type, string username, Color32 colour)
 		{
 			ClientID = clientID;
 			Type = type;
 			Username = username;
-			Color = color;
+			Colour = colour;
 		}
 
 		public ClientUpdatePacket(uint clientID)
@@ -31,7 +31,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 			ClientID = clientID;
 			Type = UpdateType.Disconnected;
 			Username = null;
-			Color = default;
+			Colour = default;
 		}
 
 		public static ClientUpdatePacket Read(Reader reader)
@@ -39,8 +39,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 			uint clientID = reader.ReadUInt32();
 			UpdateType type = (UpdateType)reader.ReadByte();
 			string username = reader.ReadString();
-			Color32 color = reader.ReadColor32WithoutAlpha();
-			return new(clientID, type, username, color);
+			Color32 colour = reader.ReadColor32WithoutAlpha();
+			return new(clientID, type, username, colour);
 		}
 
 		public static void Write(Writer writer, ClientUpdatePacket packet)
@@ -48,7 +48,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 			writer.WriteUInt32(packet.ClientID);
 			writer.WriteByte((byte)packet.Type);
 			writer.WriteString(packet.Username);
-			writer.WriteColor32WithoutAlpha(packet.Color);
+			writer.WriteColor32WithoutAlpha(packet.Colour);
 		}
 	}
 }

@@ -23,7 +23,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public event Action<uint> Client_OnRemoteClientUpdated;
 
         private string _cachedUsername;
-        private Color32 _cachedColor;
+        private Color32 _cachedColour;
         
         private ELocalClientConnectionState _localClientConnectionState = ELocalClientConnectionState.Stopped;
         
@@ -80,7 +80,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             
             Writer writer = new(SerialiserConfiguration);
             writer.WriteByte(ChallengeAnswerPacket.PacketType);
-            ChallengeAnswerPacket.Write(writer, new(hashedChallenge, _cachedUsername, _cachedColor));
+            ChallengeAnswerPacket.Write(writer, new(hashedChallenge, _cachedUsername, _cachedColour));
             _transport.SendDataToServer(writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
             
             // TODO : implement retries
@@ -92,7 +92,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 return;
             
             var packet = ConnectionAuthenticatedPacket.Read(reader);
-            ClientInformation = new(packet.ClientID, _cachedUsername, _cachedColor);
+            ClientInformation = new(packet.ClientID, _cachedUsername, _cachedColour);
             if (!IsServer)
                 ServerInformation = new(packet.Servername, packet.MaxNumberConnectedClients);
             _localClientConnectionState = ELocalClientConnectionState.Authenticated;
@@ -126,7 +126,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             switch (packet.Type)
             {
                 case ClientUpdatePacket.UpdateType.Connected:
-                    Client_ConnectedClients[clientID] = new(clientID, packet.Username, packet.Color);
+                    Client_ConnectedClients[clientID] = new(clientID, packet.Username, packet.Colour);
                     Client_OnRemoteClientConnected?.Invoke(clientID);
                     break;
                 case ClientUpdatePacket.UpdateType.Disconnected:
@@ -135,7 +135,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     break;
                 case ClientUpdatePacket.UpdateType.Updated:
                     Client_ConnectedClients[clientID].Username = packet.Username;
-                    Client_ConnectedClients[clientID].Colour = packet.Color;
+                    Client_ConnectedClients[clientID].Colour = packet.Colour;
                     Client_OnRemoteClientUpdated?.Invoke(clientID);
                     break;
             }

@@ -93,7 +93,7 @@ namespace jKnepel.SimpleUnityNetworking.Samples
             if (!_visualisers.TryGetValue(sender, out ClientVisualiser visualiser))
             {
                 visualiser = GameObject.Instantiate(_visualiserPrefab, _visualiserParent);
-                visualiser.UpdateVisualiser(client.ID, client.Username, client.Color);
+                visualiser.UpdateVisualiser(client.ID, client.Username, client.Colour);
                 _visualisers.Add(sender, visualiser);
             }
 

@@ -127,8 +127,8 @@ namespace jKnepel.SimpleUnityNetworking
         /// Method to start a local client with the given parameters
         /// </summary>
         /// <param name="username"></param>
-        /// <param name="userColor"></param>
-        void StartClient(string username, Color32 userColor);
+        /// <param name="userColour"></param>
+        void StartClient(string username, Color32 userColour);
         /// <summary>
         /// Method to stop the local client 
         /// </summary>
