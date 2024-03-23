@@ -74,18 +74,14 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 	            if (ReadBuildInType(type, out var result))
 		            return result;
 
-                var customHandler = CreateTypeHandlerDelegate(type, true);
-                if (customHandler != null)
-                {   // use custom type handler if user defined method was found
+				// use custom type handler if user defined method was found
+                if (CreateTypeHandlerDelegate(type, out var customHandler, true))
                     return customHandler(this);
-                }
 
                 // TODO : remove this once pre-compile cached generic handlers are supported
-                var implementedHandler = CreateTypeHandlerDelegate(type, false);
-                if (implementedHandler != null)
-                {   // use implemented type handler
+                // use implemented generic type handler
+                if (CreateTypeHandlerDelegate(type, out var implementedHandler, false))
                     return implementedHandler(this);
-                }
 
                 // save types that don't have any a type handler and need to be recursively serialised
                 _unknownTypes.Add(type);
@@ -187,15 +183,19 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         /// Constructs and caches pre-compiled expression delegate of type handlers.
         /// </summary>
         /// <param name="type">The type of the variable for which the writer is defined</param>
+        /// <param name="typeHandler">The handler of the defined type</param>
         /// <param name="useCustomReader">Whether the reader method is an instance of the Reader class or a custom static method in the type</param>
         /// <returns></returns>
-        private static Func<Reader, object> CreateTypeHandlerDelegate(Type type, bool useCustomReader = false)
+        private static bool CreateTypeHandlerDelegate(Type type, out Func<Reader, object> typeHandler, bool useCustomReader)
         {   // find implemented or custom read method
             var readerMethod = useCustomReader
                 ?           type.GetMethod("Read", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
                 : typeof(Reader).GetMethod($"Read{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (readerMethod == null)
-                return null;
+            {
+	            typeHandler = null;
+                return false;
+            }
 
             // parameters
             var instanceArg = Expression.Parameter(typeof(Reader), "instance");
@@ -221,9 +221,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
             // cache delegate
             var castResult = Expression.Convert(call, typeof(object));
             var lambda = Expression.Lambda<Func<Reader, object>>(castResult, instanceArg);
-            var action = lambda.Compile();
-            _typeHandlerCache.TryAdd(type, action);
-            return action;
+            typeHandler = lambda.Compile();
+            _typeHandlerCache.TryAdd(type, typeHandler);
+            return true;
         }
 
 		#endregion

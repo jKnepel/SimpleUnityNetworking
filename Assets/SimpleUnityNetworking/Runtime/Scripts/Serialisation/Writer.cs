@@ -68,17 +68,15 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
                 if (WriteBuildInType(val))
 					return;
 
-                var customHandler = CreateTypeHandlerDelegate(type, true);
-                if (customHandler != null)
+                if (CreateTypeHandlerDelegate(type, out var customHandler, true))
                 {   // use custom type handler if user defined method was found
                     customHandler(this, val);
                     return;
                 }
 
                 // TODO : remove this once pre-compile cached generic handlers are supported
-                var implementedHandler = CreateTypeHandlerDelegate(type);
-                if (implementedHandler != null)
-                {   // use implemented type handler
+                if (CreateTypeHandlerDelegate(type, out var implementedHandler, false))
+                {   // use implemented generic type handler
                     implementedHandler(this, val);
                     return;
                 }
@@ -179,15 +177,19 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
         /// Constructs and caches pre-compiled expression delegate of type handlers.
         /// </summary>
         /// <param name="type">The type of the variable for which the writer is defined</param>
+        /// <param name="typeHandler">The handler of the defined type</param>
         /// <param name="useCustomWriter">Whether the writer method is an instance of the Writer class or a custom static method in the type</param>
         /// <returns></returns>
-        private static Action<Writer, object> CreateTypeHandlerDelegate(Type type, bool useCustomWriter = false)
+        private static bool CreateTypeHandlerDelegate(Type type, out Action<Writer, object> typeHandler, bool useCustomWriter)
         {   // find implemented or custom write method
             var writerMethod = useCustomWriter
                 ?           type.GetMethod("Write", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
                 : typeof(Writer).GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (writerMethod == null)
-                return null;
+            {
+	            typeHandler = null;
+                return false;
+            }
 
             // parameters
             var instanceArg = Expression.Parameter(typeof(Writer), "instance");
@@ -214,9 +216,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 
             // cache delegate
             var lambda = Expression.Lambda<Action<Writer, object>>(call, instanceArg, objectArg);
-            var action = lambda.Compile();
-            _typeHandlerCache.TryAdd(type, action);
-            return action;
+            typeHandler = lambda.Compile();
+            _typeHandlerCache.TryAdd(type, typeHandler);
+            return true;
         }
 
         #endregion
