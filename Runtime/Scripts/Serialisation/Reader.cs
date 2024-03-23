@@ -55,8 +55,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 			SerialiserConfiguration = config ?? new();
 		}
 
-        internal static void Init() { }
-
 		#endregion
 
 		#region automatic type handler
@@ -530,7 +528,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialisation
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public string ReadString()
 		{
-            return Encoding.ASCII.GetString(ReadByteArray(ReadUInt16()));
+            return Encoding.UTF8.GetString(ReadByteArray(ReadUInt16()));
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
