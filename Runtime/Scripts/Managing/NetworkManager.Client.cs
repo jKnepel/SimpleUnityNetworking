@@ -42,7 +42,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             try
             {
-                Reader reader = new(data.Data);
+                Reader reader = new(data.Data, _serialiserConfiguration);
                 var packetType = (EPacketType)reader.ReadByte();
                 Debug.Log($"Client Packet: {packetType}");
 
@@ -75,12 +75,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             if (_localClientConnectionState != ELocalClientConnectionState.Started)
                 return;
             
-            var packet = ConnectionChallengePacket.Deserialise(reader);
+            var packet = ConnectionChallengePacket.Read(reader);
             var hashedChallenge = SHA256.Create().ComputeHash(BitConverter.GetBytes(packet.Challenge));
             
-            Writer writer = new();
+            Writer writer = new(_serialiserConfiguration);
             writer.WriteByte(ChallengeAnswerPacket.PacketType);
-            ChallengeAnswerPacket.Serialise(writer, new(hashedChallenge, _cachedUsername, _cachedColor));
+            ChallengeAnswerPacket.Write(writer, new(hashedChallenge, _cachedUsername, _cachedColor));
             _transport.SendDataToServer(writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
             // TODO : implement retries
         }
@@ -90,7 +90,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             if (_localClientConnectionState != ELocalClientConnectionState.Started)
                 return;
             
-            var packet = ConnectionAuthenticatedPacket.Deserialise(reader);
+            var packet = ConnectionAuthenticatedPacket.Read(reader);
             ClientInformation = new(packet.ClientID, _cachedUsername, _cachedColor);
             if (!IsServer)
                 ServerInformation = new(packet.Servername, packet.MaxNumberConnectedClients);
@@ -103,7 +103,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             if (_localClientConnectionState != ELocalClientConnectionState.Authenticated)
                 return;
 
-            var packet = DataPacket.ReadDataPacket(reader);
+            var packet = DataPacket.Read(reader);
             if (packet.DataType != DataPacket.DataPacketType.Forwarded)
                 return;
             
@@ -120,7 +120,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             if (_localClientConnectionState != ELocalClientConnectionState.Authenticated)
                 return;
 
-            var packet = ClientUpdatePacket.Deserialise(reader);
+            var packet = ClientUpdatePacket.Read(reader);
             var clientID = packet.ClientID;
             switch (packet.Type)
             {
@@ -140,7 +140,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
-        private void SendByteData(uint[] clientIDs, uint byteID, byte[] byteData,
+        private void SendByteData(uint[] clientIDs, string byteID, byte[] byteData,
             ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
         {
             foreach (var id in clientIDs)
@@ -150,10 +150,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 return;
             }
 
-            Writer writer = new();
+            Writer writer = new(_serialiserConfiguration);
             writer.WriteByte(DataPacket.PacketType);
-            DataPacket dataPacket = new(clientIDs, false, byteID, byteData);
-            DataPacket.WriteDataPacket(writer, dataPacket);
+            DataPacket dataPacket = new(clientIDs, false, Hashing.GetFNV1Hash32(byteID), byteData);
+            DataPacket.Write(writer, dataPacket);
             _transport.SendDataToServer(writer.GetBuffer(), channel);
         }
 
@@ -167,14 +167,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 return;
             }
 
-            Writer writer = new();
+            Writer writer = new(_serialiserConfiguration);
             writer.Write(structData);
             var structBuffer = writer.GetBuffer();
             writer.Clear();
             
             writer.WriteByte(DataPacket.PacketType);
             DataPacket dataPacket = new(clientIDs, true, Hashing.GetFNV1Hash32(typeof(T).Name), structBuffer);
-            DataPacket.WriteDataPacket(writer, dataPacket);
+            DataPacket.Write(writer, dataPacket);
             _transport.SendDataToServer(writer.GetBuffer(), channel);
         }
     }

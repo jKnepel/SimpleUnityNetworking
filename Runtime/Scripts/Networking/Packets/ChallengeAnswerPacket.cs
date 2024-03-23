@@ -19,15 +19,15 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 			Color = color;
 		}
 
-		public static ChallengeAnswerPacket Deserialise(Reader reader)
+		public static ChallengeAnswerPacket Read(Reader reader)
 		{
-			byte[] challengeAnswer = reader.ReadByteArray(CHALLENGE_ANSWER_LENGTH);
-			string username = reader.ReadString();
-			Color32 color = reader.ReadColor32WithoutAlpha();
+			var challengeAnswer = reader.ReadByteArray(CHALLENGE_ANSWER_LENGTH);
+			var username = reader.ReadString();
+			var color = reader.ReadColor32WithoutAlpha();
 			return new(challengeAnswer, username, color);
 		}
 
-		public static void Serialise(Writer writer, ChallengeAnswerPacket packet)
+		public static void Write(Writer writer, ChallengeAnswerPacket packet)
 		{
 			writer.BlockCopy(ref packet.ChallengeAnswer, 0, CHALLENGE_ANSWER_LENGTH);
 			writer.WriteString(packet.Username);

@@ -75,13 +75,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 			}
 		}
 		
-		private static StructDataCallback CreateStructDataDelegate<T>(Action<uint, T> callback)
+		private StructDataCallback CreateStructDataDelegate<T>(Action<uint, T> callback)
 		{
 			return ParseDelegate;
 			void ParseDelegate(uint senderID, byte[] data)
 			{
 				// TODO : somehow read data with generic before calling the delegate to prevent multiple reads
-				Reader reader = new(data);
+				Reader reader = new(data, _serialiserConfiguration);
 				callback?.Invoke(senderID, reader.Read<T>());
 			}
 		}

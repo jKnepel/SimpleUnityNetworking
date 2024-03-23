@@ -16,7 +16,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
             MaxNumberConnectedClients = maxNumberConnectedClients;
         }
 
-        public static ConnectionAuthenticatedPacket Deserialise(Reader reader)
+        public static ConnectionAuthenticatedPacket Read(Reader reader)
         {
             var clientID = reader.ReadUInt32();
             var servername = reader.ReadString();
@@ -24,7 +24,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
             return new(clientID, servername, maxNumberConnectedClients);
         }
 
-        public static void Serialise(Writer writer, ConnectionAuthenticatedPacket packet)
+        public static void Write(Writer writer, ConnectionAuthenticatedPacket packet)
         {
             writer.WriteUInt32(packet.ClientID);
             writer.WriteString(packet.Servername);

@@ -15,6 +15,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private readonly GUIStyle _style = new();
         
         private bool _showTransportWindow;
+        private bool _showSerialiserWindow;
         
         private bool _showServerWindow;
         private string _servername = "New Server";
@@ -60,6 +61,27 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     Editor.CreateEditor(_manager.TransportConfiguration).OnInspectorGUI();
             }
             GUILayout.EndVertical();
+            
+            // Serialiser
+            GUILayout.BeginVertical(EditorStyles.helpBox);
+            DrawToggleFoldout("Serialiser:", ref _showSerialiserWindow);
+            if (_showSerialiserWindow)
+            {
+                _manager.SerialiserConfiguration.UseCompression = (EUseCompression)EditorGUILayout.EnumPopup(
+                    new GUIContent("Use Compression:", "If, and what kind of compression should be used for all serialisation in the framework."),
+                    _manager.SerialiserConfiguration.UseCompression
+                );
+                _manager.SerialiserConfiguration.NumberOfDecimalPlaces = EditorGUILayout.IntField(
+                    new GUIContent("Number of Decimal Places:", "If compression is active, this will define the number of decimal places to which floating point numbers will be compressed."),
+                    _manager.SerialiserConfiguration.NumberOfDecimalPlaces
+                );
+                _manager.SerialiserConfiguration.BitsPerComponent = EditorGUILayout.IntField(
+                    new GUIContent("Bits Per Quaternion Component:", "If compression is active, this will define the number of bits used by the three compressed Quaternion components in addition to the two flag bits."),
+                    _manager.SerialiserConfiguration.BitsPerComponent
+                );
+            }
+            GUILayout.EndVertical();
+            
             EditorGUILayout.Space();
             
             GUILayout.Label("Managers:", EditorStyles.boldLabel);
