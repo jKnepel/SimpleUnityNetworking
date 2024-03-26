@@ -64,7 +64,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             // Serialiser
             GUILayout.BeginVertical(EditorStyles.helpBox);
             DrawToggleFoldout("Serialiser:", ref _showSerialiserWindow);
-            if (_showSerialiserWindow)
+            if (_showSerialiserWindow && _manager.SerialiserConfiguration != null)
             {
                 _manager.SerialiserConfiguration.UseCompression = (EUseCompression)EditorGUILayout.EnumPopup(
                     new GUIContent("Use Compression:", "If, and what kind of compression should be used for all serialisation in the framework."),
@@ -113,7 +113,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             if (!_manager.IsServer)
             {
                 _servername = EditorGUILayout.TextField(new GUIContent("Servername:"), _servername);
-                if (GUILayout.Button(new GUIContent("Start Server")) && EditorApplication.isPlaying)
+                if (GUILayout.Button(new GUIContent("Start Server")))
                     _manager.StartServer(_servername);
             }
             else
@@ -154,7 +154,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             {
                 _username = EditorGUILayout.TextField(new GUIContent("Username:"), _username);
                 _userColour = EditorGUILayout.ColorField(new GUIContent("User colour:"), _userColour);
-                if (GUILayout.Button(new GUIContent("Start Client")) && EditorApplication.isPlaying)
+                if (GUILayout.Button(new GUIContent("Start Client")))
                     _manager.StartClient(_username, _userColour);
             }
             else

@@ -15,8 +15,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 return _networkManagerEditor = new((MonoNetworkManager)target);
             }
         }
-        
-        private bool _showTransportWindow;
 
         public override void OnInspectorGUI()
         {

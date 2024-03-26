@@ -71,7 +71,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    public event Action<uint> Client_OnRemoteClientUpdated;
 
 	    private NetworkManager _networkManager;
-	    private NetworkManager NetworkManager
+	    public NetworkManager NetworkManager
 	    {
 		    get
 		    {
@@ -107,6 +107,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
 	    public void StartServer(string servername)
 	    {
+#if UNITY_EDITOR
+		    if (!EditorApplication.isPlaying) return;		    
+#endif
 		    NetworkManager.StartServer(servername);
 	    }
 
@@ -117,6 +120,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
 	    public void StartClient(string username, Color32 userColour)
 	    {
+#if UNITY_EDITOR
+		    if (!EditorApplication.isPlaying) return;		    
+#endif
 		    NetworkManager.StartClient(username, userColour);
 	    }
 
