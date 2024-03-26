@@ -1,7 +1,6 @@
+using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Serialisation;
-using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using jKnepel.SimpleUnityNetworking.Transporting;
-using jKnepel.SimpleUnityNetworking.Utilities;
 using System.Linq;
 using UnityEngine;
 using UnityEditor;
@@ -10,12 +9,15 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 {
     internal class INetworkManagerEditor
     {
+        #region fields
+        
         private readonly INetworkManager _manager;
 
         private readonly GUIStyle _style = new();
         
         private bool _showTransportWindow;
         private bool _showSerialiserWindow;
+        private bool _showLoggerWindow;
         
         private bool _showServerWindow;
         private string _servername = "New Server";
@@ -34,6 +36,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private Texture2D _texture;
         private Texture2D Texture => _texture ? _texture : _texture = new(1, 1);
 
+        #endregion
+        
+        #region lifecycle
 
         public INetworkManagerEditor(INetworkManager manager)
         {
@@ -44,8 +49,26 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             EditorGUILayout.Space();
             GUILayout.Label("Configurations:", EditorStyles.boldLabel);
+            {
+                TransportGUI();
+                SerialiserGUI();
+                LoggerGUI();
+            }
             
-            // Transport
+            EditorGUILayout.Space();
+            GUILayout.Label("Managers:", EditorStyles.boldLabel);
+            {
+                ServerGUI();
+                ClientGUI();
+            }
+        }
+        
+        #endregion
+        
+        #region configs
+        
+        private void TransportGUI()
+        {
             GUILayout.BeginVertical(EditorStyles.helpBox);
             DrawToggleFoldout("Transport:", ref _showTransportWindow);
             if (_showTransportWindow)
@@ -60,8 +83,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     Editor.CreateEditor(_manager.TransportConfiguration).OnInspectorGUI();
             }
             GUILayout.EndVertical();
-            
-            // Serialiser
+        }
+
+        private void SerialiserGUI()
+        {
             GUILayout.BeginVertical(EditorStyles.helpBox);
             DrawToggleFoldout("Serialiser:", ref _showSerialiserWindow);
             if (_showSerialiserWindow && _manager.SerialiserConfiguration != null)
@@ -80,154 +105,167 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 );
             }
             GUILayout.EndVertical();
-            
-            EditorGUILayout.Space();
-            
-            GUILayout.Label("Managers:", EditorStyles.boldLabel);
-            
-            // Server
+        }
+        
+        private void LoggerGUI()
+        {
+            GUILayout.BeginVertical(EditorStyles.helpBox);
+            DrawToggleFoldout("Logger:", ref _showLoggerWindow);
+            if (_showLoggerWindow)
+            {
+                _manager.LoggerConfiguration = (LoggerConfiguration)EditorGUILayout.ObjectField(
+                    "Logger Configuration:",
+                    _manager.LoggerConfiguration,
+                    typeof(LoggerConfiguration),
+                    false
+                );
+
+                if (_manager.LoggerConfiguration)
+                {
+                    Editor.CreateEditor(_manager.LoggerConfiguration).OnInspectorGUI();
+                    EditorGUILayout.Space();
+                    
+                    EditorGUILayout.BeginHorizontal();
+                    GUILayout.Label($"Messages:");
+                    GUILayout.FlexibleSpace();
+                    _isAutoscroll = EditorGUILayout.Toggle(new GUIContent(" ", "Is Autoscrolling Messages"), _isAutoscroll);
+                    EditorGUILayout.EndHorizontal();
+                    _messagesViewPos = EditorGUILayout.BeginScrollView(_messagesViewPos,
+                        EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MinHeight(100), GUILayout.MaxHeight(200));
+                    {
+                        var defaultColour = _style.normal.textColor;
+                        for (int i = 0; i < _manager.LoggerConfiguration.Logger.Messages.Count; i++)
+                        {
+                            var message = _manager.LoggerConfiguration.Logger.Messages.ElementAt(i);
+                            EditorGUILayout.BeginHorizontal(GetScrollviewRowStyle(_scrollViewColours[i % 2]));
+                            {
+                                switch (message.Severity)
+                                {
+                                    case EMessageSeverity.Log:
+                                        _style.normal.textColor = Color.white;
+                                        break;
+                                    case EMessageSeverity.Warning:
+                                        _style.normal.textColor = Color.yellow;
+                                        break;
+                                    case EMessageSeverity.Error:
+                                        _style.normal.textColor = Color.red;
+                                        break;
+                                }
+                                GUILayout.Label(message.Text, _style);
+                            }
+                            EditorGUILayout.EndHorizontal();
+                        }
+                        _style.normal.textColor = defaultColour;
+                    }
+                    EditorGUILayout.EndScrollView();
+                }
+            }
+            GUILayout.EndVertical();
+        }
+        
+        #endregion
+        
+        #region managing
+        
+        private void ServerGUI()
+        {
             GUILayout.BeginVertical(EditorStyles.helpBox);
             DrawToggleFoldout("Server", ref _showServerWindow, _manager.IsServer, "Is Server:");
             if (_showServerWindow)
             {
-                ServerGUI();
-            }
-            GUILayout.EndVertical();
-            
-            // Client
-            GUILayout.BeginVertical(EditorStyles.helpBox);
-            DrawToggleFoldout("Client", ref _showClientWindow, _manager.IsClient, "Is Client:");
-            if (_showClientWindow)
-            {
-                ClientGUI();
-            }
-            GUILayout.EndVertical();
-            
-            EditorGUILayout.Space();
-
-            ShowSystemMessages();
-        }
-
-        private void ServerGUI()
-        {
-            if (!_manager.IsServer)
-            {
-                _servername = EditorGUILayout.TextField(new GUIContent("Servername:"), _servername);
-                if (GUILayout.Button(new GUIContent("Start Server")))
-                    _manager.StartServer(_servername);
-            }
-            else
-            {
-                GUILayout.Label($"Servername: {_manager.ServerInformation.Servername}");
-                GUILayout.Label($"Connected Clients: {_manager.Server_ConnectedClients.Count}/{_manager.ServerInformation.MaxNumberConnectedClients}");
-                if (GUILayout.Button(new GUIContent("Stop Server")))
-                    _manager.StopServer();
-                
-                _serverClientsViewPos = EditorGUILayout.BeginScrollView(_serverClientsViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(150));
-                if (_manager.Server_ConnectedClients.Count == 0)
+                if (!_manager.IsServer)
                 {
-                    GUILayout.Label($"There are no clients connected to the local server!");
+                    _servername = EditorGUILayout.TextField(new GUIContent("Servername:"), _servername);
+                    if (GUILayout.Button(new GUIContent("Start Server")))
+                        _manager.StartServer(_servername);
                 }
                 else
                 {
-                    var defaultColour = _style.normal.textColor;
-                    _style.alignment = TextAnchor.MiddleLeft;
-                    for (var i = 0; i < _manager.Server_ConnectedClients.Count; i++)
+                    GUILayout.Label($"Servername: {_manager.ServerInformation.Servername}");
+                    GUILayout.Label($"Connected Clients: {_manager.Server_ConnectedClients.Count}/{_manager.ServerInformation.MaxNumberConnectedClients}");
+                    if (GUILayout.Button(new GUIContent("Stop Server")))
+                        _manager.StopServer();
+                
+                    _serverClientsViewPos = EditorGUILayout.BeginScrollView(_serverClientsViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(150));
+                    if (_manager.Server_ConnectedClients.Count == 0)
                     {
-                        var client = _manager.Server_ConnectedClients.Values.ElementAt(i);
-                        EditorGUILayout.BeginHorizontal();
-                        {
-                            _style.normal.textColor = client.Colour;
-                            GUILayout.Label($"#{client.ID} {client.Username}", _style);
-                        }
-                        EditorGUILayout.EndHorizontal();
+                        GUILayout.Label($"There are no clients connected to the local server!");
                     }
-                    _style.normal.textColor = defaultColour;
+                    else
+                    {
+                        var defaultColour = _style.normal.textColor;
+                        _style.alignment = TextAnchor.MiddleLeft;
+                        for (var i = 0; i < _manager.Server_ConnectedClients.Count; i++)
+                        {
+                            var client = _manager.Server_ConnectedClients.Values.ElementAt(i);
+                            EditorGUILayout.BeginHorizontal();
+                            {
+                                _style.normal.textColor = client.Colour;
+                                GUILayout.Label($"#{client.ID} {client.Username}", _style);
+                            }
+                            EditorGUILayout.EndHorizontal();
+                        }
+                        _style.normal.textColor = defaultColour;
+                    }
+                    EditorGUILayout.EndScrollView();
                 }
-                EditorGUILayout.EndScrollView();
             }
+            GUILayout.EndVertical();
         }
 
         private void ClientGUI()
         {
-            if (!_manager.IsClient)
+            GUILayout.BeginVertical(EditorStyles.helpBox);
+            DrawToggleFoldout("Client", ref _showClientWindow, _manager.IsClient, "Is Client:");
+            if (_showClientWindow)
             {
-                _username = EditorGUILayout.TextField(new GUIContent("Username:"), _username);
-                _userColour = EditorGUILayout.ColorField(new GUIContent("User colour:"), _userColour);
-                if (GUILayout.Button(new GUIContent("Start Client")))
-                    _manager.StartClient(_username, _userColour);
-            }
-            else
-            {
-                GUILayout.Label($"ID: {_manager.ClientInformation.ID}");
-                GUILayout.Label($"Username: {_manager.ClientInformation.Username}");
-                EditorGUILayout.ColorField("User colour:", _manager.ClientInformation.Colour);
-                GUILayout.Label($"Servername: {_manager.ServerInformation.Servername}");
-                GUILayout.Label($"Connected Clients: {_manager.Server_ConnectedClients.Count}/{_manager.ServerInformation.MaxNumberConnectedClients}");
-                if (GUILayout.Button(new GUIContent("Stop Client")))
-                    _manager.StopClient();
-                
-                _clientClientsViewPos = EditorGUILayout.BeginScrollView(_clientClientsViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(150));
-                if (_manager.Client_ConnectedClients.Count == 0)
+                if (!_manager.IsClient)
                 {
-                    GUILayout.Label($"There are no other clients connected to the server!");
+                    _username = EditorGUILayout.TextField(new GUIContent("Username:"), _username);
+                    _userColour = EditorGUILayout.ColorField(new GUIContent("User colour:"), _userColour);
+                    if (GUILayout.Button(new GUIContent("Start Client")))
+                        _manager.StartClient(_username, _userColour);
                 }
                 else
                 {
-                    var defaultColour = _style.normal.textColor;
-                    _style.alignment = TextAnchor.MiddleLeft;
-                    for (var i = 0; i < _manager.Client_ConnectedClients.Count; i++)
+                    GUILayout.Label($"ID: {_manager.ClientInformation.ID}");
+                    GUILayout.Label($"Username: {_manager.ClientInformation.Username}");
+                    EditorGUILayout.ColorField("User colour:", _manager.ClientInformation.Colour);
+                    GUILayout.Label($"Servername: {_manager.ServerInformation.Servername}");
+                    GUILayout.Label($"Connected Clients: {_manager.Server_ConnectedClients.Count}/{_manager.ServerInformation.MaxNumberConnectedClients}");
+                    if (GUILayout.Button(new GUIContent("Stop Client")))
+                        _manager.StopClient();
+                    
+                    _clientClientsViewPos = EditorGUILayout.BeginScrollView(_clientClientsViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(150));
+                    if (_manager.Client_ConnectedClients.Count == 0)
                     {
-                        var client = _manager.Client_ConnectedClients.Values.ElementAt(i);
-                        EditorGUILayout.BeginHorizontal();
-                        {
-                            _style.normal.textColor = client.Colour;
-                            GUILayout.Label($"#{client.ID} {client.Username}", _style);
-                        }
-                        EditorGUILayout.EndHorizontal();
+                        GUILayout.Label($"There are no other clients connected to the server!");
                     }
-                    _style.normal.textColor = defaultColour;
-                }
-                EditorGUILayout.EndScrollView();
-            }
-        }
-
-        private void ShowSystemMessages()
-        {
-            EditorGUILayout.BeginHorizontal();
-            GUILayout.Label($"Network Messages:");
-            GUILayout.FlexibleSpace();
-            _isAutoscroll = EditorGUILayout.Toggle(new GUIContent(" ", "Is Autoscrolling Messages"), _isAutoscroll);
-            EditorGUILayout.EndHorizontal();
-            _messagesViewPos = EditorGUILayout.BeginScrollView(_messagesViewPos,
-                EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MinHeight(100), GUILayout.MaxHeight(200));
-            {
-                Color defaultColour = _style.normal.textColor;
-                for (int i = 0; i < Messaging.Messages.Count; i++)
-                {
-                    Message message = Messaging.Messages.ElementAt(i);
-                    EditorGUILayout.BeginHorizontal(GetScrollviewRowStyle(_scrollViewColours[i % 2]));
+                    else
                     {
-                        switch (message.Severity)
+                        var defaultColour = _style.normal.textColor;
+                        _style.alignment = TextAnchor.MiddleLeft;
+                        for (var i = 0; i < _manager.Client_ConnectedClients.Count; i++)
                         {
-                            case EMessageSeverity.Log:
-                                _style.normal.textColor = Color.white;
-                                break;
-                            case EMessageSeverity.Warning:
-                                _style.normal.textColor = Color.yellow;
-                                break;
-                            case EMessageSeverity.Error:
-                                _style.normal.textColor = Color.red;
-                                break;
+                            var client = _manager.Client_ConnectedClients.Values.ElementAt(i);
+                            EditorGUILayout.BeginHorizontal();
+                            {
+                                _style.normal.textColor = client.Colour;
+                                GUILayout.Label($"#{client.ID} {client.Username}", _style);
+                            }
+                            EditorGUILayout.EndHorizontal();
                         }
-                        GUILayout.Label(message.Text, _style);
+                        _style.normal.textColor = defaultColour;
                     }
-                    EditorGUILayout.EndHorizontal();
+                    EditorGUILayout.EndScrollView();
                 }
-                _style.normal.textColor = defaultColour;
             }
-            EditorGUILayout.EndScrollView();
+            GUILayout.EndVertical();
         }
+        
+        #endregion
+        
+        #region utilities
 
         private const float ROW_HEIGHT = 20;
         private GUIStyle GetScrollviewRowStyle(Color colour)
@@ -258,13 +296,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             foldoutRect.height = 13f;
             
             var toggleRect = backgroundRect;
-            toggleRect.x = backgroundRect.width;
+            toggleRect.x = backgroundRect.width - 7f;
             toggleRect.y += 2f;
             toggleRect.width = 13f;
             toggleRect.height = 13f;
             
             var toggleLabelRect = backgroundRect;
-            toggleLabelRect.x = -4;
+            toggleLabelRect.x = -10f;
             
             var e = Event.current;
             if (labelRect.Contains(e.mousePosition))
@@ -298,26 +336,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             
         }
-    }
-
-    public struct TestMessage : IStructData
-    {
-        public string Text;
-
-        public TestMessage(string msg)
-        {
-            Text = msg;
-        }
-
-        public TestMessage ReadTestMessage(Reader reader)
-        {
-            string text = reader.ReadString();
-            return new(text);
-        }
-
-        public void WriteTestMessage(Writer writer, TestMessage value)
-        {
-            writer.WriteString(value.Text);
-        }
+        
+        #endregion
     }
 }

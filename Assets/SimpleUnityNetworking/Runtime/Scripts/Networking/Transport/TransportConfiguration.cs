@@ -9,14 +9,15 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
     [Serializable]
     public abstract class TransportConfiguration : ScriptableObject
     {
-        public Transport Transport;
-        public TransportSettings TransportSettings;
+        private Transport _transport;
+        public Transport Transport => _transport;
+        public TransportSettings Settings;
 
         protected TransportConfiguration(Transport transport, TransportSettings settings)
         {
-            Transport = transport;
-            TransportSettings = settings;
-            Transport.SetTransportSettings(TransportSettings);
+            _transport = transport;
+            Settings = settings;
+            Transport.SetTransportSettings(Settings);
         }
     }
 
@@ -30,7 +31,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             
             EditorGUILayout.TextField("Type:", config.Transport.GetType().Name, EditorStyles.label);
             EditorGUI.indentLevel++;
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("TransportSettings"), new GUIContent("Settings:"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("Settings"), new GUIContent("Settings:"));
             EditorGUI.indentLevel--;
             
             serializedObject.ApplyModifiedProperties();

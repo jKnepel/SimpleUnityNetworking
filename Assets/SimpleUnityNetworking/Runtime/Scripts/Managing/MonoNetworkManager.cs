@@ -4,6 +4,7 @@ using jKnepel.SimpleUnityNetworking.Serialisation;
 using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using System.Collections.Concurrent;
+using jKnepel.SimpleUnityNetworking.Logging;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -48,6 +49,24 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    }
 	    }
 
+	    [SerializeField] private LoggerConfiguration _cachedLoggerConfiguration;
+
+	    public LoggerConfiguration LoggerConfiguration
+	    {
+		    get => _cachedLoggerConfiguration;
+		    set
+		    {
+			    if (_cachedLoggerConfiguration == value) return;
+			    
+			    NetworkManager.LoggerConfiguration = _cachedLoggerConfiguration = value;
+			    
+#if UNITY_EDITOR
+			    if (!EditorApplication.isPlaying)
+				    EditorSceneManager.MarkSceneDirty(gameObject.scene);
+#endif
+		    }
+	    }
+
 	    public bool IsOnline => NetworkManager.IsOnline;
 	    public bool IsServer => NetworkManager.IsServer;
 	    public bool IsClient => NetworkManager.IsClient;
@@ -79,6 +98,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 			    _networkManager = new();
 			    _networkManager.TransportConfiguration = _cachedTransportConfiguration;
 			    _networkManager.SerialiserConfiguration = _cachedSerialiserConfiguration;
+			    _networkManager.LoggerConfiguration = _cachedLoggerConfiguration;
 			    return _networkManager;
 		    }
 	    }

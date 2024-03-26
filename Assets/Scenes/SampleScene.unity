@@ -172,6 +172,7 @@ MonoBehaviour:
     _useCompression: 1
     _numberOfDecimalPlaces: 3
     _bitsPerComponent: 10
+  _cachedLoggerConfiguration: {fileID: 11400000, guid: c9942d087e345ce42bc88248784cc4b6, type: 2}
 --- !u!1 &556541961
 GameObject:
   m_ObjectHideFlags: 0

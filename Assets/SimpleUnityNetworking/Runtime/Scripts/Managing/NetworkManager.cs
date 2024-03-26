@@ -1,3 +1,4 @@
+using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Utilities;
 using jKnepel.SimpleUnityNetworking.Serialisation;
@@ -5,13 +6,15 @@ using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using UnityEngine;
 
+using Logger = jKnepel.SimpleUnityNetworking.Logging.Logger;
+
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
     public partial class NetworkManager : INetworkManager, IDisposable
     {
         #region fields
 
-        private Transport _transport => _transportConfiguration?.Transport;
+        private Transport Transport => _transportConfiguration?.Transport;
         private TransportConfiguration _transportConfiguration;
         public TransportConfiguration TransportConfiguration
         {
@@ -19,27 +22,25 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             set
             {
                 if (value == _transportConfiguration) return;
-                _transport?.Dispose();
+                Transport?.Dispose();
                 _transportConfiguration = value;
 
                 if (_transportConfiguration is null) return;
-                _transport.OnServerStateUpdated += HandleTransportServerStateUpdate;
-                _transport.OnClientStateUpdated += HandleTransportClientStateUpdate;
-                _transport.OnServerReceivedData += OnServerReceivedData;
-                _transport.OnClientReceivedData += OnClientReceivedData;
-                _transport.OnConnectionUpdated += OnRemoteConnectionStateUpdated;
+                Transport.OnServerStateUpdated += HandleTransportServerStateUpdate;
+                Transport.OnClientStateUpdated += HandleTransportClientStateUpdate;
+                Transport.OnServerReceivedData += OnServerReceivedData;
+                Transport.OnClientReceivedData += OnClientReceivedData;
+                Transport.OnConnectionUpdated += OnRemoteConnectionStateUpdated;
             }
         }
 
-        private SerialiserConfiguration _serialiserConfiguration;
-        public SerialiserConfiguration SerialiserConfiguration
-        {
-            get => _serialiserConfiguration;
-            set => _serialiserConfiguration = value;
-        }
-        
+        public SerialiserConfiguration SerialiserConfiguration { get; set; }
+
+        private Logger Logger => LoggerConfiguration.Logger;
+        public LoggerConfiguration LoggerConfiguration { get; set; }
+
         public bool IsOnline => IsServer || IsClient;
-        public bool IsServer => _transport?.IsServer ?? false;
+        public bool IsServer => Transport?.IsServer ?? false;
         public bool IsClient => Client_LocalState == ELocalClientConnectionState.Authenticated;
         public bool IsHost => IsServer && IsClient;
         
@@ -69,16 +70,16 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             if (disposing)
             {
-                _transport?.Dispose();
+                Transport?.Dispose();
             }
         }
 
         public void Update()
         {
-            if (_transport != null)
+            if (Transport != null)
             {
-                _transport?.IterateIncoming();
-                _transport?.IterateOutgoing();
+                Transport?.IterateIncoming();
+                Transport?.IterateOutgoing();
             }
         }
 
@@ -88,38 +89,38 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         public void StartServer(string servername)
         {
-            if (_transport == null)
+            if (Transport == null)
             {
-                Messaging.DebugMessage("The transport needs to be defined before a server can be started!");
+                Logger?.Log("The transport needs to be defined before a server can be started!");
                 return;
             }
 
             _cachedServername = servername;
-            _cachedMaxNumberClients = TransportConfiguration.TransportSettings.MaxNumberOfClients;
-            _transport?.StartServer();
+            _cachedMaxNumberClients = TransportConfiguration.Settings.MaxNumberOfClients;
+            Transport?.StartServer();
         }
 
         public void StopServer()
         {
-            _transport?.StopServer();
+            Transport?.StopServer();
         }
 
         public void StartClient(string username, Color32 userColour)
         {
-            if (_transport == null)
+            if (Transport == null)
             {
-                Messaging.DebugMessage("The transport needs to be defined before a client can be started!");
+                Logger?.Log("The transport needs to be defined before a client can be started!");
                 return;
             }
 
             _cachedUsername = username;
             _cachedColour = userColour;
-            _transport?.StartClient();
+            Transport?.StartClient();
         }
         
         public void StopClient()
         {
-            _transport?.StopClient();
+            Transport?.StopClient();
         }
 
         public void StopNetwork()
