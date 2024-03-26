@@ -5,6 +5,7 @@ using jKnepel.SimpleUnityNetworking.Serialisation;
 using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using System.Collections.Concurrent;
+using jKnepel.SimpleUnityNetworking.Logging;
 using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking
@@ -23,6 +24,11 @@ namespace jKnepel.SimpleUnityNetworking
         /// The configuration for the serialiser used by the network manager.
         /// </summary>
         SerialiserConfiguration SerialiserConfiguration { get; set; }
+        
+        /// <summary>
+        /// The configuration for the logger, used to show or save messages by the framework.
+        /// </summary>
+        LoggerConfiguration LoggerConfiguration { get; set; }
         
         /// <summary>
         /// Whether a local server is started or a client is authenticated

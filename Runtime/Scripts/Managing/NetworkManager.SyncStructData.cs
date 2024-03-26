@@ -57,7 +57,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		{
 			if (!IsClient)
 			{
-				Messaging.DebugMessage("The local client must be started before data can be send!");
+				Logger?.Log("The local client must be started before data can be send!");
 				return;
 			}
 

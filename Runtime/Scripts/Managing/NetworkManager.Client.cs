@@ -81,7 +81,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Writer writer = new(SerialiserConfiguration);
             writer.WriteByte(ChallengeAnswerPacket.PacketType);
             ChallengeAnswerPacket.Write(writer, new(hashedChallenge, _cachedUsername, _cachedColour));
-            _transport.SendDataToServer(writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
+            Transport.SendDataToServer(writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
             
             // TODO : implement retries
         }
@@ -147,7 +147,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             foreach (var id in clientIDs)
             {
                 if (Client_ConnectedClients.ContainsKey(id)) continue;
-                Messaging.DebugMessage("The byte data was send to a non-existing client. All client IDs must be valid!");
+                Logger?.Log("The byte data was send to a non-existing client. All client IDs must be valid!");
                 return;
             }
 
@@ -155,7 +155,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             writer.WriteByte(DataPacket.PacketType);
             DataPacket dataPacket = new(clientIDs, false, Hashing.GetFNV1Hash32(byteID), byteData);
             DataPacket.Write(writer, dataPacket);
-            _transport.SendDataToServer(writer.GetBuffer(), channel);
+            Transport.SendDataToServer(writer.GetBuffer(), channel);
         }
 
         private void SendStructData<T>(uint[] clientIDs, T structData, 
@@ -164,7 +164,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             foreach (var id in clientIDs)
             {
                 if (Client_ConnectedClients.ContainsKey(id)) continue;
-                Messaging.DebugMessage("The struct data was send to a non-existing client. All client IDs must be valid!");
+                Logger?.Log("The struct data was send to a non-existing client. All client IDs must be valid!");
                 return;
             }
 
@@ -176,7 +176,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             writer.WriteByte(DataPacket.PacketType);
             DataPacket dataPacket = new(clientIDs, true, Hashing.GetFNV1Hash32(typeof(T).Name), structBuffer);
             DataPacket.Write(writer, dataPacket);
-            _transport.SendDataToServer(writer.GetBuffer(), channel);
+            Transport.SendDataToServer(writer.GetBuffer(), channel);
         }
     }
 
