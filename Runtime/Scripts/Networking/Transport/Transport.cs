@@ -1,10 +1,16 @@
 using System;
 using jKnepel.SimpleUnityNetworking.Networking;
+using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Transporting
 {
     public abstract class Transport : IDisposable
     {
+        /// <summary>
+        /// The settings used by the current transport
+        /// </summary>
+        public TransportSettings Settings { get; private set; }
+        
         /// <summary>
         /// Whether a local server or client is started
         /// </summary>
@@ -51,6 +57,11 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         /// Called when a remote client's connection state has been updated
         /// </summary>
         public abstract event Action<uint, ERemoteConnectionState> OnConnectionUpdated;
+
+        protected Transport(TransportSettings settings)
+        {
+            Settings = settings;
+        }
         
         ~Transport()
         {
@@ -65,7 +76,6 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
 
         protected abstract void Dispose(bool disposing);
 
-        public abstract void SetTransportSettings(TransportSettings settings);
         public abstract void StartServer();
         public abstract void StopServer();
         public abstract void StartClient();
@@ -76,6 +86,8 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         public abstract void SendDataToServer(byte[] data, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered);
         public abstract void SendDataToClient(uint clientID, byte[] data, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered);
         public abstract void DisconnectClient(uint clientID);
+        public abstract int GetRTTToServer();
+        public abstract int GetRTTToClient(uint clientID);
     }
     
     public struct ServerReceivedData

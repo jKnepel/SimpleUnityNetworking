@@ -6,6 +6,7 @@ namespace jKnepel.SimpleUnityNetworking.Logging
 {
     public class Logger
     {
+        public LoggerSettings Settings => _settings;
         private LoggerSettings _settings;
 
         private readonly List<Message> _messages = new();
@@ -14,11 +15,6 @@ namespace jKnepel.SimpleUnityNetworking.Logging
         public event Action<Message> OnMessageAdded;
 
         public Logger(LoggerSettings settings)
-        {
-            _settings = settings;
-        }
-
-        public void SetLoggerSettings(LoggerSettings settings)
         {
             _settings = settings;
         }

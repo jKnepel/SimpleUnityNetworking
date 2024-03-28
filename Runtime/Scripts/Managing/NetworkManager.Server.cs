@@ -2,7 +2,6 @@ using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.Packets;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using jKnepel.SimpleUnityNetworking.Transporting;
-using jKnepel.SimpleUnityNetworking.Utilities;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -57,7 +56,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             if (Server_ConnectedClients.ContainsKey(clientID))
             {
                 Logger?.Log($"An already existing connection was overwritten. Connection for client {clientID} was dropped!");
-                Transport.DisconnectClient(clientID);
+                Transport?.DisconnectClient(clientID);
                 return;
             }
             
@@ -71,9 +70,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Writer writer = new(SerialiserConfiguration);
             writer.WriteByte(ConnectionChallengePacket.PacketType);
             ConnectionChallengePacket.Write(writer, new(challenge));
-            Transport.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
-            
-            // TODO : add timeout based on RTT
+            Transport?.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
         }
 
         private void HandleRemoteClientDisconnected(uint clientID)
@@ -89,7 +86,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             writer.WriteByte(ClientUpdatePacket.PacketType);
             ClientUpdatePacket.Write(writer, new(clientID));
             foreach (var id in Server_ConnectedClients.Keys)
-                Transport.SendDataToClient(id, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
+                Transport?.SendDataToClient(id, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
         }
         
         private void OnServerReceivedData(ServerReceivedData data)
@@ -103,10 +100,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 switch (packetType)
                 {
                     case EPacketType.ChallengeAnswer:
-                        HandleChallengeAnswerPacket(data.ClientID, reader, data.Channel);
+                        HandleChallengeAnswerPacket(data.ClientID, reader);
                         break;
                     case EPacketType.ClientUpdate:
-                        HandleClientUpdatePacket(data.ClientID, reader, data.Channel);
+                        HandleClientUpdatePacket(data.ClientID, reader);
                         break;
                     case EPacketType.Data:
                         HandleDataPacket(data.ClientID, reader, data.Channel);
@@ -121,7 +118,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
-        private void HandleChallengeAnswerPacket(uint clientID, Reader reader, ENetworkChannel channel)
+        private void HandleChallengeAnswerPacket(uint clientID, Reader reader)
         {
             if (!_authenticatingClients.TryGetValue(clientID, out var challenge))
                 return;
@@ -129,7 +126,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             var packet = ChallengeAnswerPacket.Read(reader);
             if (!CompareByteArrays(challenge, packet.ChallengeAnswer))
             {
-                Transport.DisconnectClient(clientID);
+                Transport?.DisconnectClient(clientID);
                 _authenticatingClients.TryRemove(clientID, out _);
                 return;
             }
@@ -140,7 +137,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             ConnectionAuthenticatedPacket authentication = new(clientID, ServerInformation.Servername,
                 ServerInformation.MaxNumberConnectedClients);
             ConnectionAuthenticatedPacket.Write(writer, authentication);
-            Transport.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
+            Transport?.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
             writer.Clear();
             
             // inform client of other clients
@@ -153,7 +150,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 ClientUpdatePacket existingClient = new(clientInfo.ID, ClientUpdatePacket.UpdateType.Connected,
                     clientInfo.Username, clientInfo.Colour);
                 ClientUpdatePacket.Write(writer, existingClient);
-                Transport.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
+                Transport?.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
             }
             writer.Clear();
             
@@ -164,7 +161,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             ClientUpdatePacket.Write(writer, update);
             var data = writer.GetBuffer();
             foreach (var id in Server_ConnectedClients.Keys)
-                Transport.SendDataToClient(id, data, ENetworkChannel.ReliableOrdered);
+                Transport?.SendDataToClient(id, data, ENetworkChannel.ReliableOrdered);
             writer.Clear();
             
             // authenticate client
@@ -173,7 +170,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Server_OnRemoteClientConnected?.Invoke(clientID);
         }
 
-        private void HandleClientUpdatePacket(uint clientID, Reader reader, ENetworkChannel channel)
+        private void HandleClientUpdatePacket(uint clientID, Reader reader)
         {
             if (!Server_ConnectedClients.ContainsKey(clientID))
                 return;
@@ -195,7 +192,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             foreach (var id in Server_ConnectedClients.Keys)
             {
                 if (id == clientID) continue;
-                Transport.SendDataToClient(id, data, ENetworkChannel.ReliableOrdered);
+                Transport?.SendDataToClient(id, data, ENetworkChannel.ReliableOrdered);
             }
         }
 
@@ -229,7 +226,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             foreach (var id in targetIDs)
             {
                 if (id == clientID) continue;
-                Transport.SendDataToClient(id, data, channel);
+                Transport?.SendDataToClient(id, data, channel);
             }
         }
         

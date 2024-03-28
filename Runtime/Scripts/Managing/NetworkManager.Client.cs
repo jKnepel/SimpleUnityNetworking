@@ -49,16 +49,16 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 switch (packetType)
                 {
                     case EPacketType.ConnectionChallenge:
-                        HandleConnectionChallengePacket(reader, data.Channel);
+                        HandleConnectionChallengePacket(reader);
                         break;
                     case EPacketType.ConnectionAuthenticated:
-                        HandleConnectionAuthenticatedPacket(reader, data.Channel);
+                        HandleConnectionAuthenticatedPacket(reader);
                         break;
                     case EPacketType.Data:
-                        HandleDataPacket(reader, data.Channel);
+                        HandleDataPacket(reader);
                         break;
                     case EPacketType.ClientUpdate:
-                        HandleClientUpdatePacket(reader, data.Channel);
+                        HandleClientUpdatePacket(reader);
                         break;
                 }
             }
@@ -70,7 +70,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
-        private void HandleConnectionChallengePacket(Reader reader, ENetworkChannel channel)
+        private void HandleConnectionChallengePacket(Reader reader)
         {
             if (_localClientConnectionState != ELocalClientConnectionState.Started)
                 return;
@@ -81,12 +81,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Writer writer = new(SerialiserConfiguration);
             writer.WriteByte(ChallengeAnswerPacket.PacketType);
             ChallengeAnswerPacket.Write(writer, new(hashedChallenge, _cachedUsername, _cachedColour));
-            Transport.SendDataToServer(writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
-            
-            // TODO : implement retries
+            Transport?.SendDataToServer(writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
         }
 
-        private void HandleConnectionAuthenticatedPacket(Reader reader, ENetworkChannel channel)
+        private void HandleConnectionAuthenticatedPacket(Reader reader)
         {
             if (_localClientConnectionState != ELocalClientConnectionState.Started)
                 return;
@@ -99,7 +97,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Client_OnLocalStateUpdated?.Invoke(_localClientConnectionState);
         }
 
-        private void HandleDataPacket(Reader reader, ENetworkChannel channel)
+        private void HandleDataPacket(Reader reader)
         {
             if (_localClientConnectionState != ELocalClientConnectionState.Authenticated)
                 return;
@@ -116,7 +114,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 ReceiveByteData(packet.DataID, (byte)packet.SenderID, packet.Data);
         }
 
-        private void HandleClientUpdatePacket(Reader reader, ENetworkChannel channel)
+        private void HandleClientUpdatePacket(Reader reader)
         {
             if (_localClientConnectionState != ELocalClientConnectionState.Authenticated)
                 return;
@@ -155,7 +153,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             writer.WriteByte(DataPacket.PacketType);
             DataPacket dataPacket = new(clientIDs, false, Hashing.GetFNV1Hash32(byteID), byteData);
             DataPacket.Write(writer, dataPacket);
-            Transport.SendDataToServer(writer.GetBuffer(), channel);
+            Transport?.SendDataToServer(writer.GetBuffer(), channel);
         }
 
         private void SendStructData<T>(uint[] clientIDs, T structData, 
@@ -176,7 +174,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             writer.WriteByte(DataPacket.PacketType);
             DataPacket dataPacket = new(clientIDs, true, Hashing.GetFNV1Hash32(typeof(T).Name), structBuffer);
             DataPacket.Write(writer, dataPacket);
-            Transport.SendDataToServer(writer.GetBuffer(), channel);
+            Transport?.SendDataToServer(writer.GetBuffer(), channel);
         }
     }
 
