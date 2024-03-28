@@ -50,7 +50,15 @@ namespace jKnepel.SimpleUnityNetworking.Logging
             if (_areSettingsVisible)
             {
                 EditorGUI.indentLevel++;
-                EditorGUILayout.PropertyField(property.FindPropertyRelative("PrintDebugToConsole"), new GUIContent("Print Debug To Console:", "Whether debug messages should also be printed to the console."));
+                EditorGUILayout.PropertyField(property.FindPropertyRelative("PrintToConsole"), new GUIContent("Print To Console:", "Whether logged messages by the framework should also be printed to the console."));
+                if (property.FindPropertyRelative("PrintToConsole").boolValue)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(property.FindPropertyRelative("PrintLog"), new GUIContent("Print Log:", "Whether log level messages should be printed to the console."));
+                    EditorGUILayout.PropertyField(property.FindPropertyRelative("PrintWarning"), new GUIContent("Print Warning:", "Whether warning level messages should be printed to the console."));
+                    EditorGUILayout.PropertyField(property.FindPropertyRelative("PrintError"), new GUIContent("Print Error:", "Whether error level messages should be printed to the console."));
+                    EditorGUI.indentLevel--;
+                }
                 EditorGUI.indentLevel--;
             }
             EditorGUI.EndProperty();

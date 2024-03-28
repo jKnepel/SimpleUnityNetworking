@@ -30,6 +30,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 Transport.OnServerReceivedData += OnServerReceivedData;
                 Transport.OnClientReceivedData += OnClientReceivedData;
                 Transport.OnConnectionUpdated += OnRemoteConnectionStateUpdated;
+                Transport.OnTransportErrorOccurred += text => Logger.Log(text, EMessageSeverity.Error);
             }
         }
 

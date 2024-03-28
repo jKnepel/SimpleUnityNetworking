@@ -16,42 +16,6 @@ public class StructTest : MonoBehaviour
     public bool IsServer => _manager?.IsServer ?? false;
     public bool IsClient => _manager?.IsClient ?? false;
     public bool IsHost => _manager?.IsHost ?? false;
-    
-    private void Start()
-    {
-        _manager.Server_OnLocalStateUpdated += state =>
-        {
-            Debug.Log($"Server: {state}");
-        };
-        _manager.Client_OnLocalStateUpdated += state =>
-        {
-            Debug.Log($"Client: {state}");
-        };
-        _manager.Server_OnRemoteClientConnected += id =>
-        {
-            Debug.Log($"Server: Client {id} connected");
-        };
-        _manager.Server_OnRemoteClientDisconnected += id =>
-        {
-            Debug.Log($"Server: Client {id} disconnected");
-        };
-        _manager.Server_OnRemoteClientUpdated += id =>
-        {
-            Debug.Log($"Server: Client {id} updated");
-        };
-        _manager.Client_OnRemoteClientConnected += id =>
-        {
-            Debug.Log($"Client: Client {id} connected");
-        };
-        _manager.Client_OnRemoteClientDisconnected += id =>
-        {
-            Debug.Log($"Client: Client {id} disconnected");
-        };
-        _manager.Client_OnRemoteClientUpdated += id =>
-        {
-            Debug.Log($"Client: Client {id} updated");
-        };
-    }
 
     private void Update()
     {

@@ -1,3 +1,4 @@
+using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.Packets;
 using jKnepel.SimpleUnityNetworking.Serialising;
@@ -29,10 +30,22 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         
         private void HandleTransportClientStateUpdate(ELocalConnectionState state)
         {
-            if (state == ELocalConnectionState.Stopped)
+            switch (state)
             {
-                ClientInformation = null;
-                if (!IsServer) ServerInformation = null;
+                case ELocalConnectionState.Starting:
+                    Logger?.Log("Client is starting...", EMessageSeverity.Log);
+                    break;
+                case ELocalConnectionState.Started:
+                    Logger?.Log("Client was started", EMessageSeverity.Log);
+                    break;
+                case ELocalConnectionState.Stopping:
+                    Logger?.Log("Client is stopping...", EMessageSeverity.Log);
+                    break;
+                case ELocalConnectionState.Stopped:
+                    ClientInformation = null;
+                    if (!IsServer) ServerInformation = null;
+                    Logger?.Log("Client was stopped", EMessageSeverity.Log);
+                    break;
             }
             _localClientConnectionState = (ELocalClientConnectionState)state;
             Client_OnLocalStateUpdated?.Invoke(_localClientConnectionState);
@@ -64,9 +77,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             catch (Exception e)
             {
-                // TODO : handle read exceptions
-                Console.WriteLine(e);
-                throw;
+                Logger?.Log(e.Message, EMessageSeverity.Error);
             }
         }
 
@@ -95,6 +106,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 ServerInformation = new(packet.Servername, packet.MaxNumberConnectedClients);
             _localClientConnectionState = ELocalClientConnectionState.Authenticated;
             Client_OnLocalStateUpdated?.Invoke(_localClientConnectionState);
+            Logger?.Log("Client was authenticated", EMessageSeverity.Log);
         }
 
         private void HandleDataPacket(Reader reader)
@@ -126,10 +138,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 case ClientUpdatePacket.UpdateType.Connected:
                     Client_ConnectedClients[clientID] = new(clientID, packet.Username, packet.Colour);
                     Client_OnRemoteClientConnected?.Invoke(clientID);
+                    Logger?.Log($"Client: Remote client {clientID} was connected", EMessageSeverity.Log);
                     break;
                 case ClientUpdatePacket.UpdateType.Disconnected:
                     if (Client_ConnectedClients.TryRemove(clientID, out _))
+                    {
                         Client_OnRemoteClientDisconnected?.Invoke(clientID);
+                        Logger?.Log($"Client: Remote client {clientID} was disconnected", EMessageSeverity.Log);
+                    }
                     break;
                 case ClientUpdatePacket.UpdateType.Updated:
                     Client_ConnectedClients[clientID].Username = packet.Username;

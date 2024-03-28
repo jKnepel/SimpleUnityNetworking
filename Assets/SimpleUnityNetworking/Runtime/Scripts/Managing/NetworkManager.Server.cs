@@ -1,3 +1,4 @@
+using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.Packets;
 using jKnepel.SimpleUnityNetworking.Serialising;
@@ -29,12 +30,23 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         
         private void HandleTransportServerStateUpdate(ELocalConnectionState state)
         {
-            ServerInformation = state switch
+            switch (state)
             {
-                ELocalConnectionState.Stopped => null,
-                ELocalConnectionState.Started => new(_cachedServername, _cachedMaxNumberClients),
-                _ => ServerInformation
-            };
+                case ELocalConnectionState.Starting:
+                    Logger?.Log("Server is starting...", EMessageSeverity.Log);
+                    break;
+                case ELocalConnectionState.Started:
+                    ServerInformation = new(_cachedServername, _cachedMaxNumberClients);
+                    Logger?.Log("Server was started", EMessageSeverity.Log);
+                    break;
+                case ELocalConnectionState.Stopping:
+                    Logger?.Log("Server is stopping...", EMessageSeverity.Log);
+                    break;
+                case ELocalConnectionState.Stopped:
+                    ServerInformation = null;
+                    Logger?.Log("Server was stopped", EMessageSeverity.Log);
+                    break;
+            }
             Server_OnLocalStateUpdated?.Invoke(state);
         }
         
@@ -80,6 +92,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             if (!Server_ConnectedClients.TryRemove(clientID, out _)) return;
             
             Server_OnRemoteClientDisconnected?.Invoke(clientID);
+            Logger?.Log($"Server: Remote client {clientID} was disconnected", EMessageSeverity.Log);
 
             // inform other clients of disconnected client
             Writer writer = new(SerialiserConfiguration);
@@ -112,9 +125,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             catch (Exception e)
             {
-                // TODO : handle read exceptions
-                Console.WriteLine(e);
-                throw;
+                Logger?.Log(e.Message, EMessageSeverity.Error);
             }
         }
 
@@ -168,6 +179,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Server_ConnectedClients[clientID] = new(clientID, packet.Username, packet.Colour);
             _authenticatingClients.TryRemove(clientID, out _);
             Server_OnRemoteClientConnected?.Invoke(clientID);
+            Logger?.Log($"Server: Remote client {clientID} was connected", EMessageSeverity.Log);
         }
 
         private void HandleClientUpdatePacket(uint clientID, Reader reader)
