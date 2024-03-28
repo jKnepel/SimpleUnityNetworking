@@ -169,9 +169,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _cachedTransportConfiguration: {fileID: 11400000, guid: d4731c567fc16c04d8efd1a7fc1c13e0, type: 2}
   _cachedSerialiserConfiguration:
-    _useCompression: 1
-    _numberOfDecimalPlaces: 3
-    _bitsPerComponent: 10
+    UseCompression: 1
+    NumberOfDecimalPlaces: 3
+    BitsPerComponent: 10
   _cachedLoggerConfiguration: {fileID: 11400000, guid: c9942d087e345ce42bc88248784cc4b6, type: 2}
 --- !u!1 &556541961
 GameObject:
@@ -632,9 +632,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _manager: {fileID: 516821387}
   _serialiserConfiguration:
-    _useCompression: 1
-    _numberOfDecimalPlaces: 3
-    _bitsPerComponent: 10
+    UseCompression: 1
+    NumberOfDecimalPlaces: 3
+    BitsPerComponent: 10
   _targetClientID: 0
 --- !u!114 &1872444382
 MonoBehaviour:
@@ -650,9 +650,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _manager: {fileID: 516821387}
   _serialiserConfiguration:
-    _useCompression: 1
-    _numberOfDecimalPlaces: 3
-    _bitsPerComponent: 10
+    UseCompression: 1
+    NumberOfDecimalPlaces: 3
+    BitsPerComponent: 10
   _targetClientID: 0
   _synchronise: 0
   _sendObject: {fileID: 556541965}

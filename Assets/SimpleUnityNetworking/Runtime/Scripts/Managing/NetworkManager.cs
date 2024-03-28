@@ -45,6 +45,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             {
                 if (value == _loggerConfiguration) return;
                 _loggerConfiguration = value;
+
+                if (_loggerConfiguration is null) return;
                 Logger.OnMessageAdded += msg => OnLogMessageAdded?.Invoke(msg);
             }
         }
