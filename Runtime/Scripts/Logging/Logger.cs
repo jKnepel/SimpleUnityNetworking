@@ -27,18 +27,21 @@ namespace jKnepel.SimpleUnityNetworking.Logging
             
             OnMessageAdded?.Invoke(msg);
             
-            if (!_settings.PrintDebugToConsole) return;
+            if (!_settings.PrintToConsole) return;
             
             switch (sev)
             {
                 case EMessageSeverity.Log:
-                    Debug.Log(msg.GetFormattedString());
+                    if (Settings.PrintLog)
+                        Debug.Log(text);
                     break;
                 case EMessageSeverity.Warning:
-                    Debug.LogWarning(msg.GetFormattedString());
+                    if (Settings.PrintWarning)
+                        Debug.LogWarning(text);
                     break;
                 case EMessageSeverity.Error:
-                    Debug.LogError(msg.GetFormattedString());
+                    if (Settings.PrintError)
+                        Debug.LogError(text);
                     break;
             }
         }

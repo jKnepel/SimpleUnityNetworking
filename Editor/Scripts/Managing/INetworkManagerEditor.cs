@@ -1,10 +1,10 @@
-using System;
 using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using jKnepel.SimpleUnityNetworking.Transporting;
-using System.Linq;
 using UnityEngine;
 using UnityEditor;
+using System;
+using System.Linq;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
@@ -20,6 +20,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private bool _showTransportWindow;
         private bool _showSerialiserWindow;
         private bool _showLoggerWindow;
+        private bool _showLoggerMessages;
         
         private bool _showServerWindow;
         private string _servername = "New Server";
@@ -29,20 +30,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private string _username = "Username";
         private Color32 _userColour = new(153, 191, 97, 255);
         private Vector2 _clientClientsViewPos;
-        
-        private bool _isAutoscroll = true;
-        private Vector2 _messagesViewPos;
-        
-        private readonly Color[] _scrollViewColours =
-        {
-            new(0.25f, 0.25f, 0.25f), 
-            new(0.23f, 0.23f, 0.23f)
-        };
-
-        private Texture2D _texture;
-        private Texture2D Texture => _texture 
-            ? _texture 
-            : _texture = new(1, 1);
 
         #endregion
         
@@ -52,7 +39,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             _manager = manager;
             _repaint = repaint;
-            _manager.OnLogMessageAdded += _ => _repaint?.Invoke();
         }
 
         public void OnInspectorGUI()
@@ -129,46 +115,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     typeof(LoggerConfiguration),
                     false
                 );
-
                 if (_manager.LoggerConfiguration)
-                {
                     Editor.CreateEditor(_manager.LoggerConfiguration).OnInspectorGUI();
-                    EditorGUILayout.Space();
-                    
-                    EditorGUILayout.BeginHorizontal();
-                    GUILayout.Label($"Messages:");
-                    GUILayout.FlexibleSpace();
-                    _isAutoscroll = EditorGUILayout.Toggle(new GUIContent(" ", "Is Autoscrolling Messages"), _isAutoscroll);
-                    EditorGUILayout.EndHorizontal();
-                    _messagesViewPos = EditorGUILayout.BeginScrollView(_messagesViewPos,
-                        EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MinHeight(100), GUILayout.MaxHeight(200));
-                    {
-                        var defaultColour = _style.normal.textColor;
-                        for (int i = 0; i < _manager.LoggerConfiguration.Logger.Messages.Count; i++)
-                        {
-                            var message = _manager.LoggerConfiguration.Logger.Messages.ElementAt(i);
-                            EditorGUILayout.BeginHorizontal(GetScrollviewRowStyle(_scrollViewColours[i % 2]));
-                            {
-                                switch (message.Severity)
-                                {
-                                    case EMessageSeverity.Log:
-                                        _style.normal.textColor = Color.white;
-                                        break;
-                                    case EMessageSeverity.Warning:
-                                        _style.normal.textColor = Color.yellow;
-                                        break;
-                                    case EMessageSeverity.Error:
-                                        _style.normal.textColor = Color.red;
-                                        break;
-                                }
-                                GUILayout.Label(message.Text, _style);
-                            }
-                            EditorGUILayout.EndHorizontal();
-                        }
-                        _style.normal.textColor = defaultColour;
-                    }
-                    EditorGUILayout.EndScrollView();
-                }
             }
             GUILayout.EndVertical();
         }
@@ -191,8 +139,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 }
                 else
                 {
-                    GUILayout.Label($"Servername: {_manager.ServerInformation.Servername}");
-                    GUILayout.Label($"Connected Clients: {_manager.Server_ConnectedClients.Count}/{_manager.ServerInformation.MaxNumberConnectedClients}");
+                    EditorGUILayout.TextField("Servername:", _manager.ServerInformation.Servername);
+                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server_ConnectedClients.Count}/{_manager.ServerInformation.MaxNumberConnectedClients}");
                     if (GUILayout.Button(new GUIContent("Stop Server")))
                         _manager.StopServer();
                 
@@ -238,11 +186,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 }
                 else
                 {
-                    GUILayout.Label($"ID: {_manager.ClientInformation.ID}");
-                    GUILayout.Label($"Username: {_manager.ClientInformation.Username}");
+                    EditorGUILayout.TextField("ID:", $"{_manager.ClientInformation.ID}");
+                    EditorGUILayout.TextField("Username:", _manager.ClientInformation.Username);
                     EditorGUILayout.ColorField("User colour:", _manager.ClientInformation.Colour);
-                    GUILayout.Label($"Servername: {_manager.ServerInformation.Servername}");
-                    GUILayout.Label($"Connected Clients: {_manager.Server_ConnectedClients.Count}/{_manager.ServerInformation.MaxNumberConnectedClients}");
+                    EditorGUILayout.TextField("Servername:", _manager.ServerInformation.Servername);
+                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server_ConnectedClients.Count}/{_manager.ServerInformation.MaxNumberConnectedClients}");
                     if (GUILayout.Button(new GUIContent("Stop Client")))
                         _manager.StopClient();
                     
@@ -276,17 +224,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         #endregion
         
         #region utilities
-
-        private const float ROW_HEIGHT = 20;
-        private GUIStyle GetScrollviewRowStyle(Color colour)
-        {
-            Texture.SetPixel(0, 0, colour);
-            Texture.Apply();
-            GUIStyle style = new();
-            style.normal.background = Texture;
-            style.fixedHeight = ROW_HEIGHT;
-            return style;
-        }
         
         private static void DrawToggleFoldout(string title, ref bool isExpanded, 
             bool? checkbox = null, string checkboxLabel = null)

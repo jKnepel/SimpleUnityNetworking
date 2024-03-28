@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Utilities;
-using UnityEngine;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Networking.Transport;
@@ -158,6 +157,8 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         public override event Action<ELocalConnectionState> OnClientStateUpdated;
         public override event Action<uint, ERemoteConnectionState> OnConnectionUpdated;
 
+        public override event Action<string> OnTransportErrorOccurred;
+
         #endregion
         
         #region lifecycle
@@ -192,7 +193,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         {
             if (LocalServerState is ELocalConnectionState.Starting or ELocalConnectionState.Started)
             {
-                Debug.LogError("Failed to start the server, there already exists a local server.");
+                OnTransportErrorOccurred?.Invoke("Failed to start the server, there already exists a local server.");
                 return;
             }
 
@@ -214,7 +215,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             if (endpoint.Family == NetworkFamily.Invalid)
             {
                 SetLocalServerState(ELocalConnectionState.Stopping);
-                Debug.LogError("The given local or remote address use an invalid IP family.");
+                OnTransportErrorOccurred?.Invoke("The given local or remote address use an invalid IP family.");
                 SetLocalServerState(ELocalConnectionState.Stopped);
                 return;
             }
@@ -224,7 +225,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             if (_driver.Bind(endpoint) != 0)
             {
                 SetLocalServerState(ELocalConnectionState.Stopping);
-                Debug.LogError($"Failed to bind server to local address {endpoint.Address} and port {endpoint.Port}");
+                OnTransportErrorOccurred?.Invoke($"Failed to bind server to local address {endpoint.Address} and port {endpoint.Port}");
                 DisposeDrivers();
                 SetLocalServerState(ELocalConnectionState.Stopped);
                 return;
@@ -268,7 +269,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         {
             if (LocalClientState is ELocalConnectionState.Starting or ELocalConnectionState.Started)
             {
-                Debug.LogError("Failed to start the client, there already exists a local client.");
+                OnTransportErrorOccurred?.Invoke("Failed to start the client, there already exists a local client.");
                 return;
             }
 
@@ -285,7 +286,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             if (serverEndpoint == default || serverEndpoint.Family == NetworkFamily.Invalid)
             {
                 SetLocalClientState(ELocalConnectionState.Stopping);
-                Debug.LogError("The server address is invalid.");
+                OnTransportErrorOccurred?.Invoke("The server address is invalid.");
                 SetLocalClientState(ELocalConnectionState.Stopped);
                 return;
             }
@@ -296,7 +297,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             if (_driver.Bind(localEndpoint) != 0)
             {
                 SetLocalClientState(ELocalConnectionState.Stopping);
-                Debug.LogError($"Failed to bind client to local address {localEndpoint.Address} and port {localEndpoint.Port}");
+                OnTransportErrorOccurred?.Invoke($"Failed to bind client to local address {localEndpoint.Address} and port {localEndpoint.Port}");
                 DisposeDrivers();
                 SetLocalClientState(ELocalConnectionState.Stopped);
                 return;
@@ -342,7 +343,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             if (_clientIDToConnection.Count >= _maxNumberOfClients)
             {
                 SetLocalClientState(ELocalConnectionState.Stopping);
-                Debug.LogError("Maximum number of clients reached. Server cannot accept the connection.");
+                OnTransportErrorOccurred?.Invoke("Maximum number of clients reached. Server cannot accept the connection.");
                 SetLocalClientState(ELocalConnectionState.Stopped);
                 return;
             }
@@ -364,7 +365,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         {
             if (!IsServer)
             {
-                Debug.LogError("The server has to be started to disconnect a client.");
+                OnTransportErrorOccurred?.Invoke("The server has to be started to disconnect a client.");
                 return;
             }
 
@@ -379,7 +380,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
 
             if (!_clientIDToConnection.TryGetValue(clientID, out var conn))
             {
-                Debug.LogError($"The client with the ID {clientID} does not exist");
+                OnTransportErrorOccurred?.Invoke($"The client with the ID {clientID} does not exist");
                 return;
             }
             
@@ -519,7 +520,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             
             if (!IsClient)
             {
-                Debug.LogError("The local client has to be started to send data to the server.");
+                OnTransportErrorOccurred?.Invoke("The local client has to be started to send data to the server.");
                 return;
             }
 
@@ -547,14 +548,13 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             
             if (!IsServer)
             {
-                Debug.LogError("The server has to be started to send data to clients.");
+                OnTransportErrorOccurred?.Invoke("The server has to be started to send data to clients.");
                 return;
             }
 
             if (!_clientIDToConnection.TryGetValue(clientID, out var conn))
             {
-                Debug.LogError($"The client with the ID {clientID} does not exist!");
-                // TODO : handle failed sends
+                OnTransportErrorOccurred?.Invoke($"The client with the ID {clientID} does not exist!");
                 return;
             }
             
@@ -589,7 +589,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                     var result = _driver.BeginSend(sendTarget.Pipeline, sendTarget.Connection, out var writer);
                     if (result != (int)StatusCode.Success)
                     {
-                        Debug.LogError($"Sending data failed: {result}");
+                        OnTransportErrorOccurred?.Invoke($"Sending data start failed: {ParseStatusCode(result)}");
                         return;
                     }
 
@@ -605,9 +605,8 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
 
                     if (result != (int)StatusCode.NetworkSendQueueFull)
                     {
-                        Debug.LogError("Error sending a message!");
+                        OnTransportErrorOccurred?.Invoke($"Sending data end failed: {ParseStatusCode(result)}");
                         sendQueue.Dequeue().Dispose();
-                        // TODO : handle error
                     }
 
                     return;
@@ -747,6 +746,35 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             }
 
             sendTargets.Dispose();
+        }
+
+        private static string ParseStatusCode(int code)
+        {
+            switch ((StatusCode)code)
+            {
+                case StatusCode.Success:
+                    return "Operation completed successfully.";
+                case StatusCode.NetworkIdMismatch:
+                    return "Connection is invalid.";
+                case StatusCode.NetworkVersionMismatch:
+                    return "Connection is invalid. This is usually caused by an attempt to use a connection that has been already closed.";
+                case StatusCode.NetworkStateMismatch:
+                    return "State of the connection is invalid for the operation requested. This is usually caused by an attempt to send on a connecting/closed connection.";
+                case StatusCode.NetworkPacketOverflow:
+                    return "Packet is too large for the supported capacity.";
+                case StatusCode.NetworkSendQueueFull:
+                    return "Packet couldn't be sent because the send queue is full.";
+                case StatusCode.NetworkDriverParallelForErr:
+                    return "Attempted to process the same connection in different jobs.";
+                case StatusCode.NetworkSendHandleInvalid:
+                    return "The DataStreamWriter is invalid.";
+                case StatusCode.NetworkReceiveQueueFull:
+                    return "A message couldn't be received because the receive queue is full. This can only be returned through ReceiveErrorCode.";
+                case StatusCode.NetworkSocketError:
+                    return "There was an error from the underlying low-level socket.";
+                default:
+                    return string.Empty;
+            }
         }
         
         #endregion

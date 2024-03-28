@@ -6,8 +6,21 @@ namespace jKnepel.SimpleUnityNetworking.Logging
     public class LoggerSettings
     {
         /// <summary>
-        /// Whether debug messages should also be printed to the console.
+        /// Whether logged messages by the framework should also be printed to the console.
         /// </summary>
-        public bool PrintDebugToConsole = true;
+        public bool PrintToConsole = true;
+
+        /// <summary>
+        /// Whether log level messages should be printed to the console.
+        /// </summary>
+        public bool PrintLog = true;
+        /// <summary>
+        /// Whether warning level messages should be printed to the console.
+        /// </summary>
+        public bool PrintWarning = true;
+        /// <summary>
+        /// Whether error level messages should be printed to the console.
+        /// </summary>
+        public bool PrintError = true;
     }
 }

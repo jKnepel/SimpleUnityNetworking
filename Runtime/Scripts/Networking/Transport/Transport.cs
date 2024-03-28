@@ -57,6 +57,11 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         /// Called when a remote client's connection state has been updated
         /// </summary>
         public abstract event Action<uint, ERemoteConnectionState> OnConnectionUpdated;
+        
+        /// <summary>
+        /// Called when an error occurred in the underlying transport.
+        /// </summary>
+        public abstract event Action<string> OnTransportErrorOccurred;
 
         protected Transport(TransportSettings settings)
         {
