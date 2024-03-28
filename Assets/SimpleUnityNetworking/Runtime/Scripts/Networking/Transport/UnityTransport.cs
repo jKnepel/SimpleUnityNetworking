@@ -4,10 +4,8 @@ using System.Linq;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Utilities;
 using UnityEngine;
-using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
-using Unity.Jobs;
 using Unity.Networking.Transport;
 using Unity.Networking.Transport.Error;
 using Unity.Networking.Transport.Utilities;
@@ -124,7 +122,6 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         
         private bool _disposed;
         
-        private TransportSettings _settings;
         private int _maxNumberOfClients;
         
         private NetworkDriver _driver;
@@ -165,10 +162,8 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         
         #region lifecycle
         
-        public UnityTransport(TransportSettings settings = null)
-        {
-            SetTransportSettings(settings);
-        }
+        public UnityTransport(TransportSettings settings)
+            : base(settings) {}
         
         protected override void Dispose(bool disposing)
         {
@@ -193,11 +188,6 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             _disposed = true;
         }
 
-        public override void SetTransportSettings(TransportSettings settings)
-        {
-            _settings = settings;
-        }
-
         public override void StartServer()
         {
             if (LocalServerState is ELocalConnectionState.Starting or ELocalConnectionState.Started)
@@ -208,13 +198,13 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
 
             SetLocalServerState(ELocalConnectionState.Starting);
 
-            var port = _settings.Port == 0 ? NetworkUtilities.FindNextAvailablePort() : _settings.Port;
+            var port = Settings.Port == 0 ? NetworkUtilities.FindNextAvailablePort() : Settings.Port;
             NetworkEndpoint endpoint = default;
             
-            if (!string.IsNullOrEmpty(_settings.ServerListenAddress))
+            if (!string.IsNullOrEmpty(Settings.ServerListenAddress))
             {
-                if (!NetworkEndpoint.TryParse(_settings.Address, port, out endpoint))
-                    NetworkEndpoint.TryParse(_settings.Address, port, out endpoint, NetworkFamily.Ipv6);
+                if (!NetworkEndpoint.TryParse(Settings.Address, port, out endpoint))
+                    NetworkEndpoint.TryParse(Settings.Address, port, out endpoint, NetworkFamily.Ipv6);
             }
             else
             {
@@ -240,7 +230,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                 return;
             }
 
-            _maxNumberOfClients = _settings.MaxNumberOfClients;
+            _maxNumberOfClients = Settings.MaxNumberOfClients;
             _clientIDToConnection = new();
             _connectionToClientID = new();
             _driver.Listen();
@@ -290,8 +280,8 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             
             SetLocalClientState(ELocalConnectionState.Starting);
 
-            if (!NetworkEndpoint.TryParse(_settings.Address, _settings.Port, out var serverEndpoint))
-                NetworkEndpoint.TryParse(_settings.Address, _settings.Port, out serverEndpoint, NetworkFamily.Ipv6);
+            if (!NetworkEndpoint.TryParse(Settings.Address, Settings.Port, out var serverEndpoint))
+                NetworkEndpoint.TryParse(Settings.Address, Settings.Port, out serverEndpoint, NetworkFamily.Ipv6);
             if (serverEndpoint == default || serverEndpoint.Family == NetworkFamily.Invalid)
             {
                 SetLocalClientState(ELocalConnectionState.Stopping);
@@ -625,6 +615,51 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             }
         }
         
+        public override int GetRTTToServer()
+        {
+            if (!IsClient) return 0;
+            if (IsHost) return 100;
+            
+            _driver.GetPipelineBuffers(
+                _reliablePipeline, 
+                NetworkPipelineStageId.Get<ReliableSequencedPipelineStage>(),
+                _serverConnection,
+                out _,
+                out _,
+                out var sharedBuffer
+            );
+
+            unsafe
+            {
+                var sharedContext = (ReliableUtility.SharedContext*)sharedBuffer.GetUnsafePtr();
+                return sharedContext->RttInfo.LastRtt;
+            }
+        }
+
+        public override int GetRTTToClient(uint clientID)
+        {
+            if (!IsServer) return 0;
+            if (IsHost && clientID == _hostClientID) return 100;
+
+            if (!_clientIDToConnection.TryGetValue(clientID, out var conn))
+                return 0;
+            
+            _driver.GetPipelineBuffers(
+                _reliablePipeline, 
+                NetworkPipelineStageId.Get<ReliableSequencedPipelineStage>(),
+                conn,
+                out _,
+                out _,
+                out var sharedBuffer
+            );
+
+            unsafe
+            {
+                var sharedContext = (ReliableUtility.SharedContext*)sharedBuffer.GetUnsafePtr();
+                return sharedContext->RttInfo.LastRtt;
+            }
+        }
+        
         #endregion
         
         #region utility
@@ -647,18 +682,18 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         {
             _networkSettings = new(Allocator.Persistent);
             _networkSettings.WithNetworkConfigParameters(
-                connectTimeoutMS: _settings.ConnectTimeoutMS,
-                maxConnectAttempts: _settings.MaxConnectAttempts,
-                disconnectTimeoutMS: _settings.DisconnectTimeoutMS,
-                heartbeatTimeoutMS: _settings.HeartbeatTimeoutMS
+                connectTimeoutMS: Settings.ConnectTimeoutMS,
+                maxConnectAttempts: Settings.MaxConnectAttempts,
+                disconnectTimeoutMS: Settings.DisconnectTimeoutMS,
+                heartbeatTimeoutMS: Settings.HeartbeatTimeoutMS
             );
             _networkSettings.WithFragmentationStageParameters(
-                payloadCapacity: _settings.PayloadCapacity
+                payloadCapacity: Settings.PayloadCapacity
             );
             _networkSettings.WithReliableStageParameters(
-                windowSize: _settings.WindowSize,
-                minimumResendTime: _settings.MinimumResendTime,
-                maximumResendTime: _settings.MaximumResendTime
+                windowSize: Settings.WindowSize,
+                minimumResendTime: Settings.MinimumResendTime,
+                maximumResendTime: Settings.MaximumResendTime
             );
             
             _driver = NetworkDriver.Create(_networkSettings);

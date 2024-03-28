@@ -81,8 +81,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             if (disposing)
             {
-                Transport?.Dispose();
             }
+            
+            Transport?.Dispose();
         }
 
         public void Update()
