@@ -1,5 +1,6 @@
+using System;
 using jKnepel.SimpleUnityNetworking.Logging;
-using jKnepel.SimpleUnityNetworking.Serialisation;
+using jKnepel.SimpleUnityNetworking.Serialising;
 using jKnepel.SimpleUnityNetworking.Transporting;
 using System.Linq;
 using UnityEngine;
@@ -12,6 +13,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         #region fields
         
         private readonly INetworkManager _manager;
+        private readonly Action _repaint;
 
         private readonly GUIStyle _style = new();
         
@@ -31,18 +33,26 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private bool _isAutoscroll = true;
         private Vector2 _messagesViewPos;
         
-        private readonly Color[] _scrollViewColours = { new(0.25f, 0.25f, 0.25f), new(0.23f, 0.23f, 0.23f) };
+        private readonly Color[] _scrollViewColours =
+        {
+            new(0.25f, 0.25f, 0.25f), 
+            new(0.23f, 0.23f, 0.23f)
+        };
 
         private Texture2D _texture;
-        private Texture2D Texture => _texture ? _texture : _texture = new(1, 1);
+        private Texture2D Texture => _texture 
+            ? _texture 
+            : _texture = new(1, 1);
 
         #endregion
         
         #region lifecycle
 
-        public INetworkManagerEditor(INetworkManager manager)
+        public INetworkManagerEditor(INetworkManager manager, Action repaint)
         {
             _manager = manager;
+            _repaint = repaint;
+            _manager.OnLogMessageAdded += _ => _repaint?.Invoke();
         }
 
         public void OnInspectorGUI()

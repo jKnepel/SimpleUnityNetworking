@@ -1,7 +1,7 @@
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
-using jKnepel.SimpleUnityNetworking.Serialisation;
+using jKnepel.SimpleUnityNetworking.Serialising;
 using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using System.Collections.Concurrent;
@@ -109,6 +109,8 @@ namespace jKnepel.SimpleUnityNetworking
         /// Called by the local client when a remote client updated its information
         /// </summary>
         event Action<uint> Client_OnRemoteClientUpdated;
+
+        event Action<Message> OnLogMessageAdded;
         
         #endregion
         

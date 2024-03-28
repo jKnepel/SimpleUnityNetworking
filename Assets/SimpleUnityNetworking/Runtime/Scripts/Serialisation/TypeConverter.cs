@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace jKnepel.SimpleUnityNetworking.Serialisation
+namespace jKnepel.SimpleUnityNetworking.Serialising
 {
     // memory layout conversion inspired by https://stackoverflow.com/a/619307
     public static class TypeConverter

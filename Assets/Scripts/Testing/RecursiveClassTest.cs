@@ -1,12 +1,10 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
-using jKnepel.SimpleUnityNetworking.Serialisation;
+using jKnepel.SimpleUnityNetworking.Serialising;
 
 public class RecursiveClassTest : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
         TestMessage[] messages2 = { new("jkl"), new("mno") };
         Dictionary<uint, TestMessage> messages = new() { { 1, new TestMessage("def") }, { 2, new TestMessage("ghi") } };

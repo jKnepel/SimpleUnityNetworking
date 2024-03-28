@@ -1,6 +1,6 @@
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
-using jKnepel.SimpleUnityNetworking.Serialisation;
+using jKnepel.SimpleUnityNetworking.Serialising;
 using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using System.Collections.Concurrent;
@@ -59,6 +59,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 			    if (_cachedLoggerConfiguration == value) return;
 			    
 			    NetworkManager.LoggerConfiguration = _cachedLoggerConfiguration = value;
+			    NetworkManager.OnLogMessageAdded += msg => OnLogMessageAdded?.Invoke(msg);
 			    
 #if UNITY_EDITOR
 			    if (!EditorApplication.isPlaying)
@@ -88,6 +89,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    public event Action<uint> Client_OnRemoteClientConnected;
 	    public event Action<uint> Client_OnRemoteClientDisconnected;
 	    public event Action<uint> Client_OnRemoteClientUpdated;
+
+	    public event Action<Message> OnLogMessageAdded;
 
 	    private NetworkManager _networkManager;
 	    public NetworkManager NetworkManager

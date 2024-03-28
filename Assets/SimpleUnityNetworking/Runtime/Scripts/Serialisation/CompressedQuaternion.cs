@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace jKnepel.SimpleUnityNetworking.Serialisation
+namespace jKnepel.SimpleUnityNetworking.Serialising
 {
     public struct CompressedQuaternion
 	{   // thanks to Glenn Fiedler https://gafferongames.com/post/snapshot_compression/

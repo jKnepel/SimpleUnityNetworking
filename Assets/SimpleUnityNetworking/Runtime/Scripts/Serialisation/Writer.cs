@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using UnityEngine;
 
-namespace jKnepel.SimpleUnityNetworking.Serialisation
+namespace jKnepel.SimpleUnityNetworking.Serialising
 {
     public class Writer
     {

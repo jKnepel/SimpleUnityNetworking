@@ -1,6 +1,6 @@
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
-using jKnepel.SimpleUnityNetworking.Serialisation;
+using jKnepel.SimpleUnityNetworking.Serialising;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;

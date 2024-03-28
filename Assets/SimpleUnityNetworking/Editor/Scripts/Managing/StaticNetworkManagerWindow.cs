@@ -15,7 +15,7 @@ namespace jKnepel.SimpleUnityNetworking
             {
                 if (_networkManagerEditor != null)
                     return _networkManagerEditor;
-                return _networkManagerEditor = new (StaticNetworkManager.NetworkManager);
+                return _networkManagerEditor = new (StaticNetworkManager.NetworkManager, Repaint);
             }
         }
         

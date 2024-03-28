@@ -1,6 +1,6 @@
 using System;
 
-namespace jKnepel.SimpleUnityNetworking.Serialisation
+namespace jKnepel.SimpleUnityNetworking.Serialising
 {
     public class SerialiseNotImplemented : Exception
     {

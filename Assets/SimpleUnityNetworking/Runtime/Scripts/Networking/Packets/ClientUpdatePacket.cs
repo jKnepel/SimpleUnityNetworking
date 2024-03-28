@@ -1,4 +1,4 @@
-using jKnepel.SimpleUnityNetworking.Serialisation;
+using jKnepel.SimpleUnityNetworking.Serialising;
 using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Networking.Packets
