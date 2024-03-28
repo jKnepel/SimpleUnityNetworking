@@ -1,7 +1,6 @@
 using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
-using jKnepel.SimpleUnityNetworking.Utilities;
-using jKnepel.SimpleUnityNetworking.Serialisation;
+using jKnepel.SimpleUnityNetworking.Serialising;
 using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using UnityEngine;
@@ -37,7 +36,17 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public SerialiserConfiguration SerialiserConfiguration { get; set; }
 
         private Logger Logger => LoggerConfiguration.Logger;
-        public LoggerConfiguration LoggerConfiguration { get; set; }
+        private LoggerConfiguration _loggerConfiguration;
+        public LoggerConfiguration LoggerConfiguration
+        {
+            get => _loggerConfiguration;
+            set
+            {
+                if (value == _loggerConfiguration) return;
+                _loggerConfiguration = value;
+                Logger.OnMessageAdded += msg => OnLogMessageAdded?.Invoke(msg);
+            }
+        }
 
         public bool IsOnline => IsServer || IsClient;
         public bool IsServer => Transport?.IsServer ?? false;
@@ -46,6 +55,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         
         public ServerInformation ServerInformation { get; private set; }
         public ClientInformation ClientInformation { get; private set; }
+        
+        public event Action<Message> OnLogMessageAdded;
 
         private bool _disposed;
 

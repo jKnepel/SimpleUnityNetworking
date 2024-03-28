@@ -9,7 +9,7 @@ using System.Runtime.Serialization;
 using System.Text;
 using UnityEngine;
 
-namespace jKnepel.SimpleUnityNetworking.Serialisation
+namespace jKnepel.SimpleUnityNetworking.Serialising
 {
     public class Reader
     {

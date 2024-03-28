@@ -1,4 +1,4 @@
-using jKnepel.SimpleUnityNetworking.Serialisation;
+using jKnepel.SimpleUnityNetworking.Serialising;
 
 namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 {

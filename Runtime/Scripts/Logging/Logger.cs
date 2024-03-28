@@ -11,7 +11,7 @@ namespace jKnepel.SimpleUnityNetworking.Logging
         private readonly List<Message> _messages = new();
         public List<Message> Messages => _messages;
 
-        public event Action OnMessageAdded;
+        public event Action<Message> OnMessageAdded;
 
         public Logger(LoggerSettings settings)
         {
@@ -23,26 +23,26 @@ namespace jKnepel.SimpleUnityNetworking.Logging
             _settings = settings;
         }
 
-        public void Log(string msg, EMessageSeverity sev = EMessageSeverity.Error, bool isDebug = false)
+        public void Log(string text, EMessageSeverity sev = EMessageSeverity.Error)
         {
-            var formattedTime = DateTime.Now.ToString("H:mm:ss");
+            Message msg = new(text, DateTime.Now, sev);
             lock (_messages)
-                _messages.Add(new($"[{formattedTime}] {msg}", sev));
+                _messages.Add(msg);
             
-            OnMessageAdded?.Invoke();
+            OnMessageAdded?.Invoke(msg);
             
-            if (!isDebug || _settings.PrintDebugToConsole) return;
+            if (!_settings.PrintDebugToConsole) return;
             
             switch (sev)
             {
                 case EMessageSeverity.Log:
-                    Debug.Log($"[{formattedTime}] {msg}");
+                    Debug.Log(msg.GetFormattedString());
                     break;
                 case EMessageSeverity.Warning:
-                    Debug.LogWarning($"[{formattedTime}] {msg}");
+                    Debug.LogWarning(msg.GetFormattedString());
                     break;
                 case EMessageSeverity.Error:
-                    Debug.LogError($"[{formattedTime}] {msg}");
+                    Debug.LogError(msg.GetFormattedString());
                     break;
             }
         }
@@ -51,12 +51,20 @@ namespace jKnepel.SimpleUnityNetworking.Logging
     public struct Message
     {
         public string Text;
+        public DateTime Time;
         public EMessageSeverity Severity;
 
-        public Message(string text, EMessageSeverity severity = EMessageSeverity.Log)
+        public Message(string text, DateTime time, EMessageSeverity severity)
         {
             Text = text;
             Severity = severity;
+            Time = time;
+        }
+
+        public string GetFormattedString()
+        {
+            var formattedTime = Time.ToString("H:mm:ss");
+            return $"[{formattedTime}] {Text}";
         }
     }
 

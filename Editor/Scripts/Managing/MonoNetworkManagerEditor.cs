@@ -12,7 +12,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             {
                 if (_networkManagerEditor != null)
                     return _networkManagerEditor;
-                return _networkManagerEditor = new((MonoNetworkManager)target);
+                return _networkManagerEditor = new((MonoNetworkManager)target, Repaint);
             }
         }
 
