@@ -50,14 +50,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    }
 
 	    [SerializeField] private LoggerConfiguration _cachedLoggerConfiguration;
-
 	    public LoggerConfiguration LoggerConfiguration
 	    {
 		    get => _cachedLoggerConfiguration;
 		    set
 		    {
 			    if (_cachedLoggerConfiguration == value) return;
-			    
 			    NetworkManager.LoggerConfiguration = _cachedLoggerConfiguration = value;
 			    NetworkManager.OnLogMessageAdded += msg => OnLogMessageAdded?.Invoke(msg);
 			    
@@ -108,6 +106,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
 	    private void Awake()
 	    {
+		    Application.targetFrameRate = 10;
 		    NetworkManager.Server_OnLocalStateUpdated += state => Server_OnLocalStateUpdated?.Invoke(state);
 		    NetworkManager.Server_OnRemoteClientConnected += id => Server_OnRemoteClientConnected?.Invoke(id);
 		    NetworkManager.Server_OnRemoteClientDisconnected += id => Server_OnRemoteClientDisconnected?.Invoke(id);

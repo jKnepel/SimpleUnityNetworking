@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Utilities;
 using Unity.Collections;
@@ -8,6 +5,9 @@ using Unity.Collections.LowLevel.Unsafe;
 using Unity.Networking.Transport;
 using Unity.Networking.Transport.Error;
 using Unity.Networking.Transport.Utilities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace jKnepel.SimpleUnityNetworking.Transporting
 {
@@ -108,7 +108,6 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                     {
                         Debug.LogError("Error sending a message!");
                         Queue.Dequeue();
-                        // TODO : handle error
                     }
 
                     return;
@@ -404,9 +403,9 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             if (!_driver.IsCreated) return;
 
             _driver.ScheduleUpdate().Complete();
-            
-            while (AcceptConnection() && _driver.IsCreated) {}
-            while (ProcessEvent() && _driver.IsCreated) {}
+
+            while (_driver.IsCreated && AcceptConnection()) {}
+            while (_driver.IsCreated && ProcessEvent()) {}
         }
 
         private bool AcceptConnection()
@@ -433,16 +432,15 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         private bool ProcessEvent()
         {
             var eventType = _driver.PopEvent(out var conn, out var reader, out var pipe);
+
             switch (eventType)
             {
-                case NetworkEvent.Type.Empty:
-                    break;
                 case NetworkEvent.Type.Data:
                     HandleData(conn, reader, pipe);
-                    break;
+                    return true;
                 case NetworkEvent.Type.Connect:
                     SetLocalClientState(ELocalConnectionState.Started);
-                    break;
+                    return true;
                 case NetworkEvent.Type.Disconnect:
                     if (LocalClientState is ELocalConnectionState.Starting or ELocalConnectionState.Started
                         && conn.Equals(_serverConnection))
@@ -462,10 +460,10 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                         OnConnectionUpdated?.Invoke(clientID, ERemoteConnectionState.Disconnected);
                     }
                     // TODO : handle reason
-                    break;
+                    return true;
+                default:
+                    return true;
             }
-
-            return false;
         }
 
         private void HandleData(NetworkConnection conn, DataStreamReader reader, NetworkPipeline pipe)
