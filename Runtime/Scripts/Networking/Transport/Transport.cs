@@ -1,3 +1,4 @@
+using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
 using System;
 
@@ -58,9 +59,9 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         public abstract event Action<uint, ERemoteConnectionState> OnConnectionUpdated;
         
         /// <summary>
-        /// Called when an error occurred in the underlying transport.
+        /// Called when aa log message was added in the underlying transport
         /// </summary>
-        public abstract event Action<string> OnTransportErrorOccurred;
+        public abstract event Action<string, EMessageSeverity> OnTransportLogAdded;
 
         protected Transport(TransportSettings settings)
         {

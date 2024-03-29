@@ -30,13 +30,15 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 Transport.OnServerReceivedData += OnServerReceivedData;
                 Transport.OnClientReceivedData += OnClientReceivedData;
                 Transport.OnConnectionUpdated += OnRemoteConnectionStateUpdated;
-                Transport.OnTransportErrorOccurred += text => Logger.Log(text, EMessageSeverity.Error);
+                
+                if (Logger is null) return;
+                Transport.OnTransportLogAdded += Logger.Log;
             }
         }
 
         public SerialiserConfiguration SerialiserConfiguration { get; set; }
 
-        private Logger Logger => LoggerConfiguration.Logger;
+        private Logger Logger => LoggerConfiguration?.Logger;
         private LoggerConfiguration _loggerConfiguration;
         public LoggerConfiguration LoggerConfiguration
         {
@@ -48,6 +50,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
                 if (_loggerConfiguration is null) return;
                 Logger.OnMessageAdded += msg => OnLogMessageAdded?.Invoke(msg);
+                
+                if (Transport is null) return;
+                Transport.OnTransportLogAdded += Logger.Log;
             }
         }
 
