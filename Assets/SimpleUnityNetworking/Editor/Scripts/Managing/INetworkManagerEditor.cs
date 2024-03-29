@@ -10,10 +10,18 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 {
     internal class INetworkManagerEditor
     {
+        public enum EAllowStart
+        {
+            Anywhere,
+            OnlyEditor,
+            OnlyPlaymode
+        }
+        
         #region fields
         
         private readonly INetworkManager _manager;
         private readonly Action _repaint;
+        private readonly EAllowStart _allowStart;
 
         private readonly GUIStyle _style = new();
         
@@ -35,10 +43,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         
         #region lifecycle
 
-        public INetworkManagerEditor(INetworkManager manager, Action repaint)
+        public INetworkManagerEditor(INetworkManager manager, Action repaint, EAllowStart allowStart)
         {
             _manager = manager;
             _repaint = repaint;
+            _allowStart = allowStart;
         }
 
         public void OnInspectorGUI()
@@ -134,7 +143,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 if (!_manager.IsServer)
                 {
                     _servername = EditorGUILayout.TextField(new GUIContent("Servername:"), _servername);
-                    if (GUILayout.Button(new GUIContent("Start Server")))
+                    if (GUILayout.Button(new GUIContent("Start Server")) && AllowStart())
                         _manager.StartServer(_servername);
                 }
                 else
@@ -181,7 +190,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 {
                     _username = EditorGUILayout.TextField(new GUIContent("Username:"), _username);
                     _userColour = EditorGUILayout.ColorField(new GUIContent("User colour:"), _userColour);
-                    if (GUILayout.Button(new GUIContent("Start Client")))
+                    if (GUILayout.Button(new GUIContent("Start Client")) && AllowStart())
                         _manager.StartClient(_username, _userColour);
                 }
                 else
@@ -224,6 +233,21 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         #endregion
         
         #region utilities
+
+        private bool AllowStart()
+        {
+            switch (_allowStart)
+            {
+                case EAllowStart.Anywhere:
+                    return true;
+                case EAllowStart.OnlyEditor:
+                    return !EditorApplication.isPlaying;
+                case EAllowStart.OnlyPlaymode:
+                    return EditorApplication.isPlaying;
+                default:
+                    return false;
+            }
+        }
         
         private static void DrawToggleFoldout(string title, ref bool isExpanded, 
             bool? checkbox = null, string checkboxLabel = null)
