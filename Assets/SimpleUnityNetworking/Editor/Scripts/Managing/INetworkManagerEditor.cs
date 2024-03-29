@@ -1,10 +1,10 @@
 using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using jKnepel.SimpleUnityNetworking.Transporting;
-using UnityEngine;
-using UnityEditor;
 using System;
 using System.Linq;
+using UnityEngine;
+using UnityEditor;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
@@ -236,17 +236,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private bool AllowStart()
         {
-            switch (_allowStart)
+            return _allowStart switch
             {
-                case EAllowStart.Anywhere:
-                    return true;
-                case EAllowStart.OnlyEditor:
-                    return !EditorApplication.isPlaying;
-                case EAllowStart.OnlyPlaymode:
-                    return EditorApplication.isPlaying;
-                default:
-                    return false;
-            }
+                EAllowStart.Anywhere => true,
+                EAllowStart.OnlyEditor => !EditorApplication.isPlaying,
+                EAllowStart.OnlyPlaymode => EditorApplication.isPlaying,
+                _ => false
+            };
         }
         
         private static void DrawToggleFoldout(string title, ref bool isExpanded, 

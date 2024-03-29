@@ -581,6 +581,7 @@ GameObject:
   - component: {fileID: 1872444380}
   - component: {fileID: 1872444381}
   - component: {fileID: 1872444382}
+  - component: {fileID: 1872444383}
   m_Layer: 0
   m_Name: Test
   m_TagString: Untagged
@@ -610,7 +611,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1872444376}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 78c3dc5ec407acc44aa407c16f478e05, type: 3}
   m_Name: 
@@ -657,6 +658,21 @@ MonoBehaviour:
   _synchronise: 0
   _sendObject: {fileID: 556541965}
   _receiveObject: {fileID: 1024056661}
+--- !u!114 &1872444383
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1872444376}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e43f58b42439ea94d8aee8dac5b15303, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _manager: {fileID: 516821387}
+  _targetClientID: 0
+  _message: 
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

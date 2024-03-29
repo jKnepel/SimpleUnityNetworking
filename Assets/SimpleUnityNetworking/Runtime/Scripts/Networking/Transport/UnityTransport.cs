@@ -1,3 +1,4 @@
+using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Utilities;
 using System;
@@ -7,115 +8,13 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Networking.Transport;
 using Unity.Networking.Transport.Error;
+using Unity.Networking.Transport.Relay;
 using Unity.Networking.Transport.Utilities;
 
 namespace jKnepel.SimpleUnityNetworking.Transporting
 {
-    public sealed class UnityTransport : Transport
+    public sealed partial class UnityTransport : Transport
     {
-        private readonly struct SendTarget : IEquatable<SendTarget>
-        {
-            public readonly NetworkConnection Connection;
-            public readonly NetworkPipeline Pipeline;
-            
-            public SendTarget(NetworkConnection conn, NetworkPipeline pipe)
-            {
-                Connection = conn;
-                Pipeline = pipe;
-            }
-            
-            public bool Equals(SendTarget other)
-            {
-                return other.Connection.Equals(Connection);
-            }
-
-            public override bool Equals(object obj)
-            {
-                return obj is SendTarget other && Equals(other);
-            }
-
-            public override int GetHashCode()
-            {
-                return HashCode.Combine(Connection, Pipeline);
-            }
-        }
-        
-        // TODO : implement batching
-        private struct SendQueue : IDisposable
-        {
-            private NativeQueue<NativeArray<byte>> _messages;
-
-            public int Count => _messages.Count;
-
-            public SendQueue(int i)
-            {
-                _messages = new(Allocator.Persistent);
-            }
-
-            public void Dispose()
-            {
-                if (_messages.IsCreated)
-                    _messages.Dispose();
-            }
-
-            public void Enqueue(NativeArray<byte> message)
-            {
-                _messages.Enqueue(message);
-            }
-
-            public NativeArray<byte> Dequeue()
-            {
-                return _messages.Dequeue();
-            }
-
-            public NativeArray<byte> Peek()
-            {
-                return _messages.Peek();
-            }
-        }
-
-        /*
-         * TODO : implement once message batching works
-        [BurstCompile]
-        private struct SendQueueJob : IJob
-        {
-            public NetworkDriver.Concurrent Driver;
-            public SendTarget Target;
-            public SendQueue Queue;
-            
-            public void Execute()
-            {
-                while (Queue.Count > 0)
-                {
-                    var result = Driver.BeginSend(Target.Pipeline, Target.Connection, out var writer);
-                    if (result != (int)StatusCode.Success)
-                    {
-                        Debug.LogError($"Sending data failed: {result}");
-                        return;
-                    }
-
-                    var data = Queue.Peek();
-                    writer.WriteBytes(data);
-                    result = Driver.EndSend(writer);
-
-                    if (result == data.Length)
-                    {
-                        Queue.Dequeue();
-                        continue;
-                    }
-
-                    if (result != (int)StatusCode.NetworkSendQueueFull)
-                    {
-                        Debug.LogError("Error sending a message!");
-                        Queue.Dequeue();
-                    }
-
-                    return;
-                }
-            }
-        }
-        */
-        
         #region fields
         
         private const int LOCAL_HOST_RTT = 50;
@@ -127,8 +26,11 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         private NetworkDriver _driver;
         private NetworkSettings _networkSettings;
         
+        private RelayServerData _relayServerData;
+        
         private readonly Dictionary<SendTarget, SendQueue> _outgoingMessages = new();
 
+        private NetworkPipeline _unreliablePipeline;
         private NetworkPipeline _unreliableSequencedPipeline;
         private NetworkPipeline _reliablePipeline;
         private NetworkPipeline _reliableSequencedPipeline;
@@ -158,7 +60,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         public override event Action<ELocalConnectionState> OnClientStateUpdated;
         public override event Action<uint, ERemoteConnectionState> OnConnectionUpdated;
 
-        public override event Action<string> OnTransportErrorOccurred;
+        public override event Action<string, EMessageSeverity> OnTransportLogAdded;
 
         #endregion
         
@@ -185,7 +87,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             foreach (var queue in _outgoingMessages.Values)
                 queue.Dispose();
             // TODO : clean/flush outgoing messages
-            DisposeDrivers();
+            DisposeInternals();
 
             _disposed = true;
         }
@@ -194,29 +96,48 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         {
             if (LocalServerState is ELocalConnectionState.Starting or ELocalConnectionState.Started)
             {
-                OnTransportErrorOccurred?.Invoke("Failed to start the server, there already exists a local server.");
+                OnTransportLogAdded?.Invoke("Failed to start the server, there already exists a local server.", EMessageSeverity.Error);
                 return;
             }
 
             SetLocalServerState(ELocalConnectionState.Starting);
-
-            var port = Settings.Port == 0 ? NetworkUtilities.FindNextAvailablePort() : Settings.Port;
-            NetworkEndpoint endpoint;
             
-            if (!string.IsNullOrEmpty(Settings.ServerListenAddress))
+            InitialiseSettings();
+
+            NetworkEndpoint endpoint = default;
+            switch (Settings.ProtocolType)
             {
-                if (!NetworkEndpoint.TryParse(Settings.Address, port, out endpoint))
-                    NetworkEndpoint.TryParse(Settings.Address, port, out endpoint, NetworkFamily.Ipv6);
-            }
-            else
-            {
-                endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(port);
+                case EProtocolType.UnityTransport:
+                    var port = Settings.Port == 0 ? NetworkUtilities.FindNextAvailablePort() : Settings.Port;
+                    if (!string.IsNullOrEmpty(Settings.ServerListenAddress))
+                    {
+                        if (!NetworkEndpoint.TryParse(Settings.Address, port, out endpoint))
+                            NetworkEndpoint.TryParse(Settings.Address, port, out endpoint, NetworkFamily.Ipv6);
+                    }
+                    else
+                    {
+                        endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(port);
+                    }
+                    break;
+                case EProtocolType.UnityRelayTransport:
+                    if (_relayServerData.Equals(default(RelayServerData)))
+                    {
+                        SetLocalServerState(ELocalConnectionState.Stopping);
+                        DisposeInternals();
+                        OnTransportLogAdded?.Invoke("The relay server data needs to be set before a server can be started using the relay protocol.", EMessageSeverity.Error);
+                        SetLocalServerState(ELocalConnectionState.Stopped);
+                        return;
+                    }
+
+                    _networkSettings.WithRelayParameters(ref _relayServerData, Settings.HeartbeatTimeoutMS);
+                    endpoint = NetworkEndpoint.AnyIpv4;
+                    break;
             }
             
             if (endpoint.Family == NetworkFamily.Invalid)
             {
                 SetLocalServerState(ELocalConnectionState.Stopping);
-                OnTransportErrorOccurred?.Invoke("The given local or remote address use an invalid IP family.");
+                OnTransportLogAdded?.Invoke("The given local or remote address uses an invalid IP family.", EMessageSeverity.Error);
                 SetLocalServerState(ELocalConnectionState.Stopped);
                 return;
             }
@@ -226,8 +147,8 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             if (_driver.Bind(endpoint) != 0)
             {
                 SetLocalServerState(ELocalConnectionState.Stopping);
-                OnTransportErrorOccurred?.Invoke($"Failed to bind server to local address {endpoint.Address} and port {endpoint.Port}");
-                DisposeDrivers();
+                DisposeInternals();
+                OnTransportLogAdded?.Invoke($"Failed to bind server to local address {endpoint.Address} and port {endpoint.Port}.", EMessageSeverity.Error);
                 SetLocalServerState(ELocalConnectionState.Stopped);
                 return;
             }
@@ -261,7 +182,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             _clientIDToConnection = null;
             _connectionToClientID = null;
             _clientIDs = 0;
-            DisposeDrivers();
+            DisposeInternals();
 
             SetLocalServerState(ELocalConnectionState.Stopped);
         }
@@ -270,7 +191,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         {
             if (LocalClientState is ELocalConnectionState.Starting or ELocalConnectionState.Started)
             {
-                OnTransportErrorOccurred?.Invoke("Failed to start the client, there already exists a local client.");
+                OnTransportLogAdded?.Invoke("Failed to start the client, there already exists a local client.", EMessageSeverity.Error);
                 return;
             }
 
@@ -282,12 +203,34 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             
             SetLocalClientState(ELocalConnectionState.Starting);
 
-            if (!NetworkEndpoint.TryParse(Settings.Address, Settings.Port, out var serverEndpoint))
-                NetworkEndpoint.TryParse(Settings.Address, Settings.Port, out serverEndpoint, NetworkFamily.Ipv6);
-            if (serverEndpoint == default || serverEndpoint.Family == NetworkFamily.Invalid)
+            InitialiseSettings();
+            
+            NetworkEndpoint serverEndpoint = default;
+            switch (Settings.ProtocolType)
+            {
+                case EProtocolType.UnityTransport:
+                    if (!NetworkEndpoint.TryParse(Settings.Address, Settings.Port, out serverEndpoint))
+                        NetworkEndpoint.TryParse(Settings.Address, Settings.Port, out serverEndpoint, NetworkFamily.Ipv6);
+                    break;
+                case EProtocolType.UnityRelayTransport:
+                    if (_relayServerData.Equals(default(RelayServerData)))
+                    {
+                        SetLocalServerState(ELocalConnectionState.Stopping);
+                        DisposeInternals();
+                        OnTransportLogAdded?.Invoke("The relay server data needs to be set before a client can be started using the relay protocol.", EMessageSeverity.Error);
+                        SetLocalServerState(ELocalConnectionState.Stopped);
+                        return;
+                    }
+
+                    _networkSettings.WithRelayParameters(ref _relayServerData, Settings.HeartbeatTimeoutMS);
+                    serverEndpoint = _relayServerData.Endpoint;
+                    break;
+            }
+            
+            if (serverEndpoint.Family == NetworkFamily.Invalid)
             {
                 SetLocalClientState(ELocalConnectionState.Stopping);
-                OnTransportErrorOccurred?.Invoke("The server address is invalid.");
+                OnTransportLogAdded?.Invoke("The server address is invalid.", EMessageSeverity.Error);
                 SetLocalClientState(ELocalConnectionState.Stopped);
                 return;
             }
@@ -298,8 +241,8 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             if (_driver.Bind(localEndpoint) != 0)
             {
                 SetLocalClientState(ELocalConnectionState.Stopping);
-                OnTransportErrorOccurred?.Invoke($"Failed to bind client to local address {localEndpoint.Address} and port {localEndpoint.Port}");
-                DisposeDrivers();
+                DisposeInternals();
+                OnTransportLogAdded?.Invoke($"Failed to bind client to local address {localEndpoint.Address} and port {localEndpoint.Port}", EMessageSeverity.Error);
                 SetLocalClientState(ELocalConnectionState.Stopped);
                 return;
             }
@@ -326,7 +269,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             
             _driver.ScheduleUpdate().Complete();
             _serverConnection = default;
-            DisposeDrivers();
+            DisposeInternals();
 
             SetLocalClientState(ELocalConnectionState.Stopped);
         }
@@ -344,7 +287,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             if (_clientIDToConnection.Count >= _maxNumberOfClients)
             {
                 SetLocalClientState(ELocalConnectionState.Stopping);
-                OnTransportErrorOccurred?.Invoke("Maximum number of clients reached. Server cannot accept the connection.");
+                OnTransportLogAdded?.Invoke("Maximum number of clients reached. Server cannot accept the connection.", EMessageSeverity.Error);
                 SetLocalClientState(ELocalConnectionState.Stopped);
                 return;
             }
@@ -357,8 +300,8 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         private void StopHostClient()
         {
             SetLocalClientState(ELocalConnectionState.Stopping);
-            OnConnectionUpdated?.Invoke(_hostClientID, ERemoteConnectionState.Disconnected);
             _hostClientID = 0;
+            OnConnectionUpdated?.Invoke(_hostClientID, ERemoteConnectionState.Disconnected);
             SetLocalClientState(ELocalConnectionState.Stopped);
         }
 
@@ -366,14 +309,14 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         {
             if (!IsServer)
             {
-                OnTransportErrorOccurred?.Invoke("The server has to be started to disconnect a client.");
+                OnTransportLogAdded?.Invoke("The server has to be started to disconnect a client.", EMessageSeverity.Error);
                 return;
             }
 
             if (IsHost && clientID == _hostClientID)
             {
-                OnConnectionUpdated?.Invoke(_hostClientID, ERemoteConnectionState.Disconnected);
                 _hostClientID = 0;
+                OnConnectionUpdated?.Invoke(_hostClientID, ERemoteConnectionState.Disconnected);
                 SetLocalClientState(ELocalConnectionState.Stopping);
                 SetLocalClientState(ELocalConnectionState.Stopped);
                 return;
@@ -381,7 +324,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
 
             if (!_clientIDToConnection.TryGetValue(clientID, out var conn))
             {
-                OnTransportErrorOccurred?.Invoke($"The client with the ID {clientID} does not exist");
+                OnTransportLogAdded?.Invoke($"The client with the ID {clientID} does not exist", EMessageSeverity.Error);
                 return;
             }
             
@@ -394,6 +337,21 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             }
             
             OnConnectionUpdated?.Invoke(_hostClientID, ERemoteConnectionState.Disconnected);
+        }
+
+        public void SetRelayServerData(RelayServerData relayServerData)
+        {
+            if (LocalServerState is ELocalConnectionState.Starting or ELocalConnectionState.Started)
+            {
+                OnTransportLogAdded?.Invoke(
+                    "Relay server data should not be set while a local connection is already active!" +
+                    "If you are setting the relay data on the client side of a host, you can ignore this warning, " +
+                    "but setting the relay data again as client is unnecessary."
+                    , EMessageSeverity.Warning);
+            }
+            
+            _relayServerData = relayServerData;
+            Settings.ProtocolType = EProtocolType.UnityRelayTransport;
         }
         
         #endregion
@@ -421,9 +379,10 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             {
                 _driver.Disconnect(conn);
                 while (_driver.PopEventForConnection(conn, out _) != NetworkEvent.Type.Empty) {}
+                return false;
             }
             
-            uint clientID = _clientIDs++;
+            var clientID = _clientIDs++;
             _clientIDToConnection[clientID] = conn;
             _connectionToClientID[conn] = clientID;
             OnConnectionUpdated?.Invoke(clientID, ERemoteConnectionState.Connected);
@@ -450,13 +409,13 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                         SetLocalClientState(ELocalConnectionState.Stopping);
                         // TODO : flush send queues
                         CleanOutgoingMessages(_serverConnection);
-                        DisposeDrivers();
+                        DisposeInternals();
                         SetLocalClientState(ELocalConnectionState.Stopped);
                     }
                     else if (LocalServerState is ELocalConnectionState.Starting or ELocalConnectionState.Started)
                     {
                         // TODO : flush send queues
-                        CleanOutgoingMessages(_serverConnection);
+                        CleanOutgoingMessages(conn);
                         _connectionToClientID.Remove(conn, out var clientID);
                         _clientIDToConnection.Remove(clientID);
                         OnConnectionUpdated?.Invoke(clientID, ERemoteConnectionState.Disconnected);
@@ -470,7 +429,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
 
         private void HandleData(NetworkConnection conn, DataStreamReader reader, NetworkPipeline pipe)
         {
-            byte[] data = new byte[reader.Length];
+            var data = new byte[reader.Length];
             unsafe
             {
                 fixed (byte* dataPtr = data)
@@ -520,15 +479,13 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             
             if (!IsClient)
             {
-                OnTransportErrorOccurred?.Invoke("The local client has to be started to send data to the server.");
+                OnTransportLogAdded?.Invoke("The local client has to be started to send data to the server.", EMessageSeverity.Error);
                 return;
             }
 
             SendTarget target = new(_serverConnection, ParseChannelPipeline(channel));
             if (!_outgoingMessages.TryGetValue(target, out var queue))
-            {
                 _outgoingMessages[target] = queue = new(1);
-            }
 
             queue.Enqueue(new(data, Allocator.Persistent));
         }
@@ -548,21 +505,19 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             
             if (!IsServer)
             {
-                OnTransportErrorOccurred?.Invoke("The server has to be started to send data to clients.");
+                OnTransportLogAdded?.Invoke("The server has to be started to send data to clients.", EMessageSeverity.Error);
                 return;
             }
 
             if (!_clientIDToConnection.TryGetValue(clientID, out var conn))
             {
-                OnTransportErrorOccurred?.Invoke($"The client with the ID {clientID} does not exist!");
+                OnTransportLogAdded?.Invoke($"The client with the ID {clientID} does not exist!", EMessageSeverity.Error);
                 return;
             }
             
             SendTarget target = new(conn, ParseChannelPipeline(channel));
             if (!_outgoingMessages.TryGetValue(target, out var queue))
-            {
                 _outgoingMessages[target] = queue = new(1);
-            }
 
             queue.Enqueue(new(data, Allocator.Persistent));
         }
@@ -589,7 +544,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                     var result = _driver.BeginSend(sendTarget.Pipeline, sendTarget.Connection, out var writer);
                     if (result != (int)StatusCode.Success)
                     {
-                        OnTransportErrorOccurred?.Invoke($"Sending data start failed: {ParseStatusCode(result)}");
+                        OnTransportLogAdded?.Invoke($"Sending data start failed: {ParseStatusCode(result)}", EMessageSeverity.Error);
                         return;
                     }
 
@@ -605,8 +560,8 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
 
                     if (result != (int)StatusCode.NetworkSendQueueFull)
                     {
-                        OnTransportErrorOccurred?.Invoke($"Sending data end failed: {ParseStatusCode(result)}");
                         sendQueue.Dequeue().Dispose();
+                        OnTransportLogAdded?.Invoke($"Sending data end failed: {ParseStatusCode(result)}", EMessageSeverity.Error);
                     }
 
                     return;
@@ -677,7 +632,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             OnClientStateUpdated?.Invoke(_clientState);
         }
 
-        private void InitialiseDrivers()
+        private void InitialiseSettings()
         {
             _networkSettings = new(Allocator.Persistent);
             _networkSettings.WithNetworkConfigParameters(
@@ -694,17 +649,28 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                 minimumResendTime: Settings.MinimumResendTime,
                 maximumResendTime: Settings.MaximumResendTime
             );
-            
+        }
+
+        private void InitialiseDrivers()
+        {
             _driver = NetworkDriver.Create(_networkSettings);
+            _unreliablePipeline = NetworkPipeline.Null;
             _unreliableSequencedPipeline = _driver.CreatePipeline(typeof(UnreliableSequencedPipelineStage));
             _reliablePipeline = _driver.CreatePipeline(typeof(FragmentationPipelineStage));
             _reliableSequencedPipeline = _driver.CreatePipeline(typeof(FragmentationPipelineStage), typeof(ReliableSequencedPipelineStage));
         }
 
-        private void DisposeDrivers()
+        private void DisposeInternals()
         {
             if (_driver.IsCreated) _driver.Dispose();
-            if (_networkSettings.IsCreated) _networkSettings.Dispose();
+            if (_networkSettings.IsCreated)
+            {
+                _networkSettings.Dispose();
+                _networkSettings = default;
+            }
+            _unreliableSequencedPipeline = NetworkPipeline.Null;
+            _reliablePipeline = NetworkPipeline.Null;
+            _reliableSequencedPipeline = NetworkPipeline.Null;
         }
 
         private NetworkPipeline ParseChannelPipeline(ENetworkChannel channel)
@@ -714,7 +680,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                 ENetworkChannel.ReliableOrdered => _reliableSequencedPipeline,
                 ENetworkChannel.ReliableUnordered => _reliablePipeline,
                 ENetworkChannel.UnreliableOrdered => _unreliableSequencedPipeline,
-                ENetworkChannel.UnreliableUnordered => NetworkPipeline.Null,
+                ENetworkChannel.UnreliableUnordered => _unreliablePipeline,
                 _ => NetworkPipeline.Null
             };
         }
@@ -724,7 +690,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             if (pipeline == _reliableSequencedPipeline) return ENetworkChannel.ReliableOrdered;
             if (pipeline == _reliablePipeline) return ENetworkChannel.ReliableUnordered;
             if (pipeline == _unreliableSequencedPipeline) return ENetworkChannel.UnreliableOrdered;
-            if (pipeline == NetworkPipeline.Null) return ENetworkChannel.UnreliableUnordered;
+            if (pipeline == _unreliablePipeline) return ENetworkChannel.UnreliableUnordered;
             return default;
         }
 

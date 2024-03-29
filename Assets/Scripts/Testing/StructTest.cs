@@ -99,7 +99,7 @@ public class StructTest : MonoBehaviour
 
 #if UNITY_EDITOR
 [CustomEditor(typeof(StructTest))]
-public class UnreliableTestEditor : Editor
+public class StructTestEditor : Editor
 {
     private ENetworkChannel _channel = ENetworkChannel.ReliableOrdered;
     
