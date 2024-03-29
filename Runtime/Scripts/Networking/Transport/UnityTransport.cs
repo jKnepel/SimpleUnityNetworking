@@ -201,7 +201,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
             SetLocalServerState(ELocalConnectionState.Starting);
 
             var port = Settings.Port == 0 ? NetworkUtilities.FindNextAvailablePort() : Settings.Port;
-            NetworkEndpoint endpoint = default;
+            NetworkEndpoint endpoint;
             
             if (!string.IsNullOrEmpty(Settings.ServerListenAddress))
             {
@@ -464,7 +464,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
                     // TODO : handle reason
                     return true;
                 default:
-                    return true;
+                    return false;
             }
         }
 
