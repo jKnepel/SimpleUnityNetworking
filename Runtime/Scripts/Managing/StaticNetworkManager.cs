@@ -1,3 +1,4 @@
+using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using jKnepel.SimpleUnityNetworking.Serialising;
@@ -30,6 +31,15 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    {
 		    get => _networkManager.SerialiserConfiguration;
 		    set => _networkManager.SerialiserConfiguration = value;
+	    }
+	    
+	    /// <summary>
+	    /// The configuration for the logger, used to show or save messages by the framework.
+	    /// </summary>
+	    public static LoggerConfiguration LoggerConfiguration
+	    {
+		    get => _networkManager.LoggerConfiguration;
+		    set => _networkManager.LoggerConfiguration = value;
 	    }
 
 	    /// <summary>
@@ -107,6 +117,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    /// Called by the local client when a remote client updated its information
 	    /// </summary>
 	    public static event Action<uint> Client_OnRemoteClientUpdated;
+	    
+	    /// <summary>
+	    /// Called once a new message was added to the logger
+	    /// </summary>
+	    public static event Action<Message> OnLogMessageAdded;
 
 	    private static NetworkManager _networkManager;
 	    public static NetworkManager NetworkManager => _networkManager;
@@ -124,6 +139,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    _networkManager.Client_OnRemoteClientConnected += id => Client_OnRemoteClientConnected?.Invoke(id);
 		    _networkManager.Client_OnRemoteClientDisconnected += id => Client_OnRemoteClientDisconnected?.Invoke(id);
 		    _networkManager.Client_OnRemoteClientUpdated += id => Client_OnRemoteClientUpdated?.Invoke(id);
+		    _networkManager.OnLogMessageAdded += msg => OnLogMessageAdded?.Invoke(msg);
 #if UNITY_EDITOR
 		    EditorApplication.playModeStateChanged += PreventPlayMode;
 #endif

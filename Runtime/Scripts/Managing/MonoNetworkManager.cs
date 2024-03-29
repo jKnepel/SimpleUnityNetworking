@@ -114,6 +114,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    NetworkManager.Client_OnRemoteClientConnected += id => Client_OnRemoteClientConnected?.Invoke(id);
 		    NetworkManager.Client_OnRemoteClientDisconnected += id => Client_OnRemoteClientDisconnected?.Invoke(id);
 		    NetworkManager.Client_OnRemoteClientUpdated += id => Client_OnRemoteClientUpdated?.Invoke(id);
+		    NetworkManager.OnLogMessageAdded += msg => OnLogMessageAdded?.Invoke(msg);
 	    }
 
 	    public void Update()
