@@ -1,10 +1,10 @@
+using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using System.Collections.Concurrent;
-using jKnepel.SimpleUnityNetworking.Logging;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -106,7 +106,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
 	    private void Awake()
 	    {
-		    Application.targetFrameRate = 10;
 		    NetworkManager.Server_OnLocalStateUpdated += state => Server_OnLocalStateUpdated?.Invoke(state);
 		    NetworkManager.Server_OnRemoteClientConnected += id => Server_OnRemoteClientConnected?.Invoke(id);
 		    NetworkManager.Server_OnRemoteClientDisconnected += id => Server_OnRemoteClientDisconnected?.Invoke(id);

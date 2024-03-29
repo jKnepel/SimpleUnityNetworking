@@ -1,13 +1,13 @@
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Utilities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Networking.Transport;
 using Unity.Networking.Transport.Error;
 using Unity.Networking.Transport.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace jKnepel.SimpleUnityNetworking.Transporting
 {
@@ -117,6 +117,8 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         */
         
         #region fields
+        
+        private const int LOCAL_HOST_RTT = 50;
         
         private bool _disposed;
         
@@ -615,7 +617,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         public override int GetRTTToServer()
         {
             if (!IsClient) return 0;
-            if (IsHost) return 100;
+            if (IsHost) return LOCAL_HOST_RTT;
             
             _driver.GetPipelineBuffers(
                 _reliablePipeline, 
@@ -636,7 +638,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
         public override int GetRTTToClient(uint clientID)
         {
             if (!IsServer) return 0;
-            if (IsHost && clientID == _hostClientID) return 100;
+            if (IsHost && clientID == _hostClientID) return LOCAL_HOST_RTT;
 
             if (!_clientIDToConnection.TryGetValue(clientID, out var conn))
                 return 0;

@@ -1,6 +1,5 @@
-using System;
 using jKnepel.SimpleUnityNetworking.Networking;
-using UnityEngine;
+using System;
 
 namespace jKnepel.SimpleUnityNetworking.Transporting
 {
