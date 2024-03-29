@@ -110,6 +110,9 @@ namespace jKnepel.SimpleUnityNetworking
         /// </summary>
         event Action<uint> Client_OnRemoteClientUpdated;
 
+        /// <summary>
+        /// Called once a new message was added to the logger
+        /// </summary>
         event Action<Message> OnLogMessageAdded;
         
         #endregion
