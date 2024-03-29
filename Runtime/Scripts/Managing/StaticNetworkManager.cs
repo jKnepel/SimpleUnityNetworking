@@ -293,11 +293,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    _networkManager.SendStructDataToClients(clientIDs, structData, channel);
 	    }
 
+#if UNITY_EDITOR
 	    private static void PreventPlayMode(PlayModeStateChange state)
 	    {
 		    if (state != PlayModeStateChange.ExitingEditMode || !IsOnline) return;
 		    EditorApplication.isPlaying = false;
 		    Debug.LogWarning("Playmode is not possible while the static network manager is online!");
 	    }
+#endif
     }
 }
