@@ -16,9 +16,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
     {
         public ConcurrentDictionary<uint, ClientInformation> Server_ConnectedClients { get; } = new();
         
-        public ELocalConnectionState Server_LocalState => Transport?.LocalServerState ?? ELocalConnectionState.Stopped;
+        public ELocalServerConnectionState Server_LocalState => _localServerConnectionState;
         
-        public event Action<ELocalConnectionState> Server_OnLocalStateUpdated;
+        public event Action<ELocalServerConnectionState> Server_OnLocalStateUpdated;
         public event Action<uint> Server_OnRemoteClientConnected;
         public event Action<uint> Server_OnRemoteClientDisconnected;
         public event Action<uint> Server_OnRemoteClientUpdated;
@@ -27,6 +27,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private string _cachedServername;
         private int _cachedMaxNumberClients;
+        
+        private ELocalServerConnectionState _localServerConnectionState = ELocalServerConnectionState.Stopped;
         
         private void HandleTransportServerStateUpdate(ELocalConnectionState state)
         {
@@ -47,7 +49,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     Logger?.Log("Server was stopped", EMessageSeverity.Log);
                     break;
             }
-            Server_OnLocalStateUpdated?.Invoke(state);
+            _localServerConnectionState = (ELocalServerConnectionState)state;
+            Server_OnLocalStateUpdated?.Invoke(_localServerConnectionState);
         }
         
         private void OnRemoteConnectionStateUpdated(uint clientID, ERemoteConnectionState state)
@@ -246,5 +249,25 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             return a.SequenceEqual(b);
         }
+    }
+    
+    public enum ELocalServerConnectionState
+    {
+        /// <summary>
+        /// Signifies the start of a local connection
+        /// </summary>
+        Starting = 0,
+        /// <summary>
+        /// Signifies that a local connection has been successfully established
+        /// </summary>
+        Started = 1,
+        /// <summary>
+        /// Signifies that an established local connection is being closed
+        /// </summary>
+        Stopping = 2,
+        /// <summary>
+        /// Signifies that an established local connection was closed
+        /// </summary>
+        Stopped = 3
     }
 }

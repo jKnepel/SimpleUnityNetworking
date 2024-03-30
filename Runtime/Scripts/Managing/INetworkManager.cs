@@ -64,7 +64,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <summary>
         /// The current connection state of the local server
         /// </summary>
-        ELocalConnectionState Server_LocalState { get; }
+        ELocalServerConnectionState Server_LocalState { get; }
         /// <summary>
         /// The clients that are connected to the local server
         /// </summary>
@@ -89,7 +89,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <summary>
         /// Called when the local server's connection state has been updated
         /// </summary>
-        event Action<ELocalConnectionState> Server_OnLocalStateUpdated;
+        event Action<ELocalServerConnectionState> Server_OnLocalStateUpdated;
         /// <summary>
         /// Called by the local server when a new remote client has been authenticated
         /// </summary>
@@ -119,11 +119,6 @@ namespace jKnepel.SimpleUnityNetworking
         /// Called by the local client when a remote client updated its information
         /// </summary>
         event Action<uint> Client_OnRemoteClientUpdated;
-
-        /// <summary>
-        /// Called once a new message was added to the logger
-        /// </summary>
-        event Action<Message> OnLogMessageAdded;
         
         #endregion
         

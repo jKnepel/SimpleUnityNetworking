@@ -21,9 +21,29 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             set
             {
                 if (value == _transportConfiguration) return;
-                Transport?.Dispose();
-                _transportConfiguration = value;
 
+                if (Transport is not null)
+                {
+                    Transport.Dispose();
+                    Transport.OnServerStateUpdated -= HandleTransportServerStateUpdate;
+                    Transport.OnClientStateUpdated -= HandleTransportClientStateUpdate;
+                    Transport.OnServerReceivedData -= OnServerReceivedData;
+                    Transport.OnClientReceivedData -= OnClientReceivedData;
+                    Transport.OnConnectionUpdated -= OnRemoteConnectionStateUpdated;
+                    
+                    if (Logger is not null)
+                        Transport.OnTransportLogAdded += Logger.Log;
+                    
+                    ClientInformation = null;
+                    ServerInformation = null;
+                    _authenticatingClients.Clear();
+                    Client_ConnectedClients.Clear();
+                    Server_ConnectedClients.Clear();
+                    _localClientConnectionState = ELocalClientConnectionState.Stopped;
+                    _localServerConnectionState = ELocalServerConnectionState.Stopped;
+                }
+                _transportConfiguration = value;
+                
                 if (_transportConfiguration is null) return;
                 Transport.OnServerStateUpdated += HandleTransportServerStateUpdate;
                 Transport.OnClientStateUpdated += HandleTransportClientStateUpdate;
@@ -31,8 +51,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 Transport.OnClientReceivedData += OnClientReceivedData;
                 Transport.OnConnectionUpdated += OnRemoteConnectionStateUpdated;
                 
-                if (Logger is null) return;
-                Transport.OnTransportLogAdded += Logger.Log;
+                if (Logger is not null)
+                    Transport.OnTransportLogAdded += Logger.Log;
             }
         }
 
@@ -46,26 +66,29 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             set
             {
                 if (value == _loggerConfiguration) return;
+
+                if (Logger is not null)
+                {
+                    if (Transport is not null)
+                        Transport.OnTransportLogAdded -= Logger.Log;
+                }
                 _loggerConfiguration = value;
 
                 if (_loggerConfiguration is null) return;
-                Logger.OnMessageAdded += msg => OnLogMessageAdded?.Invoke(msg);
                 
-                if (Transport is null) return;
-                Transport.OnTransportLogAdded += Logger.Log;
+                if (Transport is not null)
+                    Transport.OnTransportLogAdded += Logger.Log;
             }
         }
 
         public bool IsOnline => IsServer || IsClient;
-        public bool IsServer => Transport?.IsServer ?? false;
+        public bool IsServer => Server_LocalState == ELocalServerConnectionState.Started;
         public bool IsClient => Client_LocalState == ELocalClientConnectionState.Authenticated;
         public bool IsHost => IsServer && IsClient;
         
         public ServerInformation ServerInformation { get; private set; }
         public ClientInformation ClientInformation { get; private set; }
         
-        public event Action<Message> OnLogMessageAdded;
-
         private bool _disposed;
 
         #endregion
