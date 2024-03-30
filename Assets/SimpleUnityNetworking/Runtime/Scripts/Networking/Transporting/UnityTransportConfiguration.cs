@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace jKnepel.SimpleUnityNetworking.Transporting
+namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 {
     [CreateAssetMenu(fileName = "UnityTransportConfiguration", menuName = "SimpleUnityNetworking/UnityTransportConfiguration")]
     public class UnityTransportConfiguration : TransportConfiguration

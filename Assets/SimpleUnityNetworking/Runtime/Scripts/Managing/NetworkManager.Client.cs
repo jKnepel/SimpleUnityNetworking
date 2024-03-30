@@ -1,9 +1,9 @@
 using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.Packets;
+using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
-using jKnepel.SimpleUnityNetworking.Transporting;
 using jKnepel.SimpleUnityNetworking.Utilities;
 using System;
 using System.Collections.Concurrent;

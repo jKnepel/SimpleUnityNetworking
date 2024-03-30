@@ -1,7 +1,7 @@
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
+using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
-using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -55,9 +55,11 @@ public class RelayTest : MonoBehaviour
 
     public async void StartServer(int maxPlayers, string allocationRegion)
     {
+        if (_manager.Transport == null) return;
+        
         var hostAllocation = await RelayService.Instance.CreateAllocationAsync(maxPlayers, allocationRegion);
         JoinCode = await RelayService.Instance.GetJoinCodeAsync(hostAllocation.AllocationId);
-        ((UnityTransport)_manager.TransportConfiguration.Transport).SetRelayServerData(new(hostAllocation, "udp"));
+        ((UnityTransport)_manager.Transport).SetRelayServerData(new(hostAllocation, "udp"));
         _manager.StartServer("server");
     }
 
@@ -68,6 +70,8 @@ public class RelayTest : MonoBehaviour
 
     public async void StartClient(string joinCode)
     {
+        if (_manager.Transport == null) return;
+        
         if (IsServer)
         {
             _manager.StartClient("user", new());
@@ -75,7 +79,7 @@ public class RelayTest : MonoBehaviour
         }
         
         var joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
-        ((UnityTransport)_manager.TransportConfiguration.Transport).SetRelayServerData(new(joinAllocation, "udp"));
+        ((UnityTransport)_manager.Transport).SetRelayServerData(new(joinAllocation, "udp"));
         _manager.StartClient("user", new());
     }
 

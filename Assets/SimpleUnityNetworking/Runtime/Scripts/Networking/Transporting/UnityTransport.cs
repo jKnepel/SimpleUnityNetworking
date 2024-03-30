@@ -11,7 +11,7 @@ using Unity.Networking.Transport.Error;
 using Unity.Networking.Transport.Relay;
 using Unity.Networking.Transport.Utilities;
 
-namespace jKnepel.SimpleUnityNetworking.Transporting
+namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 {
     public sealed partial class UnityTransport : Transport
     {
@@ -707,7 +707,7 @@ namespace jKnepel.SimpleUnityNetworking.Transporting
 
             foreach (var sendTarget in sendTargets)
             {
-                _outgoingMessages.Remove(sendTarget, out var queue);
+                _outgoingMessages.Remove(sendTarget, out var queue);                                            
                 queue.Dispose();
             }
 

@@ -2,7 +2,7 @@ using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
 using System;
 
-namespace jKnepel.SimpleUnityNetworking.Transporting
+namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 {
     public abstract class Transport : IDisposable
     {

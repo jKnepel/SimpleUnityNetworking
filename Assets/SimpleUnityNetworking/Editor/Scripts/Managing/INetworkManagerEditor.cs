@@ -1,6 +1,6 @@
 using jKnepel.SimpleUnityNetworking.Logging;
+using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
-using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using System.Linq;
 using UnityEngine;
