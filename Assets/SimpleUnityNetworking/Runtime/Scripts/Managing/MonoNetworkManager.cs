@@ -61,7 +61,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    {
 			    if (_cachedLoggerConfiguration == value) return;
 			    NetworkManager.LoggerConfiguration = _cachedLoggerConfiguration = value;
-			    NetworkManager.OnLogMessageAdded += msg => OnLogMessageAdded?.Invoke(msg);
 			    
 #if UNITY_EDITOR
 			    if (!EditorApplication.isPlaying)
@@ -76,13 +75,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    public bool IsHost => NetworkManager.IsHost;
 	    
 	    public ServerInformation ServerInformation => NetworkManager.ServerInformation;
-	    public ELocalConnectionState Server_LocalState => NetworkManager.Server_LocalState;
+	    public ELocalServerConnectionState Server_LocalState => NetworkManager.Server_LocalState;
 	    public ConcurrentDictionary<uint, ClientInformation> Server_ConnectedClients => NetworkManager.Server_ConnectedClients;
 	    public ClientInformation ClientInformation => NetworkManager.ClientInformation;
 	    public ELocalClientConnectionState Client_LocalState => NetworkManager.Client_LocalState;
 	    public ConcurrentDictionary<uint, ClientInformation> Client_ConnectedClients => NetworkManager.Client_ConnectedClients;
 
-	    public event Action<ELocalConnectionState> Server_OnLocalStateUpdated;
+	    public event Action<ELocalServerConnectionState> Server_OnLocalStateUpdated;
 	    public event Action<uint> Server_OnRemoteClientConnected;
 	    public event Action<uint> Server_OnRemoteClientDisconnected;
 	    public event Action<uint> Server_OnRemoteClientUpdated;
@@ -91,8 +90,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    public event Action<uint> Client_OnRemoteClientConnected;
 	    public event Action<uint> Client_OnRemoteClientDisconnected;
 	    public event Action<uint> Client_OnRemoteClientUpdated;
-
-	    public event Action<Message> OnLogMessageAdded;
 
 	    private NetworkManager _networkManager;
 	    public NetworkManager NetworkManager
@@ -118,7 +115,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    NetworkManager.Client_OnRemoteClientConnected += id => Client_OnRemoteClientConnected?.Invoke(id);
 		    NetworkManager.Client_OnRemoteClientDisconnected += id => Client_OnRemoteClientDisconnected?.Invoke(id);
 		    NetworkManager.Client_OnRemoteClientUpdated += id => Client_OnRemoteClientUpdated?.Invoke(id);
-		    NetworkManager.OnLogMessageAdded += msg => OnLogMessageAdded?.Invoke(msg);
 	    }
 
 	    public void Update()

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: UnityTransportConfiguration
   m_EditorClassIdentifier: 
   _settings:
-    ProtocolType: 1
+    ProtocolType: 0
     Address: 127.0.0.1
     Port: 24856
     ServerListenAddress: 

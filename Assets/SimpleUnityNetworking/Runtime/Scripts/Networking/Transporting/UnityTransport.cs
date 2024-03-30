@@ -1,5 +1,4 @@
 using jKnepel.SimpleUnityNetworking.Logging;
-using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Utilities;
 using System;
 using System.Collections.Generic;
