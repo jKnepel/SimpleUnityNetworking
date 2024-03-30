@@ -2,7 +2,7 @@ using System;
 using Unity.Collections;
 using Unity.Networking.Transport;
 
-namespace jKnepel.SimpleUnityNetworking.Transporting
+namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 {
     public sealed partial class UnityTransport
     {

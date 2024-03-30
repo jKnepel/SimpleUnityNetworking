@@ -1,12 +1,14 @@
+using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
+using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using jKnepel.SimpleUnityNetworking.Serialising;
-using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using System.Collections.Concurrent;
-using jKnepel.SimpleUnityNetworking.Logging;
 using UnityEngine;
+
+using Logger = jKnepel.SimpleUnityNetworking.Logging.Logger;
 
 namespace jKnepel.SimpleUnityNetworking
 {
@@ -15,18 +17,26 @@ namespace jKnepel.SimpleUnityNetworking
         #region fields
         
         /// <summary>
+        /// The transport instance defined by the configuration
+        /// </summary>
+        Transport Transport { get; }
+        /// <summary>
         /// The configuration containing the instance of the <see cref="Transport"/>,
         /// which will be used for sending and receiving data
         /// </summary>
         TransportConfiguration TransportConfiguration { get; set; }
         
         /// <summary>
-        /// The configuration for the serialiser used by the network manager.
+        /// The configuration for the serialiser used by the network manager
         /// </summary>
         SerialiserConfiguration SerialiserConfiguration { get; set; }
         
         /// <summary>
-        /// The configuration for the logger, used to show or save messages by the framework.
+        /// The logger instance defined by the configuration
+        /// </summary>
+        Logger Logger { get; }
+        /// <summary>
+        /// The configuration for the logger, used to show or save messages by the framework
         /// </summary>
         LoggerConfiguration LoggerConfiguration { get; set; }
         

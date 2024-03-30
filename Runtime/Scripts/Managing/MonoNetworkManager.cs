@@ -1,8 +1,8 @@
 using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
-using jKnepel.SimpleUnityNetworking.SyncDataTypes;
+using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
-using jKnepel.SimpleUnityNetworking.Transporting;
+using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using System;
 using System.Collections.Concurrent;
 using UnityEngine;
@@ -11,10 +11,13 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 #endif
 
+using Logger = jKnepel.SimpleUnityNetworking.Logging.Logger;
+
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
     public class MonoNetworkManager : MonoBehaviour, INetworkManager
     {
+	    public Transport Transport => TransportConfiguration?.Transport;
 	    [SerializeField] private TransportConfiguration _cachedTransportConfiguration;
 	    public TransportConfiguration TransportConfiguration
 	    {
@@ -49,6 +52,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    }
 	    }
 
+	    public Logger Logger => LoggerConfiguration?.Logger;
 	    [SerializeField] private LoggerConfiguration _cachedLoggerConfiguration;
 	    public LoggerConfiguration LoggerConfiguration
 	    {

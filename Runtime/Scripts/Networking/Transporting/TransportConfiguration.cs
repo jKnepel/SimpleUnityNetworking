@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-namespace jKnepel.SimpleUnityNetworking.Transporting
+namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 {
     [Serializable]
     public abstract class TransportConfiguration : ScriptableObject

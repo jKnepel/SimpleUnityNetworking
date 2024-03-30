@@ -1,8 +1,8 @@
 using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
-using jKnepel.SimpleUnityNetworking.SyncDataTypes;
+using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
-using jKnepel.SimpleUnityNetworking.Transporting;
+using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using System;
 using System.Collections.Concurrent;
 using UnityEngine;
@@ -10,10 +10,16 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
+using Logger = jKnepel.SimpleUnityNetworking.Logging.Logger;
+
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
     public static class StaticNetworkManager
     {
+	    /// <summary>
+	    /// The transport instance defined by the configuration
+	    /// </summary>
+	    public static Transport Transport => _networkManager.Transport;
 	    /// <summary>
 	    /// The configuration containing the instance of the <see cref="Transport"/>,
 	    /// which will be used for sending and receiving data
@@ -32,7 +38,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    get => _networkManager.SerialiserConfiguration;
 		    set => _networkManager.SerialiserConfiguration = value;
 	    }
-	    
+
+	    /// <summary>
+	    /// The logger instance defined by the configuration
+	    /// </summary>
+	    public static Logger Logger => _networkManager.Logger;
 	    /// <summary>
 	    /// The configuration for the logger, used to show or save messages by the framework.
 	    /// </summary>

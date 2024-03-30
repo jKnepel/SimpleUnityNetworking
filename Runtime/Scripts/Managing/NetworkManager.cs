@@ -1,7 +1,7 @@
 using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
+using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
-using jKnepel.SimpleUnityNetworking.Transporting;
 using System;
 using UnityEngine;
 
@@ -13,7 +13,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
     {
         #region fields
 
-        private Transport Transport => _transportConfiguration?.Transport;
+        public Transport Transport => _transportConfiguration?.Transport;
         private TransportConfiguration _transportConfiguration;
         public TransportConfiguration TransportConfiguration
         {
@@ -38,7 +38,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         public SerialiserConfiguration SerialiserConfiguration { get; set; }
 
-        private Logger Logger => LoggerConfiguration?.Logger;
+        public Logger Logger => LoggerConfiguration?.Logger;
         private LoggerConfiguration _loggerConfiguration;
         public LoggerConfiguration LoggerConfiguration
         {
