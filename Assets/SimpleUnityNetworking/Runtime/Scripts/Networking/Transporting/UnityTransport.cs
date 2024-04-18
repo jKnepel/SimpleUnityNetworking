@@ -83,9 +83,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                 _hostClientID = 0;
             }
 
-            foreach (var queue in _outgoingMessages.Values)
-                queue.Dispose();
             // TODO : clean/flush outgoing messages
+            CleanOutgoingMessages();
             DisposeInternals();
 
             _disposed = true;
@@ -357,7 +356,13 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         
         #region incoming
 
-        public override void IterateIncoming()
+        public override void Tick()
+        {
+            IterateIncoming();
+            IterateOutgoing();
+        }
+
+        public void IterateIncoming()
         {
             if (!_driver.IsCreated) return;
 
@@ -521,7 +526,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             queue.Enqueue(new(data, Allocator.Persistent));
         }
 
-        public override void IterateOutgoing()
+        public void IterateOutgoing()
         {
             if (!_driver.IsCreated) return;
 
@@ -667,6 +672,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                 _networkSettings.Dispose();
                 _networkSettings = default;
             }
+            
+            _unreliablePipeline = NetworkPipeline.Null;
             _unreliableSequencedPipeline = NetworkPipeline.Null;
             _reliablePipeline = NetworkPipeline.Null;
             _reliableSequencedPipeline = NetworkPipeline.Null;
@@ -691,6 +698,13 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             if (pipeline == _unreliableSequencedPipeline) return ENetworkChannel.UnreliableOrdered;
             if (pipeline == _unreliablePipeline) return ENetworkChannel.UnreliableUnordered;
             return default;
+        }
+
+        private void CleanOutgoingMessages()
+        {
+            foreach (var queue in _outgoingMessages.Values)
+                queue.Dispose();
+            _outgoingMessages.Clear();
         }
 
         private void CleanOutgoingMessages(NetworkConnection conn)

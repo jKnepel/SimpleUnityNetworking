@@ -19,7 +19,7 @@ public class CompressionTest : MonoBehaviour
 
     private void Update()
     {
-        _manager.Update();
+        _manager.Tick();
 	}
 
     public void StartServer()

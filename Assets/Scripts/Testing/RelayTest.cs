@@ -5,6 +5,7 @@ using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Unity.Networking.Transport.Relay;
 using UnityEngine;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
@@ -34,7 +35,7 @@ public class RelayTest : MonoBehaviour
 
     private void Update()
     {
-        _manager.Update();
+        _manager.Tick();
 	}
     
     public async Task InitializeNetwork()
@@ -59,7 +60,7 @@ public class RelayTest : MonoBehaviour
         
         var hostAllocation = await RelayService.Instance.CreateAllocationAsync(maxPlayers, allocationRegion);
         JoinCode = await RelayService.Instance.GetJoinCodeAsync(hostAllocation.AllocationId);
-        ((UnityTransport)_manager.Transport).SetRelayServerData(new(hostAllocation, "udp"));
+        ((UnityTransport)_manager.Transport).SetRelayServerData(new(hostAllocation, "dtls"));
         _manager.StartServer("server");
     }
 

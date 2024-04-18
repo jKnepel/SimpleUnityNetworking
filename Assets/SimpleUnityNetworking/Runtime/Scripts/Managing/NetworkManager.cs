@@ -32,7 +32,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     Transport.OnConnectionUpdated -= OnRemoteConnectionStateUpdated;
                     
                     if (Logger is not null)
-                        Transport.OnTransportLogAdded += Logger.Log;
+                        Transport.OnTransportLogAdded -= Logger.Log;
                     
                     ClientInformation = null;
                     ServerInformation = null;
@@ -98,12 +98,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         ~NetworkManager()
         {
             Dispose(false);
-            GC.SuppressFinalize(this);
         }
 
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         private void Dispose(bool disposing)
@@ -117,13 +117,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Transport?.Dispose();
         }
 
-        public void Update()
+        public void Tick()
         {
-            if (Transport != null)
-            {
-                Transport?.IterateIncoming();
-                Transport?.IterateOutgoing();
-            }
+            Transport?.Tick();
         }
 
         #endregion

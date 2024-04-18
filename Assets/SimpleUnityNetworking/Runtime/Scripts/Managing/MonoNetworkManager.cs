@@ -117,9 +117,15 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    NetworkManager.Client_OnRemoteClientUpdated += id => Client_OnRemoteClientUpdated?.Invoke(id);
 	    }
 
-	    public void Update()
+	    private void Update()
 	    {
-		    NetworkManager.Update();
+		    // TODO : remove this once custom tick rate is supported
+		    Tick();
+	    }
+
+	    public void Tick()
+	    {
+		    NetworkManager.Tick();
 	    }
 
 	    private void OnDestroy()
