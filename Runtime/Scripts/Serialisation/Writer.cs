@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -82,16 +83,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
                 if (WriteBuildInType(val))
 					return;
 
-                if (CreateTypeHandlerDelegate(type, out var customHandler, true))
+                if (CreateTypeHandlerDelegate(type, out var customHandler))
                 {   // use custom type handler if user defined method was found
                     customHandler(this, val);
-                    return;
-                }
-
-                // TODO : remove this once pre-compile cached generic handlers are supported
-                if (CreateTypeHandlerDelegate(type, out var implementedHandler, false))
-                {   // use implemented generic type handler
-                    implementedHandler(this, val);
                     return;
                 }
 
@@ -183,6 +177,34 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		        case DateTime dateTimeValue:
 			        WriteDateTime(dateTimeValue);
 			        return true;
+		        case Array arrayValue:
+		        {
+			        WriteInt32(arrayValue.Length);
+			        foreach (var t in arrayValue)
+				        Write(t);
+			        return true;
+		        }
+		        case IList listValue:
+		        {
+			        WriteInt32(listValue.Count);
+			        foreach (var t in listValue)
+				        Write(t);
+			        return true;
+		        }
+		        case IDictionary dictValue:
+		        {
+					WriteInt32(dictValue.Count);
+					var t = dictValue.GetEnumerator();
+					using (t as IDisposable)
+					{
+						while (t.MoveNext())
+						{
+							Write(t.Key);
+							Write(t.Value);
+						}
+						return true;
+					}
+		        }
 		        default: return false;
 	        }
         }
@@ -194,11 +216,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         /// <param name="typeHandler">The handler of the defined type</param>
         /// <param name="useCustomWriter">Whether the writer method is an instance of the Writer class or a custom static method in the type</param>
         /// <returns></returns>
-        private static bool CreateTypeHandlerDelegate(Type type, out Action<Writer, object> typeHandler, bool useCustomWriter)
+        private static bool CreateTypeHandlerDelegate(Type type, out Action<Writer, object> typeHandler)
         {   // find implemented or custom write method
-            var writerMethod = useCustomWriter
-                ?           type.GetMethod("Write", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
-                : typeof(Writer).GetMethod($"Write{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+            var writerMethod = type.GetMethod("Write", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (writerMethod == null)
             {
 	            typeHandler = null;
@@ -217,15 +237,11 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
                 var genericWriter = type.IsArray
                     ? writerMethod.MakeGenericMethod(type.GetElementType())
                     : writerMethod.MakeGenericMethod(type.GetGenericArguments());
-                call = useCustomWriter
-                    ? Expression.Call(genericWriter, instanceArg, castArg)
-                    : Expression.Call(instanceArg, genericWriter, castArg);
+                call = Expression.Call(genericWriter, instanceArg, castArg);
             }
             else
 			{
-                call = useCustomWriter
-                    ? Expression.Call(writerMethod, instanceArg, castArg)
-                    : Expression.Call(instanceArg, writerMethod, castArg);
+                call = Expression.Call(writerMethod, instanceArg, castArg);
 			}
 
             // cache delegate

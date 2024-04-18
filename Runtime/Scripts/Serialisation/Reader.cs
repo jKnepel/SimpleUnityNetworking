@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -90,13 +91,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		            return result;
 
 				// use custom type handler if user defined method was found
-                if (CreateTypeHandlerDelegate(type, out var customHandler, true))
+                if (CreateTypeHandlerDelegate(type, out var customHandler))
                     return customHandler(this);
-
-                // TODO : remove this once pre-compile cached generic handlers are supported
-                // use implemented generic type handler
-                if (CreateTypeHandlerDelegate(type, out var implementedHandler, false))
-                    return implementedHandler(this);
 
                 // save types that don't have any a type handler and need to be recursively serialised
                 _unknownTypes.Add(type);
@@ -188,6 +184,37 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		        case not null when val == typeof(DateTime):
 			        result = ReadDateTime();
 			        return true;
+		        case not null when typeof(Array).IsAssignableFrom(val):
+		        {
+			        var length = ReadInt32();
+			        var arr = Array.CreateInstance(val.GetElementType(), length);
+			        for (var i = 0; i < length; i++)
+				        arr.SetValue(Read(val.GetElementType()), i);
+			        result = arr;
+			        return true;
+		        }
+		        case not null when typeof(IList).IsAssignableFrom(val):
+		        {
+			        var count = ReadInt32();
+			        var arg = val.GetGenericArguments().Single();
+			        var listType = typeof(List<>).MakeGenericType(arg);
+			        var list = (IList)Activator.CreateInstance(listType);
+			        for (var i = 0; i < count; i++)
+				        list.Add(Read(arg));
+			        result = list;
+			        return true;
+		        }
+		        case not null when typeof(IDictionary).IsAssignableFrom(val):
+		        {
+			        var count = ReadInt32();
+			        var args = val.GetGenericArguments();
+			        var dictType = typeof(Dictionary<,>).MakeGenericType(args);
+			        var dict = (IDictionary)Activator.CreateInstance(dictType);
+			        for (var i = 0; i < count; i++)
+				        dict.Add(Read(args[0]), Read(args[1]));
+			        result = dict;
+			        return true;
+		        }
 		        default:
 			        result = null;
 			        return false;
@@ -201,11 +228,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         /// <param name="typeHandler">The handler of the defined type</param>
         /// <param name="useCustomReader">Whether the reader method is an instance of the Reader class or a custom static method in the type</param>
         /// <returns></returns>
-        private static bool CreateTypeHandlerDelegate(Type type, out Func<Reader, object> typeHandler, bool useCustomReader)
+        private static bool CreateTypeHandlerDelegate(Type type, out Func<Reader, object> typeHandler)
         {   // find implemented or custom read method
-            var readerMethod = useCustomReader
-                ?           type.GetMethod("Read", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly)
-                : typeof(Reader).GetMethod($"Read{SerialiserHelper.GetTypeName(type)}", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+            var readerMethod = type.GetMethod("Read", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (readerMethod == null)
             {
 	            typeHandler = null;
@@ -222,15 +247,11 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
                 var genericReader = type.IsArray
                     ? readerMethod.MakeGenericMethod(type.GetElementType())
                     : readerMethod.MakeGenericMethod(type.GetGenericArguments());
-                call = useCustomReader
-                    ? Expression.Call(genericReader, instanceArg)
-                    : Expression.Call(instanceArg, genericReader);
+                call = Expression.Call(genericReader, instanceArg);
             }
             else
             {
-                call = useCustomReader
-                    ? Expression.Call(readerMethod, instanceArg)
-                    : Expression.Call(instanceArg, readerMethod);
+                call = Expression.Call(readerMethod, instanceArg);
             }
 
             // cache delegate
