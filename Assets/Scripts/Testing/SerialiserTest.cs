@@ -52,7 +52,7 @@ public class SerialiserTest : MonoBehaviour
                   $"ULong = {output.ULong}");
     }
 
-    private struct ValueStruct : ISerialisable
+    private struct ValueStruct
     {
         public byte Byte;
         public int[] Array;
@@ -64,10 +64,5 @@ public class SerialiserTest : MonoBehaviour
         public uint UInt;
         public long Long;
         public ulong ULong;
-
-        public static void Serialise(Writer writer, ISerialisable obj)
-        {
-            
-        }
     }
 }
