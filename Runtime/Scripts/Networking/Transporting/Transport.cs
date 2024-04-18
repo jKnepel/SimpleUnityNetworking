@@ -1,5 +1,4 @@
 using jKnepel.SimpleUnityNetworking.Logging;
-using jKnepel.SimpleUnityNetworking.Networking;
 using System;
 
 namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
@@ -76,7 +75,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         public void Dispose()
         {
             Dispose(true);
-            GC.SuppressFinalize(this);
         }
 
         protected abstract void Dispose(bool disposing);
@@ -86,8 +84,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         public abstract void StartClient();
         public abstract void StopClient();
         public abstract void StopNetwork();
-        public abstract void IterateIncoming();
-        public abstract void IterateOutgoing();
+        public abstract void Tick();
         public abstract void SendDataToServer(byte[] data, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered);
         public abstract void SendDataToClient(uint clientID, byte[] data, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered);
         public abstract void DisconnectClient(uint clientID);

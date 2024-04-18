@@ -135,7 +135,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    {
 		    _networkManager = new();
 		    _networkManager.TransportConfiguration = TransportConfiguration;
-		    _networkManager.SerialiserConfiguration = new();
+		    _networkManager.SerialiserConfiguration = SerialiserConfiguration;
 		    _networkManager.Server_OnLocalStateUpdated += state => Server_OnLocalStateUpdated?.Invoke(state);
 		    _networkManager.Server_OnRemoteClientConnected += id => Server_OnRemoteClientConnected?.Invoke(id);
 		    _networkManager.Server_OnRemoteClientDisconnected += id => Server_OnRemoteClientDisconnected?.Invoke(id);
@@ -150,11 +150,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    }
 
 	    /// <summary>
-	    /// Method to update the state of the connected transport. Should be called once per frame.
+	    /// This method updates the incoming and outgoing packets,
+	    /// effectively dictating the state updates of the network. Should be called once per tick.
 	    /// </summary>
-	    public static void Update()
+	    public static void Tick()
 	    {
-		    _networkManager.Update();
+		    _networkManager.Tick();
 	    }
 	    
 	    /// <summary>

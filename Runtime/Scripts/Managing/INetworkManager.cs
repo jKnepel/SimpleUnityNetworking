@@ -17,12 +17,12 @@ namespace jKnepel.SimpleUnityNetworking
         #region fields
         
         /// <summary>
-        /// The transport instance defined by the configuration
+        /// The transport instance, which will be used for sending and receiving data
+        /// and managing internal connections
         /// </summary>
         Transport Transport { get; }
         /// <summary>
-        /// The configuration containing the instance of the <see cref="Transport"/>,
-        /// which will be used for sending and receiving data
+        /// The configuration containing the instance of the <see cref="Transport"/>
         /// </summary>
         TransportConfiguration TransportConfiguration { get; set; }
         
@@ -32,11 +32,11 @@ namespace jKnepel.SimpleUnityNetworking
         SerialiserConfiguration SerialiserConfiguration { get; set; }
         
         /// <summary>
-        /// The logger instance defined by the configuration
+        /// The logger instance, which will be used for saving and displaying messages
         /// </summary>
         Logger Logger { get; }
         /// <summary>
-        /// The configuration for the logger, used to show or save messages by the framework
+        /// The configuration containing the instance of the <see cref="Logger"/>
         /// </summary>
         LoggerConfiguration LoggerConfiguration { get; set; }
         
@@ -125,9 +125,10 @@ namespace jKnepel.SimpleUnityNetworking
         #region methods
 
         /// <summary>
-        /// Method to update the state of the connected transport. Should be called once per frame.
+        /// This method updates the incoming and outgoing packets,
+        /// effectively dictating the state updates of the network. Should be called once per tick.
         /// </summary>
-        void Update();
+        void Tick();
 
         /// <summary>
         /// Method to start a local server with the given parameters

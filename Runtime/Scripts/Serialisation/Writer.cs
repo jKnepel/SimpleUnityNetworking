@@ -30,10 +30,21 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		/// The max capacity of the internal buffer.
 		/// </summary>
 		public int Capacity => _buffer.Length;
+
 		/// <summary>
-		/// The configuration of the writer.
+		/// If compression should be used for all serialisation in the framework.
 		/// </summary>
-		public SerialiserConfiguration SerialiserConfiguration { get; }
+		public bool UseCompression { get; set; } = true;
+		/// <summary>
+		/// If compression is active, this will define the number of decimal places to which
+		/// floating point numbers will be compressed.
+		/// </summary>
+		public int NumberOfDecimalPlaces { get; set; } = 3;
+		/// <summary>
+		/// If compression is active, this will define the number of bits used by the three compressed Quaternion
+		/// components in addition to the two flag bits.
+		/// </summary>
+		public int BitsPerComponent { get; set; } = 10;
 
 		private byte[] _buffer = new byte[32];
 
@@ -46,7 +57,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 
 		public Writer(SerialiserConfiguration config = null)
 		{
-            SerialiserConfiguration = config ?? new();
+			if (config != null)
+			{
+				UseCompression = config.UseCompression;
+				NumberOfDecimalPlaces = config.NumberOfDecimalPlaces;
+				BitsPerComponent = config.BitsPerComponent;
+			}
 		}
 
 		#endregion
@@ -335,7 +351,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteUInt16(ushort val)
         {
-	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        if (UseCompression)
 	        {
 				WriteVLQCompression(val);
 	        }
@@ -351,7 +367,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteInt16(short val)
         {
-	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        if (UseCompression)
 	        {
 		        WriteVLQCompression(ZigZagEncode(val));
 	        }
@@ -367,7 +383,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteUInt32(uint val)
         {
-	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        if (UseCompression)
 	        {
 		        WriteVLQCompression(val);
 	        }
@@ -385,7 +401,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteInt32(int val)
         {
-	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        if (UseCompression)
 	        {
 		        WriteVLQCompression(ZigZagEncode(val));
 	        }
@@ -403,7 +419,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteUInt64(ulong val)
         {
-	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        if (UseCompression)
 	        {
 		        WriteVLQCompression(val);
 	        }
@@ -425,7 +441,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteInt64(long val)
         {
-	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        if (UseCompression)
 	        {
 		        WriteVLQCompression(ZigZagEncode(val));
 	        }
@@ -453,9 +469,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteSingle(float val)
         {
-	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        if (UseCompression)
 	        {
-		        var compressed = val * Mathf.Pow(10, SerialiserConfiguration.NumberOfDecimalPlaces);
+		        var compressed = val * Mathf.Pow(10, NumberOfDecimalPlaces);
 		        WriteVLQCompression(ZigZagEncode((int)compressed));
 	        }
 	        else
@@ -511,9 +527,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteQuaternion(Quaternion val)
         {
-	        if (SerialiserConfiguration.UseCompression == EUseCompression.Compressed)
+	        if (UseCompression)
 	        {
-		        CompressedQuaternion q = new(val, SerialiserConfiguration.BitsPerComponent);
+		        CompressedQuaternion q = new(val, BitsPerComponent);
 		        WriteVLQCompression(q.PackedQuaternion);
 	        }
 	        else
