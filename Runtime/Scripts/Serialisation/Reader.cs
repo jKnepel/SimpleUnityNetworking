@@ -91,7 +91,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		            return result;
 
 				// use custom type handler if user defined method was found
-                if (CreateTypeHandlerDelegate(type, out var customHandler))
+                if (ReadCustomType(type, out var customHandler))
                     return customHandler(this);
 
                 // save types that don't have any a type handler and need to be recursively serialised
@@ -226,9 +226,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         /// </summary>
         /// <param name="type">The type of the variable for which the writer is defined</param>
         /// <param name="typeHandler">The handler of the defined type</param>
-        /// <param name="useCustomReader">Whether the reader method is an instance of the Reader class or a custom static method in the type</param>
         /// <returns></returns>
-        private static bool CreateTypeHandlerDelegate(Type type, out Func<Reader, object> typeHandler)
+        private static bool ReadCustomType(Type type, out Func<Reader, object> typeHandler)
         {   // find implemented or custom read method
             var readerMethod = type.GetMethod("Read", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (readerMethod == null)

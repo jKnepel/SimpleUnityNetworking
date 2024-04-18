@@ -83,7 +83,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
                 if (WriteBuildInType(val))
 					return;
 
-                if (CreateTypeHandlerDelegate(type, out var customHandler))
+                if (WriteCustomType(type, out var customHandler))
                 {   // use custom type handler if user defined method was found
                     customHandler(this, val);
                     return;
@@ -214,9 +214,8 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         /// </summary>
         /// <param name="type">The type of the variable for which the writer is defined</param>
         /// <param name="typeHandler">The handler of the defined type</param>
-        /// <param name="useCustomWriter">Whether the writer method is an instance of the Writer class or a custom static method in the type</param>
         /// <returns></returns>
-        private static bool CreateTypeHandlerDelegate(Type type, out Action<Writer, object> typeHandler)
+        private static bool WriteCustomType(Type type, out Action<Writer, object> typeHandler)
         {   // find implemented or custom write method
             var writerMethod = type.GetMethod("Write", BindingFlags.Static | BindingFlags.Public | BindingFlags.DeclaredOnly);
             if (writerMethod == null)
