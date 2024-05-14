@@ -21,11 +21,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    [SerializeField] private TransportConfiguration _cachedTransportConfiguration;
 	    public TransportConfiguration TransportConfiguration
 	    {
-		    get => _cachedTransportConfiguration;
+		    get => NetworkManager.TransportConfiguration;
 		    set
 		    {
-			    if (_cachedTransportConfiguration == value) return;
-			    NetworkManager.TransportConfiguration = _cachedTransportConfiguration = value;
+			    if (NetworkManager.TransportConfiguration == value) return;
+                NetworkManager.TransportConfiguration = _cachedTransportConfiguration = value;
 			    
 #if UNITY_EDITOR
 				if (value != null)
@@ -39,14 +39,16 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    [SerializeField] private SerialiserConfiguration _cachedSerialiserConfiguration;
 	    public SerialiserConfiguration SerialiserConfiguration
 	    {
-		    get => _cachedSerialiserConfiguration;
+		    get => NetworkManager.SerialiserConfiguration;
 		    set
 		    {
-			    if (_cachedSerialiserConfiguration == value) return;
+			    if (NetworkManager.SerialiserConfiguration == value) return;
 			    NetworkManager.SerialiserConfiguration = _cachedSerialiserConfiguration = value;
-			    
+
 #if UNITY_EDITOR
-			    if (!EditorApplication.isPlaying)
+                if (value != null)
+                    EditorUtility.SetDirty(_cachedTransportConfiguration);
+                if (!EditorApplication.isPlaying)
 				    EditorSceneManager.MarkSceneDirty(gameObject.scene);
 #endif
 		    }
@@ -56,14 +58,16 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    [SerializeField] private LoggerConfiguration _cachedLoggerConfiguration;
 	    public LoggerConfiguration LoggerConfiguration
 	    {
-		    get => _cachedLoggerConfiguration;
+		    get => NetworkManager.LoggerConfiguration;
 		    set
 		    {
-			    if (_cachedLoggerConfiguration == value) return;
+			    if (NetworkManager.LoggerConfiguration == value) return;
 			    NetworkManager.LoggerConfiguration = _cachedLoggerConfiguration = value;
-			    
+
 #if UNITY_EDITOR
-			    if (!EditorApplication.isPlaying)
+                if (value != null)
+                    EditorUtility.SetDirty(_cachedTransportConfiguration);
+                if (!EditorApplication.isPlaying)
 				    EditorSceneManager.MarkSceneDirty(gameObject.scene);
 #endif
 		    }
