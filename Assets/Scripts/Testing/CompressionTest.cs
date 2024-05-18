@@ -65,14 +65,14 @@ public class CompressionTest : MonoBehaviour
             ULong = 123123
         };
 
-        Writer writer = new(_serialiserConfiguration);
+        Writer writer = new(_serialiserConfiguration.Settings);
         writer.Write(data);
         _manager.SendByteDataToClient(_targetClientID, "values", writer.GetBuffer(), channel);
     }
 
     private void ReceiveValueBytes(uint clientID, byte[] data)
     {
-        Reader reader = new(data, _serialiserConfiguration);
+        Reader reader = new(data, _serialiserConfiguration.Settings);
         var message = reader.Read<ValueStruct>();
         
         Debug.Log($"Received {data.Length} bytes from {clientID}: " +

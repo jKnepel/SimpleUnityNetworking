@@ -5,7 +5,6 @@ using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Unity.Networking.Transport.Relay;
 using UnityEngine;
 using Unity.Services.Authentication;
 using Unity.Services.Core;

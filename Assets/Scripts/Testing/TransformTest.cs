@@ -69,14 +69,14 @@ public class TransformTest : MonoBehaviour
             Rotation = _sendObject.rotation
         };
         
-        Writer writer = new(_serialiserConfiguration);
+        Writer writer = new(_serialiserConfiguration.Settings);
         writer.Write(data);
         _manager.SendByteDataToClient(_targetClientID, "transform", writer.GetBuffer(), channel);
     }
 
     private void ReceiveTransformStruct(uint clientID, byte[] data)
     {
-        Reader reader = new(data, _serialiserConfiguration);
+        Reader reader = new(data, _serialiserConfiguration.Settings);
         var message = reader.Read<TransformStruct>();
         
         Debug.Log(data.Length);

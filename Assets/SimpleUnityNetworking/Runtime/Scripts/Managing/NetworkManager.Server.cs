@@ -82,7 +82,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             _authenticatingClients[clientID] = hashedChallenge;
 
             // send challenge to client
-            Writer writer = new(SerialiserConfiguration);
+            Writer writer = new(SerialiserConfiguration?.Settings);
             writer.WriteByte(ConnectionChallengePacket.PacketType);
             ConnectionChallengePacket.Write(writer, new(challenge));
             Transport?.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
@@ -98,7 +98,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Logger?.Log($"Server: Remote client {clientID} was disconnected", EMessageSeverity.Log);
 
             // inform other clients of disconnected client
-            Writer writer = new(SerialiserConfiguration);
+            Writer writer = new(SerialiserConfiguration?.Settings);
             writer.WriteByte(ClientUpdatePacket.PacketType);
             ClientUpdatePacket.Write(writer, new(clientID));
             foreach (var id in Server_ConnectedClients.Keys)
@@ -109,7 +109,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             try
             {
-                Reader reader = new(data.Data, SerialiserConfiguration);
+                Reader reader = new(data.Data, SerialiserConfiguration?.Settings);
                 var packetType = (EPacketType)reader.ReadByte();
                 Debug.Log($"Server Packet: {packetType} from {data.ClientID}");
 
@@ -146,7 +146,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             
             // inform client of authentication
-            Writer writer = new(SerialiserConfiguration);
+            Writer writer = new(SerialiserConfiguration?.Settings);
             writer.WriteByte(ConnectionAuthenticatedPacket.PacketType);
             ConnectionAuthenticatedPacket authentication = new(clientID, ServerInformation.Servername,
                 ServerInformation.MaxNumberConnectedClients);
@@ -200,7 +200,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Server_OnRemoteClientUpdated?.Invoke(clientID);
 
             // inform other clients of update
-            Writer writer = new(SerialiserConfiguration);
+            Writer writer = new(SerialiserConfiguration?.Settings);
             writer.WriteByte(ClientUpdatePacket.PacketType);
             ClientUpdatePacket.Write(writer, packet);
             var data = writer.GetBuffer();
@@ -232,7 +232,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             
             // forward data to defined clients
-            Writer writer = new(SerialiserConfiguration);
+            Writer writer = new(SerialiserConfiguration?.Settings);
             writer.WriteByte(DataPacket.PacketType);
             DataPacket forwardedPacket = new(DataPacket.DataPacketType.Forwarded, clientID, packet.IsStructData,
                 packet.DataID, packet.Data);

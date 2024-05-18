@@ -29,10 +29,10 @@ public class SerialiserTest : MonoBehaviour
         var start = DateTime.Now;
         for (var i = 0; i < _repetitions; i++)
         {
-            Writer writer = new(_serialiserConfiguration);
+            Writer writer = new(_serialiserConfiguration.Settings);
             writer.Write(input);
             size = writer.Length;
-            Reader reader = new(writer.GetBuffer(), _serialiserConfiguration);
+            Reader reader = new(writer.GetBuffer(), _serialiserConfiguration.Settings);
             output = reader.Read<ValueStruct>();
         }
         var end = DateTime.Now;
