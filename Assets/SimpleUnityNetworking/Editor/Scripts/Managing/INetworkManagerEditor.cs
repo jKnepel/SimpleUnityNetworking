@@ -1,10 +1,7 @@
-using jKnepel.SimpleUnityNetworking.Logging;
-using jKnepel.SimpleUnityNetworking.Networking.Transporting;
-using jKnepel.SimpleUnityNetworking.Serialising;
-using System;
 using System.Linq;
 using UnityEngine;
 using UnityEditor;
+using jKnepel.SimpleUnityNetworking.Utilities;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
@@ -16,50 +13,35 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             OnlyEditor,
             OnlyPlaymode
         }
-        
+
         #region fields
-        
+
         private readonly INetworkManager _manager;
-        private readonly Action _repaint;
         private readonly EAllowStart _allowStart;
 
         private readonly GUIStyle _style = new();
-        
-        private bool _showTransportWindow;
-        private bool _showSerialiserWindow;
-        private bool _showLoggerWindow;
-        private bool _showLoggerMessages;
-        
-        private bool _showServerWindow;
+
+        private bool _showServerWindow = true;
         private string _servername = "New Server";
         private Vector2 _serverClientsViewPos;
 
-        private bool _showClientWindow;
+        private bool _showClientWindow = true;
         private string _username = "Username";
         private Color32 _userColour = new(153, 191, 97, 255);
         private Vector2 _clientClientsViewPos;
 
         #endregion
-        
+
         #region lifecycle
 
-        public INetworkManagerEditor(INetworkManager manager, Action repaint, EAllowStart allowStart)
+        public INetworkManagerEditor(INetworkManager manager, EAllowStart allowStart)
         {
             _manager = manager;
-            _repaint = repaint;
             _allowStart = allowStart;
         }
 
-        public void OnInspectorGUI()
+        public void ManagerGUIs()
         {
-            EditorGUILayout.Space();
-            GUILayout.Label("Configurations:", EditorStyles.boldLabel);
-            {
-                TransportGUI();
-                SerialiserGUI();
-                LoggerGUI();
-            }
-            
             EditorGUILayout.Space();
             GUILayout.Label("Managers:", EditorStyles.boldLabel);
             {
@@ -67,69 +49,29 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 ClientGUI();
             }
         }
-        
-        #endregion
-        
-        #region configs
-        
-        private void TransportGUI()
+
+        public T ConfigurationGUI<T>(ScriptableObject configuration, string title, ref bool showSection) where T : ScriptableObject
         {
             GUILayout.BeginVertical(EditorStyles.helpBox);
-            DrawToggleFoldout("Transport:", ref _showTransportWindow);
-            if (_showTransportWindow)
+            DrawToggleFoldout(title, ref showSection);
+            if (showSection)
             {
-                _manager.TransportConfiguration = (TransportConfiguration)EditorGUILayout.ObjectField(
-                    "Transport Configuration:",
-                    _manager.TransportConfiguration,
-                    typeof(TransportConfiguration),
-                    false
-                );
-                if (_manager.TransportConfiguration)
-                    Editor.CreateEditor(_manager.TransportConfiguration).OnInspectorGUI();
+                if (!_manager.IsOnline)
+                    configuration = (T)EditorGUILayout.ObjectField("Asset:", configuration, typeof(T), false);
+                configuration ??= UnityUtilities.LoadOrCreateScriptableObject<T>(typeof(T).Name);
+
+                if (configuration)
+                    Editor.CreateEditor(configuration).OnInspectorGUI();
             }
             GUILayout.EndVertical();
+
+            return configuration as T;
         }
 
-        private void SerialiserGUI()
-        {
-            GUILayout.BeginVertical(EditorStyles.helpBox);
-            DrawToggleFoldout("Serialiser:", ref _showSerialiserWindow);
-            if (_showSerialiserWindow)
-            {
-                _manager.SerialiserConfiguration = (SerialiserConfiguration)EditorGUILayout.ObjectField(
-                    "Serialiser Configuration:",
-                    _manager.SerialiserConfiguration,
-                    typeof(SerialiserConfiguration),
-                    false
-                );
-                if (_manager.SerialiserConfiguration)
-                    Editor.CreateEditor(_manager.SerialiserConfiguration).OnInspectorGUI();
-            }
-            GUILayout.EndVertical();
-        }
-        
-        private void LoggerGUI()
-        {
-            GUILayout.BeginVertical(EditorStyles.helpBox);
-            DrawToggleFoldout("Logger:", ref _showLoggerWindow);
-            if (_showLoggerWindow)
-            {
-                _manager.LoggerConfiguration = (LoggerConfiguration)EditorGUILayout.ObjectField(
-                    "Logger Configuration:",
-                    _manager.LoggerConfiguration,
-                    typeof(LoggerConfiguration),
-                    false
-                );
-                if (_manager.LoggerConfiguration)
-                    Editor.CreateEditor(_manager.LoggerConfiguration).OnInspectorGUI();
-            }
-            GUILayout.EndVertical();
-        }
-        
         #endregion
-        
-        #region managing
-        
+
+        #region guis
+
         private void ServerGUI()
         {
             GUILayout.BeginVertical(EditorStyles.helpBox);
@@ -148,7 +90,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server_ConnectedClients.Count}/{_manager.ServerInformation.MaxNumberConnectedClients}");
                     if (GUILayout.Button(new GUIContent("Stop Server")))
                         _manager.StopServer();
-                
+
                     _serverClientsViewPos = EditorGUILayout.BeginScrollView(_serverClientsViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(150));
                     if (_manager.Server_ConnectedClients.Count == 0)
                     {
@@ -198,7 +140,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server_ConnectedClients.Count}/{_manager.ServerInformation.MaxNumberConnectedClients}");
                     if (GUILayout.Button(new GUIContent("Stop Client")))
                         _manager.StopClient();
-                    
+
                     _clientClientsViewPos = EditorGUILayout.BeginScrollView(_clientClientsViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(150));
                     if (_manager.Client_ConnectedClients.Count == 0)
                     {
@@ -225,9 +167,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             GUILayout.EndVertical();
         }
-        
+
         #endregion
-        
+
         #region utilities
 
         private bool AllowStart()
@@ -240,14 +182,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 _ => false
             };
         }
-        
-        private static void DrawToggleFoldout(string title, ref bool isExpanded, 
+
+        private static void DrawToggleFoldout(string title, ref bool isExpanded,
             bool? checkbox = null, string checkboxLabel = null)
-        {   
+        {
             Color normalColour = new(0.24f, 0.24f, 0.24f);
             Color hoverColour = new(0.27f, 0.27f, 0.27f);
             var currentColour = normalColour;
-            
+
             var backgroundRect = GUILayoutUtility.GetRect(1f, 17f);
             var labelRect = backgroundRect;
             labelRect.xMin += 16f;
@@ -257,16 +199,16 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             foldoutRect.y += 1f;
             foldoutRect.width = 13f;
             foldoutRect.height = 13f;
-            
+
             var toggleRect = backgroundRect;
             toggleRect.x = backgroundRect.width - 7f;
             toggleRect.y += 2f;
             toggleRect.width = 13f;
             toggleRect.height = 13f;
-            
+
             var toggleLabelRect = backgroundRect;
             toggleLabelRect.x = -10f;
-            
+
             var e = Event.current;
             if (labelRect.Contains(e.mousePosition))
                 currentColour = hoverColour;
@@ -277,7 +219,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 var borderBot = GUILayoutUtility.GetRect(1f, 0.6f);
                 EditorGUI.DrawRect(borderBot, new(0, 0, 0));
             }
-            
+
             EditorGUI.LabelField(labelRect, title, EditorStyles.boldLabel);
 
             isExpanded = GUI.Toggle(foldoutRect, isExpanded, GUIContent.none, EditorStyles.foldout);
@@ -286,7 +228,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             {
                 if (checkboxLabel is not null)
                 {
-                    var labelStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleRight }; 
+                    var labelStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleRight };
                     EditorGUI.LabelField(toggleLabelRect, checkboxLabel, labelStyle);
                 }
                 EditorGUI.Toggle(toggleRect, (bool)checkbox, new("ShurikenToggle"));
@@ -297,9 +239,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 isExpanded = !isExpanded;
                 e.Use();
             }
-            
         }
-        
+
         #endregion
     }
 }
