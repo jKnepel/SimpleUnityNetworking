@@ -125,9 +125,13 @@ namespace jKnepel.SimpleUnityNetworking
         #region methods
 
         /// <summary>
-        /// This method updates the incoming and outgoing packets,
-        /// effectively dictating the state updates of the network. Should be called once per tick.
+        /// This method calls the transport's internal tick method, updating connections and
+        /// incoming and outgoing packets.
         /// </summary>
+        /// <remarks>
+        /// Calling this method will disable automatic ticks in the transport settings.
+        /// Therefore this method should only be used if ticks are to be handled manually.
+        /// </remarks>
         void Tick();
 
         /// <summary>
