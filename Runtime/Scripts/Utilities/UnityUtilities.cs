@@ -21,7 +21,7 @@ namespace jKnepel.SimpleUnityNetworking.Utilities
 		    DebugByteMessage(new []{ bytes }, msg, inBinary);
 	    }
 	    
-		public static T LoadOrCreateScriptableObject<T>(string name, string path = null) where T : ScriptableObject
+		public static T LoadOrCreateScriptableObject<T>(string name, string path = "Assets/Resources/") where T : ScriptableObject
 		{
 			T configuration = Resources.Load<T>(Path.GetFileNameWithoutExtension(name));
 

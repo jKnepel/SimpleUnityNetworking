@@ -22,7 +22,6 @@ namespace jKnepel.SimpleUnityNetworking
                     return _networkManagerEditor;
                 return _networkManagerEditor = new(
                     StaticNetworkManager.NetworkManager,
-                    Repaint,
                     INetworkManagerEditor.EAllowStart.OnlyEditor
                 );
             }
@@ -83,6 +82,34 @@ namespace jKnepel.SimpleUnityNetworking
         {
             GetWindow(typeof(StaticNetworkManagerWindow), false, "Network Manager");
         }
+        
+        private void Awake()
+        {
+            NetworkManager.Client_OnRemoteClientConnected += RepaintOnUpdate;
+            NetworkManager.Client_OnRemoteClientDisconnected += RepaintOnUpdate;
+            NetworkManager.Client_OnRemoteClientUpdated += RepaintOnUpdate;
+            NetworkManager.Client_OnLocalStateUpdated += RepaintOnUpdate;
+            NetworkManager.Server_OnRemoteClientConnected += RepaintOnUpdate;
+            NetworkManager.Server_OnRemoteClientDisconnected += RepaintOnUpdate;
+            NetworkManager.Server_OnRemoteClientUpdated += RepaintOnUpdate;
+            NetworkManager.Server_OnLocalStateUpdated += RepaintOnUpdate;
+        }
+
+        private void OnDestroy()
+        {
+            NetworkManager.Client_OnRemoteClientConnected -= RepaintOnUpdate;
+            NetworkManager.Client_OnRemoteClientDisconnected -= RepaintOnUpdate;
+            NetworkManager.Client_OnRemoteClientUpdated -= RepaintOnUpdate;
+            NetworkManager.Client_OnLocalStateUpdated -= RepaintOnUpdate;
+            NetworkManager.Server_OnRemoteClientConnected -= RepaintOnUpdate;
+            NetworkManager.Server_OnRemoteClientDisconnected -= RepaintOnUpdate;
+            NetworkManager.Server_OnRemoteClientUpdated -= RepaintOnUpdate;
+            NetworkManager.Server_OnLocalStateUpdated -= RepaintOnUpdate;
+        }
+
+        private void RepaintOnUpdate(uint _) => Repaint();
+        private void RepaintOnUpdate(ELocalClientConnectionState _) => Repaint();
+        private void RepaintOnUpdate(ELocalServerConnectionState _) => Repaint();
 
         private void OnGUI()
         {
@@ -104,7 +131,7 @@ namespace jKnepel.SimpleUnityNetworking
 
         private void TransportGUI()
         {
-            TransportConfiguration = NetworkManagerEditor.ConfigurationGUI<UnityTransportConfiguration>(_cachedTransportConfiguration, "Transport", ref _showTransportWindow);
+            TransportConfiguration = NetworkManagerEditor.ConfigurationGUI<TransportConfiguration>(_cachedTransportConfiguration, "Transport", ref _showTransportWindow);
         }
 
         private void SerialiserGUI()
