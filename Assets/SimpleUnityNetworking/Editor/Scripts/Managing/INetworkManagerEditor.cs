@@ -1,8 +1,7 @@
-using System;
 using System.Linq;
 using UnityEngine;
 using UnityEditor;
-using System.IO;
+using jKnepel.SimpleUnityNetworking.Utilities;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
@@ -18,7 +17,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         #region fields
 
         private readonly INetworkManager _manager;
-        private readonly Action _repaint;
         private readonly EAllowStart _allowStart;
 
         private readonly GUIStyle _style = new();
@@ -36,10 +34,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         #region lifecycle
 
-        public INetworkManagerEditor(INetworkManager manager, Action repaint, EAllowStart allowStart)
+        public INetworkManagerEditor(INetworkManager manager, EAllowStart allowStart)
         {
             _manager = manager;
-            _repaint = repaint;
             _allowStart = allowStart;
         }
 
@@ -53,10 +50,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
-        #endregion
-
-        #region configs
-
         public T ConfigurationGUI<T>(ScriptableObject configuration, string title, ref bool showSection) where T : ScriptableObject
         {
             GUILayout.BeginVertical(EditorStyles.helpBox);
@@ -65,7 +58,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             {
                 if (!_manager.IsOnline)
                     configuration = (T)EditorGUILayout.ObjectField("Asset:", configuration, typeof(T), false);
-                configuration ??= LoadOrCreateConfiguration<T>(typeof(T).Name);
+                configuration ??= UnityUtilities.LoadOrCreateScriptableObject<T>(typeof(T).Name);
 
                 if (configuration)
                     Editor.CreateEditor(configuration).OnInspectorGUI();
@@ -77,7 +70,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         #endregion
 
-        #region managing
+        #region guis
 
         private void ServerGUI()
         {
@@ -179,7 +172,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         #region utilities
 
-        public bool AllowStart()
+        private bool AllowStart()
         {
             return _allowStart switch
             {
@@ -190,7 +183,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             };
         }
 
-        public static void DrawToggleFoldout(string title, ref bool isExpanded,
+        private static void DrawToggleFoldout(string title, ref bool isExpanded,
             bool? checkbox = null, string checkboxLabel = null)
         {
             Color normalColour = new(0.24f, 0.24f, 0.24f);
@@ -246,54 +239,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 isExpanded = !isExpanded;
                 e.Use();
             }
-
-        }
-
-        public static T LoadOrCreateConfiguration<T>(string name = "Configuration", string path = "Assets/Resources/") where T : ScriptableObject
-        {
-            T configuration = Resources.Load<T>(Path.GetFileNameWithoutExtension(name));
-
-            string fullPath = path + name + ".asset";
-
-            if (!configuration)
-            {
-                if (EditorApplication.isCompiling)
-                {
-                    Debug.LogError("Can not load settings when editor is compiling!");
-                    return null;
-                }
-                if (EditorApplication.isUpdating)
-                {
-                    Debug.LogError("Can not load settings when editor is updating!");
-                    return null;
-                }
-
-                configuration = AssetDatabase.LoadAssetAtPath<T>(fullPath);
-            }
-            if (!configuration)
-            {
-                string[] allSettings = AssetDatabase.FindAssets($"t:{name}{".asset"}");
-                if (allSettings.Length > 0)
-                {
-                    configuration = AssetDatabase.LoadAssetAtPath<T>(AssetDatabase.GUIDToAssetPath(allSettings[0]));
-                }
-            }
-            if (!configuration)
-            {
-                configuration = ScriptableObject.CreateInstance<T>();
-                string dir = Path.GetDirectoryName(fullPath);
-                if (!Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
-                AssetDatabase.CreateAsset(configuration, fullPath);
-                AssetDatabase.SaveAssets();
-            }
-
-            if (!configuration)
-            {
-                configuration = ScriptableObject.CreateInstance<T>();
-            }
-
-            return configuration;
         }
 
         #endregion
