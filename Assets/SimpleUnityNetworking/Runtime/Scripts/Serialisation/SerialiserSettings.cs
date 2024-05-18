@@ -37,8 +37,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
             _areSettingsVisible = EditorGUILayout.Foldout(_areSettingsVisible, "Settings:");
             if (_areSettingsVisible)
             {
-                EditorGUI.indentLevel++;
-                
                 var useCompression = property.FindPropertyRelative("UseCompression");
                 EditorGUILayout.PropertyField(useCompression,
                     new GUIContent("UseCompression:",
@@ -54,8 +52,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
                             "If compression is active, this will define the number of bits used by the three compressed Quaternion components in addition to the two flag bits."));
                     EditorGUI.indentLevel--;
                 }
-                
-                EditorGUI.indentLevel--;
             }
             EditorGUI.EndProperty();
         }

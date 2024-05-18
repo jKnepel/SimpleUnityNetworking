@@ -116,6 +116,8 @@ namespace jKnepel.SimpleUnityNetworking
             var area = new Rect(PADDING, PADDING, position.width - PADDING * 2f, position.height - PADDING * 2f);
 
             GUILayout.BeginArea(area);
+            
+            GUILayout.Label("Static Network Manager", EditorStyles.largeLabel);
 
             EditorGUILayout.Space();
             GUILayout.Label("Configurations:", EditorStyles.boldLabel);
