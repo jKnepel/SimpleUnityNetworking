@@ -1,7 +1,6 @@
 using System.Linq;
 using UnityEngine;
 using UnityEditor;
-using jKnepel.SimpleUnityNetworking.Utilities;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
@@ -58,7 +57,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             {
                 if (!_manager.IsOnline)
                     configuration = (T)EditorGUILayout.ObjectField("Asset:", configuration, typeof(T), false);
-                configuration ??= UnityUtilities.LoadOrCreateScriptableObject<T>(typeof(T).Name);
 
                 if (configuration)
                     Editor.CreateEditor(configuration).OnInspectorGUI();
