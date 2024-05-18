@@ -81,7 +81,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 			void ParseDelegate(uint senderID, byte[] data)
 			{
 				// TODO : somehow read data with generic before calling the delegate to prevent multiple reads
-				Reader reader = new(data, SerialiserConfiguration);
+				Reader reader = new(data, SerialiserConfiguration?.Settings);
 				callback?.Invoke(senderID, reader.Read<T>());
 			}
 		}

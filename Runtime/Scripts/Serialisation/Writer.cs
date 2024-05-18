@@ -33,19 +33,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		public int Capacity => _buffer.Length;
 
 		/// <summary>
-		/// If compression should be used for all serialisation in the framework.
+		/// The settings used by the writer.
 		/// </summary>
-		public bool UseCompression { get; set; } = true;
-		/// <summary>
-		/// If compression is active, this will define the number of decimal places to which
-		/// floating point numbers will be compressed.
-		/// </summary>
-		public int NumberOfDecimalPlaces { get; set; } = 3;
-		/// <summary>
-		/// If compression is active, this will define the number of bits used by the three compressed Quaternion
-		/// components in addition to the two flag bits.
-		/// </summary>
-		public int BitsPerComponent { get; set; } = 10;
+		public readonly SerialiserSettings Settings;
 
 		private byte[] _buffer = new byte[32];
 
@@ -56,14 +46,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 
 		#region lifecycle
 
-		public Writer(SerialiserConfiguration config = null)
+		public Writer(SerialiserSettings settings = default)
 		{
-			if (config != null)
-			{
-				UseCompression = config.UseCompression;
-				NumberOfDecimalPlaces = config.NumberOfDecimalPlaces;
-				BitsPerComponent = config.BitsPerComponent;
-			}
+			Settings = settings;
 		}
 
 		#endregion
@@ -278,7 +263,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		public void Revert(int bytes)
 		{
 			Position -= bytes;
-			Position = Mathf.Max(Position, 0);
+			Position = Math.Max(Position, 0);
 		}
 
 		/// <summary>
@@ -336,6 +321,62 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         {
             BlockCopy(ref src, 0, src.Length);
         }
+		
+        /// <summary>
+        /// "ZigZagEncoding" based on google protocol buffers.
+        /// See for <a href="https://protobuf.dev/programming-guides/encoding/">reference</a>.
+        /// </summary>
+        /// <param name="val"></param>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ulong ZigZagEncode(short val)
+        {
+	        return (ulong)((val >> 15) ^ (val << 1));
+        }
+
+        /// <summary>
+        /// "ZigZagEncoding" based on google protocol buffers.
+        /// See for <a href="https://protobuf.dev/programming-guides/encoding/">reference</a>.
+        /// </summary>
+        /// <param name="val"></param>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ulong ZigZagEncode(int val)
+        {
+	        return (ulong)((val >> 31) ^ (val << 1));
+        }
+		
+        /// <summary>
+        /// "ZigZagEncoding" based on google protocol buffers.
+        /// See for <a href="https://protobuf.dev/programming-guides/encoding/">reference</a>.
+        /// </summary>
+        /// <param name="val"></param>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ulong ZigZagEncode(long val)
+        {
+	        return (ulong)((val >> 63) ^ (val << 1));
+        }
+
+        /// <summary>
+        /// Uses a 7-bit VLQ encoding scheme based on the MIDI compression system.
+        /// See for <a href="https://web.archive.org/web/20051129113105/http://www.borg.com/~jglatt/tech/midifile/vari.htm">reference</a>
+        /// </summary>
+        /// <param name="val"></param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void WriteVLQCompression(ulong val)
+        {
+	        do
+	        {
+		        var lowerBits = (byte)(val & 0x7F);
+		        val >>= 7;
+		        if (val > 0)
+			        lowerBits |= 0x80;
+		        _buffer[Position++] = lowerBits;
+	        } while (val > 0);
+
+	        Length = Math.Max(Length, Position);
+        }
 
         #endregion
 
@@ -366,7 +407,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteUInt16(ushort val)
         {
-	        if (UseCompression)
+	        if (Settings.UseCompression)
 	        {
 				WriteVLQCompression(val);
 	        }
@@ -382,7 +423,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteInt16(short val)
         {
-	        if (UseCompression)
+	        if (Settings.UseCompression)
 	        {
 		        WriteVLQCompression(ZigZagEncode(val));
 	        }
@@ -398,7 +439,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteUInt32(uint val)
         {
-	        if (UseCompression)
+	        if (Settings.UseCompression)
 	        {
 		        WriteVLQCompression(val);
 	        }
@@ -416,7 +457,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteInt32(int val)
         {
-	        if (UseCompression)
+	        if (Settings.UseCompression)
 	        {
 		        WriteVLQCompression(ZigZagEncode(val));
 	        }
@@ -434,7 +475,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteUInt64(ulong val)
         {
-	        if (UseCompression)
+	        if (Settings.UseCompression)
 	        {
 		        WriteVLQCompression(val);
 	        }
@@ -456,7 +497,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteInt64(long val)
         {
-	        if (UseCompression)
+	        if (Settings.UseCompression)
 	        {
 		        WriteVLQCompression(ZigZagEncode(val));
 	        }
@@ -484,9 +525,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteSingle(float val)
         {
-	        if (UseCompression)
+	        if (Settings.UseCompression)
 	        {
-		        var compressed = val * Mathf.Pow(10, NumberOfDecimalPlaces);
+		        var compressed = val * Mathf.Pow(10, Settings.NumberOfDecimalPlaces);
 		        WriteVLQCompression(ZigZagEncode((int)compressed));
 	        }
 	        else
@@ -542,9 +583,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteQuaternion(Quaternion val)
         {
-	        if (UseCompression)
+	        if (Settings.UseCompression)
 	        {
-		        CompressedQuaternion q = new(val, BitsPerComponent);
+		        CompressedQuaternion q = new(val, Settings.BitsPerComponent);
 		        WriteVLQCompression(q.PackedQuaternion);
 	        }
 	        else
@@ -697,63 +738,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
             WriteInt64(val.ToBinary());
 		}
 
-		#endregion
-		
-		#region utilities
-		
-		/// <summary>
-		/// "ZigZagEncoding" based on google protocol buffers.
-		/// See for <a href="https://protobuf.dev/programming-guides/encoding/">reference</a>.
-		/// </summary>
-		/// <param name="val"></param>
-		/// <returns></returns>
-		private static ulong ZigZagEncode(short val)
-		{
-			return (ulong)((val >> 15) ^ (val << 1));
-		}
-
-		/// <summary>
-		/// "ZigZagEncoding" based on google protocol buffers.
-		/// See for <a href="https://protobuf.dev/programming-guides/encoding/">reference</a>.
-		/// </summary>
-		/// <param name="val"></param>
-		/// <returns></returns>
-		private static ulong ZigZagEncode(int val)
-		{
-			return (ulong)((val >> 31) ^ (val << 1));
-		}
-		
-		/// <summary>
-		/// "ZigZagEncoding" based on google protocol buffers.
-		/// See for <a href="https://protobuf.dev/programming-guides/encoding/">reference</a>.
-		/// </summary>
-		/// <param name="val"></param>
-		/// <returns></returns>
-		private static ulong ZigZagEncode(long val)
-		{
-			return (ulong)((val >> 63) ^ (val << 1));
-		}
-
-		/// <summary>
-		/// Uses a 7-bit VLQ encoding scheme based on the MIDI compression system.
-		/// See for <a href="https://web.archive.org/web/20051129113105/http://www.borg.com/~jglatt/tech/midifile/vari.htm">reference</a>
-		/// </summary>
-		/// <param name="val"></param>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private void WriteVLQCompression(ulong val)
-		{
-			do
-			{
-				var lowerBits = (byte)(val & 0x7F);
-				val >>= 7;
-				if (val > 0)
-					lowerBits |= 0x80;
-				_buffer[Position++] = lowerBits;
-			} while (val > 0);
-
-			Length = Math.Max(Length, Position);
-		}
-		
 		#endregion
 	}
 }

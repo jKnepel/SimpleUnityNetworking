@@ -32,21 +32,11 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		/// The remaining positions until the full length of the buffer.
 		/// </summary>
 		public int Remaining => Length - Position;
-		
+
 		/// <summary>
-		/// If compression should be used for all serialisation in the framework.
+		/// The settings used by the reader.
 		/// </summary>
-		public bool UseCompression { get; set; } = true;
-		/// <summary>
-		/// If compression is active, this will define the number of decimal places to which
-		/// floating point numbers will be compressed.
-		/// </summary>
-		public int NumberOfDecimalPlaces { get; set; } = 3;
-		/// <summary>
-		/// If compression is active, this will define the number of bits used by the three compressed Quaternion
-		/// components in addition to the two flag bits.
-		/// </summary>
-		public int BitsPerComponent { get; set; } = 10;
+		public readonly SerialiserSettings Settings;
 
 		private readonly byte[] _buffer;
 
@@ -57,7 +47,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 
 		#region lifecycle
 
-		public Reader(byte[] bytes, SerialiserConfiguration config = null)
+		public Reader(byte[] bytes, SerialiserSettings settings = default)
 		{
 			if (bytes == null)
 				return;
@@ -65,12 +55,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 			Position = 0;
 			_buffer = bytes;
 
-			if (config != null)
-			{
-				UseCompression = config.UseCompression;
-				NumberOfDecimalPlaces = config.NumberOfDecimalPlaces;
-				BitsPerComponent = config.BitsPerComponent;			
-			}
+			Settings = settings;
 		}
 
 		#endregion
@@ -284,7 +269,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		public void Revert(int bytes)
         {
             Position -= bytes; 
-            Position = Mathf.Max(Position, 0);
+            Position = Math.Max(Position, 0);
         }
 
 		/// <summary>
@@ -337,6 +322,39 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
             BlockCopy(ref remaining, 0, Remaining);
             return remaining;
 		}
+		
+		/// <summary>
+		/// "ZigZagEncoding" based on google protocol buffers.
+		/// See for <a href="https://protobuf.dev/programming-guides/encoding/">reference</a>.
+		/// </summary>
+		/// <param name="val"></param>
+		/// <returns></returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static long ZigZagDecode(ulong val)
+		{
+			return ((long)val >> 1) ^ -((long)val & 1);
+		}
+
+		/// <summary>
+		/// Uses a 7-bit VLQ encoding scheme based on the MIDI compression system.
+		/// See for <a href="https://web.archive.org/web/20051129113105/http://www.borg.com/~jglatt/tech/midifile/vari.htm">reference</a>.
+		/// </summary>
+		/// <returns></returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private ulong ReadVLQCompression()
+		{
+			ulong val = 0;
+			ulong shift = 0;
+			while (true)
+			{
+				ulong lowerBits = ReadByte();
+				val |= (lowerBits & 0x7F) << (int)shift;
+				shift += 7;
+				if ((lowerBits & 0x80) == 0) break;
+			}
+	        
+			return val;
+		}
 
 		#endregion
 
@@ -366,7 +384,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ushort ReadUInt16()
 		{
-			if (UseCompression)
+			if (Settings.UseCompression)
 				return (ushort)ReadVLQCompression();
 			
 			ushort result = _buffer[Position++];
@@ -377,7 +395,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public short ReadInt16()
 		{
-			if (UseCompression)
+			if (Settings.UseCompression)
 				return (short)ZigZagDecode(ReadVLQCompression());
 			
 			short result = _buffer[Position++];
@@ -388,7 +406,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public uint ReadUInt32()
 		{
-			if (UseCompression)
+			if (Settings.UseCompression)
 				return (uint)ReadVLQCompression();
 			
 			uint result = _buffer[Position++];
@@ -401,7 +419,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int ReadInt32()
 		{
-			if (UseCompression)
+			if (Settings.UseCompression)
 				return (int)ZigZagDecode(ReadVLQCompression());
 			
 			int result = _buffer[Position++];
@@ -414,7 +432,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ulong ReadUInt64()
 		{
-			if (UseCompression)
+			if (Settings.UseCompression)
 				return ReadVLQCompression();
 			
 			ulong result = _buffer[Position++];
@@ -431,7 +449,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public long ReadInt64()
 		{
-			if (UseCompression)
+			if (Settings.UseCompression)
 				return ZigZagDecode(ReadVLQCompression());
 			
 			long result = _buffer[Position++];
@@ -456,10 +474,10 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float ReadSingle()
 		{
-			if (UseCompression)
+			if (Settings.UseCompression)
 			{
 				var compressed = ZigZagDecode(ReadVLQCompression());
-				return compressed / Mathf.Pow(10, NumberOfDecimalPlaces);
+				return compressed / Mathf.Pow(10, Settings.NumberOfDecimalPlaces);
 			}
 			
 			TypeConverter.UIntToFloat converter = new() { UInt = ReadUInt32() };
@@ -505,10 +523,10 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Quaternion ReadQuaternion()
 		{
-			if (UseCompression)
+			if (Settings.UseCompression)
 			{
 				var packed = ReadVLQCompression();
-				CompressedQuaternion q = new(packed, BitsPerComponent);
+				CompressedQuaternion q = new(packed, Settings.BitsPerComponent);
 				return q.Quaternion;
 			}
 			
@@ -610,43 +628,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
             return DateTime.FromBinary(ReadInt64());
 		}
 
-        #endregion
-        
-        #region utilities
-        
-		/// <summary>
-		/// "ZigZagEncoding" based on google protocol buffers.
-		/// See for <a href="https://protobuf.dev/programming-guides/encoding/">reference</a>.
-		/// </summary>
-		/// <param name="val"></param>
-		/// <returns></returns>
-        private static long ZigZagDecode(ulong val)
-        {
-	        return ((long)val >> 1) ^ -((long)val & 1);
-        }
-
-        /// <summary>
-        /// Uses a 7-bit VLQ encoding scheme based on the MIDI compression system.
-        /// See for <a href="https://web.archive.org/web/20051129113105/http://www.borg.com/~jglatt/tech/midifile/vari.htm">reference</a>.
-        /// </summary>
-        /// <returns></returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ulong ReadVLQCompression()
-        {
-	        ulong val = 0;
-	        ulong shift = 0;
-	        var left = true;
-	        while (left)
-	        {
-		        ulong lowerBits = ReadByte();
-		        left = (lowerBits & 0x80) != 0;
-		        val |= (lowerBits & 0x7F) << (int)shift;
-		        shift += 7;
-	        }
-	        
-	        return val;
-        }
-        
         #endregion
     }
 }
