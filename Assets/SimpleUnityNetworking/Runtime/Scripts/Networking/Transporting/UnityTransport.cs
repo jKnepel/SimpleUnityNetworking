@@ -3,12 +3,14 @@ using jKnepel.SimpleUnityNetworking.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Timers;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Networking.Transport;
 using Unity.Networking.Transport.Error;
 using Unity.Networking.Transport.Relay;
 using Unity.Networking.Transport.Utilities;
+using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 {
@@ -21,6 +23,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         private bool _disposed;
         
         private int _maxNumberOfClients;
+        
+        private readonly Timer _tickrateTimer = new();
+        private bool _serverIsTicking;
+        private bool _clientIsTicking;
         
         private NetworkDriver _driver;
         private NetworkSettings _networkSettings;
@@ -64,9 +70,12 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         #endregion
         
         #region lifecycle
-        
+
         public UnityTransport(TransportSettings settings)
-            : base(settings) {}
+            : base(settings)
+        {
+            _tickrateTimer.Elapsed += (_, _) => MainThreadQueue.Enqueue(TickInternal);
+        }
         
         protected override void Dispose(bool disposing)
         {
@@ -74,6 +83,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             
             if (disposing)
             {
+                _tickrateTimer.Dispose();
                 _serverState = ELocalConnectionState.Stopped;
                 _clientState = ELocalConnectionState.Stopped;
                 _clientIDToConnection = null;
@@ -155,6 +165,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             _clientIDToConnection = new();
             _connectionToClientID = new();
             _driver.Listen();
+            AutomaticTicks(true, true);
             SetLocalServerState(ELocalConnectionState.Started);
         }
 
@@ -180,6 +191,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             _clientIDToConnection = null;
             _connectionToClientID = null;
             _clientIDs = 0;
+            AutomaticTicks(false, true);
             DisposeInternals();
 
             SetLocalServerState(ELocalConnectionState.Stopped);
@@ -246,6 +258,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             }
 
             _serverConnection = _driver.Connect(serverEndpoint);
+            AutomaticTicks(true, false);
         }
 
         public override void StopClient()
@@ -268,6 +281,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             _driver.ScheduleUpdate().Complete();
             _serverConnection = default;
             DisposeInternals();
+            AutomaticTicks(false, false);
 
             SetLocalClientState(ELocalConnectionState.Stopped);
         }
@@ -291,6 +305,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             }
             
             _hostClientID = _clientIDs++;
+            AutomaticTicks(true, false);
             SetLocalClientState(ELocalConnectionState.Started);
             OnConnectionUpdated?.Invoke(_hostClientID, ERemoteConnectionState.Connected);
         }
@@ -299,6 +314,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         {
             SetLocalClientState(ELocalConnectionState.Stopping);
             _hostClientID = 0;
+            AutomaticTicks(false, false);
             OnConnectionUpdated?.Invoke(_hostClientID, ERemoteConnectionState.Disconnected);
             SetLocalClientState(ELocalConnectionState.Stopped);
         }
@@ -351,18 +367,49 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             _relayServerData = relayServerData;
             Settings.ProtocolType = EProtocolType.UnityRelayTransport;
         }
-        
-        #endregion
-        
-        #region incoming
 
         public override void Tick()
+        {
+            Settings.AutomaticTicks = false;
+            _tickrateTimer.Enabled = false;
+            TickInternal();
+        }
+
+        private void TickInternal()
         {
             IterateIncoming();
             IterateOutgoing();
         }
+        
+        private void AutomaticTicks(bool start, bool asServer)
+        {
+            if (asServer)
+                _serverIsTicking = start;
+            else
+                _clientIsTicking = start;
+            
+            switch (start)
+            {
+                case true when _tickrateTimer.Enabled:
+                case true when !Settings.AutomaticTicks:
+                    return;
+                case true:
+                    _tickrateTimer.Interval = 1000f / Settings.Tickrate;
+                    _tickrateTimer.Start();
+                    return;
+                case false when !_serverIsTicking && !_clientIsTicking:
+                    _tickrateTimer.Stop();
+                    return;
+                case false:
+                    return;
+            }
+        }
 
-        public void IterateIncoming()
+        #endregion
+        
+        #region incoming
+
+        private void IterateIncoming()
         {
             if (!_driver.IsCreated) return;
 
@@ -526,7 +573,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             queue.Enqueue(new(data, Allocator.Persistent));
         }
 
-        public void IterateOutgoing()
+        private void IterateOutgoing()
         {
             if (!_driver.IsCreated) return;
 

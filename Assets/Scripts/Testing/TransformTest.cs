@@ -23,7 +23,6 @@ public class TransformTest : MonoBehaviour
 
     private void Update()
     {
-        _manager.Tick();
         if (_sendObject.hasChanged && _synchronise)
         {
             SendTransformToClient(ENetworkChannel.UnreliableOrdered);

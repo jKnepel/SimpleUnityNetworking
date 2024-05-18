@@ -31,11 +31,6 @@ public class RelayTest : MonoBehaviour
     {
         _ = InitializeNetwork();
     }
-
-    private void Update()
-    {
-        _manager.Tick();
-	}
     
     public async Task InitializeNetwork()
     {

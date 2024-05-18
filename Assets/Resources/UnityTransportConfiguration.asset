@@ -26,3 +26,5 @@ MonoBehaviour:
     WindowSize: 32
     MinimumResendTime: 64
     MaximumResendTime: 200
+    AutomaticTicks: 1
+    Tickrate: 30

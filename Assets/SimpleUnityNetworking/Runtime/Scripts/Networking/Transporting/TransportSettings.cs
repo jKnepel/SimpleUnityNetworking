@@ -73,6 +73,17 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         /// longer than this value to resend a packet.
         /// </summary>
         public int MaximumResendTime = 200;
+        /// <summary>
+        /// Whether the framework should automatically handle the tick rate on its own.
+        /// If this value is set to false, the tick method must be called manually or no updates
+        /// will be performed by the transport.
+        /// </summary>
+        public bool AutomaticTicks = true;
+        /// <summary>
+        /// The rate at which updates are performed per second. These updates include all network events,
+        /// incoming and outgoing packets and client connections.
+        /// </summary>
+        public int Tickrate = 60;
     }
 
     public enum EProtocolType
@@ -107,6 +118,11 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                 EditorGUILayout.PropertyField(property.FindPropertyRelative("WindowSize"), new GUIContent("Window Size:", "Maximum number in-flight packets per pipeline/connection combination. Default value is 32 but can be increased to 64 at the cost of slightly larger packet headers."));
                 EditorGUILayout.PropertyField(property.FindPropertyRelative("MinimumResendTime"), new GUIContent("Minimum Resend Time:", "Minimum amount of time to wait before a reliable packet is resent if it's not been acknowledged."));
                 EditorGUILayout.PropertyField(property.FindPropertyRelative("MaximumResendTime"), new GUIContent("Maximum Resend Time:", "Maximum amount of time to wait before a reliable packet is resent if it's not been acknowledged. That is, even with a high RTT the reliable pipeline will never wait longer than this value to resend a packet."));
+
+                var ticks = property.FindPropertyRelative("AutomaticTicks");
+                EditorGUILayout.PropertyField(ticks, new GUIContent("Automatic Ticks:", "Whether the framework should automatically handle the tick rate on its own. If this value is set to false, the tick method must be called manually or no updates will be performed by the transport."));
+                if (ticks.boolValue)
+                    EditorGUILayout.PropertyField(property.FindPropertyRelative("Tickrate"), new GUIContent("Tickrate:", "The rate at which updates are performed per second. These updates include all network events, incoming and outgoing packets and client connections."));
             }
             EditorGUI.EndProperty();
         }

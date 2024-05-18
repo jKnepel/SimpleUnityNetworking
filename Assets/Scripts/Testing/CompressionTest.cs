@@ -17,11 +17,6 @@ public class CompressionTest : MonoBehaviour
     public bool IsClient => _manager?.IsClient ?? false;
     public bool IsHost => _manager?.IsHost ?? false;
 
-    private void Update()
-    {
-        _manager.Tick();
-	}
-
     public void StartServer()
     {
         _manager.StartServer("server");
