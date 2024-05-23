@@ -30,6 +30,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     Transport.OnServerReceivedData -= OnServerReceivedData;
                     Transport.OnClientReceivedData -= OnClientReceivedData;
                     Transport.OnConnectionUpdated -= OnRemoteConnectionStateUpdated;
+                    Transport.OnTickStarted -= TickStarted;
+                    Transport.OnTickCompleted -= TickCompleted;
                     
                     if (Logger is not null)
                         Transport.OnTransportLogAdded -= Logger.Log;
@@ -50,6 +52,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 Transport.OnServerReceivedData += OnServerReceivedData;
                 Transport.OnClientReceivedData += OnClientReceivedData;
                 Transport.OnConnectionUpdated += OnRemoteConnectionStateUpdated;
+                Transport.OnTickStarted += TickStarted;
+                Transport.OnTickCompleted += TickCompleted;
                 
                 if (Logger is not null)
                     Transport.OnTransportLogAdded += Logger.Log;
@@ -88,6 +92,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         
         public ServerInformation ServerInformation { get; private set; }
         public ClientInformation ClientInformation { get; private set; }
+
+        public event Action OnTickStarted;
+        public event Action OnTickCompleted;
         
         private bool _disposed;
 
@@ -167,6 +174,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             StopClient();
             StopServer();
         }
+
+        #endregion
+        
+        #region utilities
+
+        private void TickStarted() => OnTickStarted?.Invoke();
+        private void TickCompleted() => OnTickCompleted?.Invoke();
 
         #endregion
     }

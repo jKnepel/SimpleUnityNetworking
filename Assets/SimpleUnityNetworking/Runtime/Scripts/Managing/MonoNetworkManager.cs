@@ -95,6 +95,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    public event Action<uint> Client_OnRemoteClientDisconnected;
 	    public event Action<uint> Client_OnRemoteClientUpdated;
 
+	    public event Action OnTickStarted;
+	    public event Action OnTickCompleted;
+
 	    private NetworkManager _networkManager;
 	    public NetworkManager NetworkManager
 	    {
@@ -119,6 +122,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    NetworkManager.Client_OnRemoteClientConnected += id => Client_OnRemoteClientConnected?.Invoke(id);
 		    NetworkManager.Client_OnRemoteClientDisconnected += id => Client_OnRemoteClientDisconnected?.Invoke(id);
 		    NetworkManager.Client_OnRemoteClientUpdated += id => Client_OnRemoteClientUpdated?.Invoke(id);
+		    NetworkManager.OnTickStarted += () => OnTickStarted?.Invoke();
+		    NetworkManager.OnTickCompleted += () => OnTickCompleted?.Invoke();
 	    }
 
 	    public void Tick()

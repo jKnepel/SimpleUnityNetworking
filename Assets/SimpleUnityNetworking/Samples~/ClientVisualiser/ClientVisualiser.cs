@@ -9,11 +9,11 @@ namespace jKnepel.SimpleUnityNetworking.Samples
         [SerializeField] private TMPro.TMP_Text _usernameObject;
         [SerializeField] private Material _material;
 
-        public void UpdateVisualiser(byte id, string username, Colour colour)
+        public void UpdateVisualiser(uint id, string username, Color colour)
         {
             name = $"{id}#{username}";
             _usernameObject.text = username;
-            _usernameObject.colour = colour;
+            _usernameObject.color = colour;
             if (_material == null)
             {
                 _renderer.material = Instantiate(_material);
