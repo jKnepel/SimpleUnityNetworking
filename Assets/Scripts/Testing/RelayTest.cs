@@ -153,6 +153,9 @@ public class RelayTestEditor : Editor
 
         EditorGUILayout.PropertyField(serializedObject.FindProperty("_manager"));
         
+        EditorGUILayout.Space();
+        
+        GUILayout.Label("Values:", EditorStyles.boldLabel);
         GUILayout.Label($"IsOnline: {test.IsOnline}");
         GUILayout.Label($"IsServer: {test.IsServer}");
         GUILayout.Label($"IsClient: {test.IsClient}");
@@ -161,22 +164,26 @@ public class RelayTestEditor : Editor
         
         EditorGUILayout.Space();
 
-
+        GUILayout.Label("Server:", EditorStyles.boldLabel);
         _maxNumberPlayers = EditorGUILayout.IntField("Max Players:", _maxNumberPlayers);
         _allocationRegionIdx = EditorGUILayout.Popup("Allocation Region:", _allocationRegionIdx, test.AllocationRegions ?? Array.Empty<string>());
-        if (GUILayout.Button("Start Server"))
+        if (!test.IsServer && GUILayout.Button("Start Server"))
             test.StartServer(_maxNumberPlayers, test.AllocationRegions[_allocationRegionIdx]);
-        if (GUILayout.Button("Stop Server"))
+        if (test.IsServer && GUILayout.Button("Stop Server"))
             test.StopServer();
+        
         EditorGUILayout.Space();
 
+        GUILayout.Label("Client:", EditorStyles.boldLabel);
         _joinCode = EditorGUILayout.TextField("Join Code:", _joinCode);
-        if (GUILayout.Button("Start Client"))
+        if (!test.IsClient && GUILayout.Button("Start Client"))
             test.StartClient(_joinCode);
-        if (GUILayout.Button("Stop Client"))
+        if (test.IsClient && GUILayout.Button("Stop Client"))
             test.StopClient();
+        
         EditorGUILayout.Space();
         
+        GUILayout.Label("Data:", EditorStyles.boldLabel);
         if (GUILayout.Button("Register"))
             test.Register();
         if (GUILayout.Button("Unregister"))

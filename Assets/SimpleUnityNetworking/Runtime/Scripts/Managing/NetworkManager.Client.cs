@@ -57,7 +57,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             {
                 Reader reader = new(data.Data, SerialiserConfiguration?.Settings);
                 var packetType = (EPacketType)reader.ReadByte();
-                Debug.Log($"Client Packet: {packetType}");
+                // Debug.Log($"Client Packet: {packetType}");
 
                 switch (packetType)
                 {
@@ -73,6 +73,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     case EPacketType.ClientUpdate:
                         HandleClientUpdatePacket(reader);
                         break;
+                    default:
+                        return;
                 }
             }
             catch (Exception e)
