@@ -119,6 +119,15 @@ namespace jKnepel.SimpleUnityNetworking
         /// Called by the local client when a remote client updated its information
         /// </summary>
         event Action<uint> Client_OnRemoteClientUpdated;
+
+        /// <summary>
+        /// Called when a tick was started
+        /// </summary>
+        event Action OnTickStarted;
+        /// <summary>
+        /// Called when a tick was completed
+        /// </summary>
+        event Action OnTickCompleted;
         
         #endregion
         

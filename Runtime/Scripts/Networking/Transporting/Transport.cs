@@ -58,9 +58,18 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         public abstract event Action<uint, ERemoteConnectionState> OnConnectionUpdated;
         
         /// <summary>
-        /// Called when aa log message was added in the underlying transport
+        /// Called when a log message was added in the underlying transport
         /// </summary>
         public abstract event Action<string, EMessageSeverity> OnTransportLogAdded;
+
+        /// <summary>
+        /// Called when a tick was started
+        /// </summary>
+        public abstract event Action OnTickStarted;
+        /// <summary>
+        /// Called when a tick was completed
+        /// </summary>
+        public abstract event Action OnTickCompleted;
 
         protected Transport(TransportSettings settings)
         {

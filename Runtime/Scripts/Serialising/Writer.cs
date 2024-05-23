@@ -46,9 +46,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 
 		#region lifecycle
 
-		public Writer(SerialiserSettings settings = default)
+		public Writer(SerialiserSettings settings = null)
 		{
-			Settings = settings;
+			Settings = settings ?? new();
 		}
 
 		#endregion

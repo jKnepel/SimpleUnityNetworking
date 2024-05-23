@@ -128,6 +128,15 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public static event Action<uint> Client_OnRemoteClientUpdated;
 
+        /// <summary>
+        /// Called when a tick was started
+        /// </summary>
+        public static event Action OnTickStarted;
+        /// <summary>
+        /// Called when a tick was completed
+        /// </summary>
+        public static event Action OnTickCompleted;
+
         private static NetworkManager _networkManager;
         public static NetworkManager NetworkManager
         {
@@ -152,6 +161,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             NetworkManager.Client_OnRemoteClientConnected += id => Client_OnRemoteClientConnected?.Invoke(id);
             NetworkManager.Client_OnRemoteClientDisconnected += id => Client_OnRemoteClientDisconnected?.Invoke(id);
             NetworkManager.Client_OnRemoteClientUpdated += id => Client_OnRemoteClientUpdated?.Invoke(id);
+            NetworkManager.OnTickStarted += () => OnTickStarted?.Invoke();
+            NetworkManager.OnTickCompleted += () => OnTickCompleted?.Invoke();
 #if UNITY_EDITOR
             EditorApplication.playModeStateChanged += PreventPlayMode;
 #endif

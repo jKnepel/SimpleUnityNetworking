@@ -67,6 +67,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 
         public override event Action<string, EMessageSeverity> OnTransportLogAdded;
 
+        public override event Action OnTickStarted;
+        public override event Action OnTickCompleted;
+
         #endregion
         
         #region lifecycle
@@ -377,8 +380,12 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 
         private void TickInternal()
         {
+            if (!_driver.IsCreated) return;
+
+            OnTickStarted?.Invoke();
             IterateIncoming();
             IterateOutgoing();
+            OnTickCompleted?.Invoke();
         }
         
         private void AutomaticTicks(bool start, bool asServer)
@@ -411,8 +418,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 
         private void IterateIncoming()
         {
-            if (!_driver.IsCreated) return;
-
             _driver.ScheduleUpdate().Complete();
 
             while (_driver.IsCreated && AcceptConnection()) {}
@@ -575,8 +580,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 
         private void IterateOutgoing()
         {
-            if (!_driver.IsCreated) return;
-
             foreach (var (sendTarget, sendQueue) in _outgoingMessages)
             {
                 if (!_driver.IsCreated) return;

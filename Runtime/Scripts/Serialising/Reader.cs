@@ -47,7 +47,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 
 		#region lifecycle
 
-		public Reader(byte[] bytes, SerialiserSettings settings = default)
+		public Reader(byte[] bytes, SerialiserSettings settings = null)
 		{
 			if (bytes == null)
 				return;
@@ -55,7 +55,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 			Position = 0;
 			_buffer = bytes;
 
-			Settings = settings;
+			Settings = settings ?? new();
 		}
 
 		#endregion
