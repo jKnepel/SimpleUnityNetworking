@@ -10,7 +10,6 @@ using Unity.Networking.Transport;
 using Unity.Networking.Transport.Error;
 using Unity.Networking.Transport.Relay;
 using Unity.Networking.Transport.Utilities;
-using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 {
@@ -42,10 +41,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 
         private Dictionary<uint, NetworkConnection> _clientIDToConnection;
         private Dictionary<NetworkConnection, uint> _connectionToClientID;
-        private uint _clientIDs;
+        private uint _clientIDs = 1;
         
         private NetworkConnection _serverConnection;
-        
         private uint _hostClientID; // client ID that the hosting server assigns its local client
 
         private ELocalConnectionState _serverState = ELocalConnectionState.Stopped;
@@ -92,8 +90,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                 _clientIDToConnection = null;
                 _connectionToClientID = null;
                 _serverConnection = default;
-                _clientIDs = 0;
-                _hostClientID = 0;
+                _clientIDs = 1;
+                _hostClientID = 1;
             }
 
             // TODO : clean/flush outgoing messages
@@ -193,7 +191,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             _driver.ScheduleUpdate().Complete();
             _clientIDToConnection = null;
             _connectionToClientID = null;
-            _clientIDs = 0;
+            _clientIDs = 1;
             AutomaticTicks(false, true);
             DisposeInternals();
 
@@ -776,7 +774,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 
             sendTargets.Dispose();
         }
-
+        
         private static string ParseStatusCode(int code)
         {
             switch ((StatusCode)code)

@@ -60,6 +60,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
+        public SerialiserSettings SerialiserSettings => SerialiserConfiguration?.Settings;
         public SerialiserConfiguration SerialiserConfiguration { get; set; }
 
         public Logger Logger => LoggerConfiguration?.Logger;
@@ -178,6 +179,28 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         #endregion
         
         #region utilities
+        
+        private delegate void ByteDataCallback(uint senderID, byte[] data);
+        private delegate void StructDataCallback(uint senderID, byte[] data);
+        
+        private static ByteDataCallback CreateByteDataDelegate(Action<uint, byte[]> callback)
+        {
+            return ParseDelegate;
+            void ParseDelegate(uint senderID, byte[] data)
+            {
+                callback?.Invoke(senderID, data);
+            }
+        }
+        
+        private StructDataCallback CreateStructDataDelegate<T>(Action<uint, T> callback)
+        {
+            return ParseDelegate;
+            void ParseDelegate(uint senderID, byte[] data)
+            {
+                Reader reader = new(data, SerialiserSettings);
+                callback?.Invoke(senderID, reader.Read<T>());
+            }
+        }
 
         private void TickStarted() => OnTickStarted?.Invoke();
         private void TickCompleted() => OnTickCompleted?.Invoke();

@@ -39,12 +39,12 @@ public class CompressionTest : MonoBehaviour
 
     public void Register()
     {
-        _manager.RegisterByteData("values", ReceiveValueBytes);
+        _manager.Client_RegisterByteData("values", ReceiveValueBytes);
     }
 
     public void Unregister()
     {
-        _manager.UnregisterByteData("values", ReceiveValueBytes);
+        _manager.Client_UnregisterByteData("values", ReceiveValueBytes);
     }
 
     public void SendValuesToClient(ENetworkChannel channel)
@@ -62,7 +62,7 @@ public class CompressionTest : MonoBehaviour
 
         Writer writer = new(_serialiserConfiguration.Settings);
         writer.Write(data);
-        _manager.SendByteDataToClient(_targetClientID, "values", writer.GetBuffer(), channel);
+        _manager.Client_SendByteDataToClient(_targetClientID, "values", writer.GetBuffer(), channel);
     }
 
     private void ReceiveValueBytes(uint clientID, byte[] data)

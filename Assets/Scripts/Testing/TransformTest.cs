@@ -1,7 +1,7 @@
+using jKnepel.SimpleUnityNetworking;
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Serialising;
-using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -52,12 +52,12 @@ public class TransformTest : MonoBehaviour
 
     public void Register()
     {
-        _manager.RegisterByteData("transform", ReceiveTransformStruct);
+        _manager.Client_RegisterByteData("transform", ReceiveTransformStruct);
     }
 
     public void Unregister()
     {
-        _manager.UnregisterByteData("transform", ReceiveTransformStruct);
+        _manager.Client_UnregisterByteData("transform", ReceiveTransformStruct);
     }
 
     public void SendTransformToClient(ENetworkChannel channel)
@@ -70,7 +70,7 @@ public class TransformTest : MonoBehaviour
         
         Writer writer = new(_serialiserConfiguration.Settings);
         writer.Write(data);
-        _manager.SendByteDataToClient(_targetClientID, "transform", writer.GetBuffer(), channel);
+        _manager.Client_SendByteDataToClient(_targetClientID, "transform", writer.GetBuffer(), channel);
     }
 
     private void ReceiveTransformStruct(uint clientID, byte[] data)

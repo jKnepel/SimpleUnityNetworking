@@ -1,6 +1,6 @@
+using jKnepel.SimpleUnityNetworking;
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
-using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -9,8 +9,6 @@ using UnityEditor;
 public class StructTest : MonoBehaviour
 {
     [SerializeField] private MonoNetworkManager _manager;
-    [SerializeField] private uint _targetClientID;
-    [SerializeField] private string _message;
     
     public bool IsOnline => _manager?.IsOnline ?? false;
     public bool IsServer => _manager?.IsServer ?? false;
@@ -36,22 +34,32 @@ public class StructTest : MonoBehaviour
     {
         _manager.StopClient();
     }
-
-    public void Register()
+    
+    public void RegisterServer()
     {
-        _manager.RegisterStructData<MessageStruct>(ReceiveStruct);
+        _manager.Server_RegisterStructData<MessageStruct>(ReceiveStruct);
     }
 
-    public void Unregister()
+    public void UnregisterServer()
     {
-        _manager.UnregisterStructData<MessageStruct>(ReceiveStruct);
+        _manager.Server_UnregisterStructData<MessageStruct>(ReceiveStruct);
     }
 
-    public void SendToClient(ENetworkChannel channel = ENetworkChannel.ReliableOrdered)
+    public void RegisterClient()
     {
-        MessageStruct message = new()
+        _manager.Client_RegisterStructData<MessageStruct>(ReceiveStruct);
+    }
+
+    public void UnregisterClient()
+    {
+        _manager.Client_UnregisterStructData<MessageStruct>(ReceiveStruct);
+    }
+    
+    public void SendToClientFromServer(uint client, string message, ENetworkChannel channel = ENetworkChannel.ReliableOrdered)
+    {
+        MessageStruct str = new()
         {
-            String = _message,
+            String = message,
             Byte = 1,
             Short = -2,
             UShort = 5,
@@ -61,7 +69,41 @@ public class StructTest : MonoBehaviour
             ULong = 123123,
             Ints = new [] { 1, 2, 3 }
         };
-        _manager.SendStructDataToClient(_targetClientID, message, channel);
+        _manager.Server_SendStructDataToClient(client, str, channel);
+    }
+
+    public void SendToClient(uint client, string message, ENetworkChannel channel = ENetworkChannel.ReliableOrdered)
+    {
+        MessageStruct str = new()
+        {
+            String = message,
+            Byte = 1,
+            Short = -2,
+            UShort = 5,
+            Int = -998,
+            UInt = 213,
+            Long = -12313123,
+            ULong = 123123,
+            Ints = new [] { 1, 2, 3 }
+        };
+        _manager.Client_SendStructDataToClient(client, str, channel);
+    }
+
+    public void SendToServer(string message, ENetworkChannel channel = ENetworkChannel.ReliableOrdered)
+    {
+        MessageStruct str = new()
+        {
+            String = message,
+            Byte = 1,
+            Short = -2,
+            UShort = 5,
+            Int = -998,
+            UInt = 213,
+            Long = -12313123,
+            ULong = 123123,
+            Ints = new [] { 1, 2, 3 }
+        };
+        _manager.Client_SendStructDataToServer(str, channel);
     }
 
     private void ReceiveStruct(uint clientID, MessageStruct message)
@@ -96,6 +138,8 @@ public class StructTest : MonoBehaviour
 [CustomEditor(typeof(StructTest))]
 public class StructTestEditor : Editor
 {
+    private uint _clientID = 1;
+    private string _message = string.Empty;
     private ENetworkChannel _channel = ENetworkChannel.ReliableOrdered;
     
 	public override void OnInspectorGUI()
@@ -108,22 +152,40 @@ public class StructTestEditor : Editor
         GUILayout.Label($"IsServer: {test.IsServer}");
         GUILayout.Label($"IsClient: {test.IsClient}");
         GUILayout.Label($"IsHost: {test.IsHost}");
-        _channel = (ENetworkChannel)EditorGUILayout.EnumPopup(_channel);
         
-        if (GUILayout.Button("Register"))
-            test.Register();
-        if (GUILayout.Button("Unregister"))
-            test.Unregister();
-        if (GUILayout.Button("Start Server"))
+        EditorGUILayout.Space();
+        
+        if (GUILayout.Button("Register Server"))
+            test.RegisterServer();
+        if (GUILayout.Button("Unregister Server"))
+            test.UnregisterServer();
+        if (GUILayout.Button("Register Client"))
+            test.RegisterClient();
+        if (GUILayout.Button("Unregister Client"))
+            test.UnregisterClient();
+        
+        EditorGUILayout.Space();
+        
+        if (!test.IsServer && GUILayout.Button("Start Server"))
             test.StartServer();
-        if (GUILayout.Button("Stop Server"))
+        if (test.IsServer && GUILayout.Button("Stop Server"))
             test.StopServer();
-        if (GUILayout.Button("Start Client"))
+        if (!test.IsClient && GUILayout.Button("Start Client"))
             test.StartClient();
-        if (GUILayout.Button("Stop Client"))
+        if (test.IsClient && GUILayout.Button("Stop Client"))
             test.StopClient();
-        if (GUILayout.Button("Send Message"))
-            test.SendToClient(_channel);
+        
+        EditorGUILayout.Space();
+
+        _clientID = (uint)EditorGUILayout.IntField("Client ID:", (int)_clientID);
+        _message = EditorGUILayout.TextField("Mesage:", _message);
+        _channel = (ENetworkChannel)EditorGUILayout.EnumPopup("Channel:", _channel);
+        if (GUILayout.Button("Send Message To Client From Server"))
+            test.SendToClientFromServer(_clientID, _message, _channel);
+        if (GUILayout.Button("Send Message To Client"))
+            test.SendToClient(_clientID, _message, _channel);
+        if (GUILayout.Button("Send Message To Server"))
+            test.SendToServer(_message, _channel);
     }
 }
 #endif

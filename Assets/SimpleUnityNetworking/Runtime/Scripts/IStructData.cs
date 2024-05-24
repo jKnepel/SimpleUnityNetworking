@@ -1,4 +1,4 @@
-namespace jKnepel.SimpleUnityNetworking.SyncDataTypes
+namespace jKnepel.SimpleUnityNetworking
 {
 	public interface IStructData { }
 }

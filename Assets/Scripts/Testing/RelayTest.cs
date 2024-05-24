@@ -1,7 +1,7 @@
+using jKnepel.SimpleUnityNetworking;
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
-using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -85,12 +85,12 @@ public class RelayTest : MonoBehaviour
 
     public void Register()
     {
-        _manager.RegisterStructData<MessageStruct>(ReceiveStruct);
+        _manager.Client_RegisterStructData<MessageStruct>(ReceiveStruct);
     }
 
     public void Unregister()
     {
-        _manager.UnregisterStructData<MessageStruct>(ReceiveStruct);
+        _manager.Client_UnregisterStructData<MessageStruct>(ReceiveStruct);
     }
 
     public void SendToClient(ENetworkChannel channel = ENetworkChannel.ReliableOrdered)
@@ -107,7 +107,7 @@ public class RelayTest : MonoBehaviour
             ULong = 123123,
             Ints = new [] { 1, 2, 3 }
         };
-        _manager.SendStructDataToClient(_targetClientID, message, channel);
+        _manager.Client_SendStructDataToClient(_targetClientID, message, channel);
     }
 
     private void ReceiveStruct(uint clientID, MessageStruct message)

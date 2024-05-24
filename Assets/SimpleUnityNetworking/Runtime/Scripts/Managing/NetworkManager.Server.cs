@@ -3,17 +3,19 @@ using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.Packets;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
+using jKnepel.SimpleUnityNetworking.Utilities;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
-using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
     public partial class NetworkManager
     {
+        #region server logic
+        
         public ConcurrentDictionary<uint, ClientInformation> Server_ConnectedClients { get; } = new();
         
         public ELocalServerConnectionState Server_LocalState => _localServerConnectionState;
@@ -76,13 +78,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             
             // create and save challenge
-            System.Random rnd = new();
+            Random rnd = new();
             var challenge = (ulong)(rnd.NextDouble() * ulong.MaxValue);
             var hashedChallenge = SHA256.Create().ComputeHash(BitConverter.GetBytes(challenge));
             _authenticatingClients[clientID] = hashedChallenge;
 
             // send challenge to client
-            Writer writer = new(SerialiserConfiguration?.Settings);
+            Writer writer = new(SerialiserSettings);
             writer.WriteByte(ConnectionChallengePacket.PacketType);
             ConnectionChallengePacket.Write(writer, new(challenge));
             Transport?.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
@@ -98,7 +100,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Logger?.Log($"Server: Remote client {clientID} was disconnected", EMessageSeverity.Log);
 
             // inform other clients of disconnected client
-            Writer writer = new(SerialiserConfiguration?.Settings);
+            Writer writer = new(SerialiserSettings);
             writer.WriteByte(ClientUpdatePacket.PacketType);
             ClientUpdatePacket.Write(writer, new(clientID));
             foreach (var id in Server_ConnectedClients.Keys)
@@ -109,7 +111,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             try
             {
-                Reader reader = new(data.Data, SerialiserConfiguration?.Settings);
+                Reader reader = new(data.Data, SerialiserSettings);
                 var packetType = (EPacketType)reader.ReadByte();
                 // Debug.Log($"Server Packet: {packetType} from {data.ClientID}");
 
@@ -130,7 +132,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             catch (Exception e)
             {
-                Logger?.Log(e.Message, EMessageSeverity.Error);
+                Logger?.Log(e.Message);
             }
         }
 
@@ -148,7 +150,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             
             // inform client of authentication
-            Writer writer = new(SerialiserConfiguration?.Settings);
+            Writer writer = new(SerialiserSettings);
             writer.WriteByte(ConnectionAuthenticatedPacket.PacketType);
             ConnectionAuthenticatedPacket authentication = new(clientID, ServerInformation.Servername,
                 ServerInformation.MaxNumberConnectedClients);
@@ -202,7 +204,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Server_OnRemoteClientUpdated?.Invoke(clientID);
 
             // inform other clients of update
-            Writer writer = new(SerialiserConfiguration?.Settings);
+            Writer writer = new(SerialiserSettings);
             writer.WriteByte(ClientUpdatePacket.PacketType);
             ClientUpdatePacket.Write(writer, packet);
             var data = writer.GetBuffer();
@@ -225,16 +227,24 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 case DataPacket.DataPacketType.Forwarded:
                     return;
                 // ReSharper disable once PossibleInvalidOperationException
-                case DataPacket.DataPacketType.Target:
+                case DataPacket.DataPacketType.ToClient:
                     targetIDs = new[] { (uint)packet.TargetID };
                     break;
-                case DataPacket.DataPacketType.Targets:
+                case DataPacket.DataPacketType.ToClients:
                     targetIDs = packet.TargetIDs;
+                    break;
+                case DataPacket.DataPacketType.ToServer:
+                    if (packet.IsStructData)
+                        // ReSharper disable once PossibleInvalidOperationException
+                        Server_ReceiveStructData(packet.DataID, clientID, packet.Data);
+                    else
+                        // ReSharper disable once PossibleInvalidOperationException
+                        Server_ReceiveByteData(packet.DataID, clientID, packet.Data);
                     break;
             }
             
             // forward data to defined clients
-            Writer writer = new(SerialiserConfiguration?.Settings);
+            Writer writer = new(SerialiserSettings);
             writer.WriteByte(DataPacket.PacketType);
             DataPacket forwardedPacket = new(DataPacket.DataPacketType.Forwarded, clientID, packet.IsStructData,
                 packet.DataID, packet.Data);
@@ -251,6 +261,188 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             return a.SequenceEqual(b);
         }
+        
+        #endregion
+        
+        #region byte data
+        
+        private readonly ConcurrentDictionary<uint, Dictionary<int, ByteDataCallback>> _registeredServerByteDataCallbacks = new();
+
+        public void Server_RegisterByteData(string byteID, Action<uint, byte[]> callback)
+        {
+            var byteDataHash = Hashing.GetFNV1Hash32(byteID);
+
+            if (!_registeredServerByteDataCallbacks.TryGetValue(byteDataHash, out var callbacks))
+            {
+                callbacks = new();
+                _registeredServerByteDataCallbacks.TryAdd(byteDataHash, callbacks);
+            }
+
+            var key = callback.GetHashCode();
+            var del = CreateByteDataDelegate(callback);
+            if (!callbacks.ContainsKey(key))
+                callbacks.TryAdd(key, del);
+        }
+
+        public void Server_UnregisterByteData(string byteID, Action<uint, byte[]> callback)
+        {
+            var byteDataHash = Hashing.GetFNV1Hash32(byteID);
+
+            if (!_registeredServerByteDataCallbacks.TryGetValue(byteDataHash, out var callbacks))
+                return;
+
+            callbacks.Remove(callback.GetHashCode(), out _);
+        }
+        
+        public void Server_SendByteDataToClient(uint clientID, string byteID, byte[] byteData, 
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+        {
+            Server_SendByteData(new [] { clientID }, byteID, byteData, channel);
+        }
+
+        public void Server_SendByteDataToAll(string byteID, byte[] byteData, 
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+        {
+            Server_SendByteData(Client_ConnectedClients.Keys.ToArray(), byteID, byteData, channel);
+        }
+
+        public void Server_SendByteDataToClients(uint[] clientIDs, string byteID, byte[] byteData, 
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+        {
+            Server_SendByteData(clientIDs, byteID, byteData, channel);
+        }
+        
+        private void Server_SendByteData(uint[] clientIDs, string byteID, byte[] byteData,
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+        {
+            if (!IsServer)
+            {
+                Logger?.Log("The local server must be started before data can be send!");
+                return;
+            }
+            
+            foreach (var id in clientIDs)
+            {
+                if (Server_ConnectedClients.ContainsKey(id)) continue;
+                Logger?.Log("Client IDs contained a non-existing ID. All client IDs must be valid!");
+                return;
+            }
+
+            Writer writer = new(SerialiserSettings);
+            writer.WriteByte(DataPacket.PacketType);
+            DataPacket packet = new(DataPacket.DataPacketType.Forwarded, 0, false,
+                Hashing.GetFNV1Hash32(byteID), byteData);
+            DataPacket.Write(writer, packet);
+            var data = writer.GetBuffer();
+            foreach (var id in clientIDs)
+            {
+                Transport?.SendDataToClient(id, data, channel);
+            }
+        }
+
+        private void Server_ReceiveByteData(uint byteID, uint clientID, byte[] data)
+        {
+            if (!_registeredServerByteDataCallbacks.TryGetValue(byteID, out var callbacks))
+                return;
+
+            foreach (var callback in callbacks.Values)
+                callback?.Invoke(clientID, data);
+        }
+        
+        #endregion
+        
+        #region struct data
+        
+        private readonly ConcurrentDictionary<uint, Dictionary<int, StructDataCallback>> _registeredServerStructDataCallbacks = new();
+
+        public void Server_RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        {
+	        var structDataHash = Hashing.GetFNV1Hash32(typeof(T).Name);
+            
+            if (!_registeredServerStructDataCallbacks.TryGetValue(structDataHash, out var callbacks))
+			{
+                callbacks = new();
+                _registeredServerStructDataCallbacks.TryAdd(structDataHash, callbacks);
+			}
+
+			var key = callback.GetHashCode();
+			var del = CreateStructDataDelegate(callback);
+            if (!callbacks.ContainsKey(key))
+                callbacks.TryAdd(key, del); 
+        }
+
+        public void Server_UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+		{
+			var structDataHash = Hashing.GetFNV1Hash32(typeof(T).Name);
+            
+            if (!_registeredServerStructDataCallbacks.TryGetValue(structDataHash, out var callbacks))
+                return;
+
+            callbacks.Remove(callback.GetHashCode(), out _);
+        }
+        
+		public void Server_SendStructDataToClient<T>(uint clientID, T structData, 
+			ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData 
+        {
+            Server_SendStructData(new [] { clientID }, structData, channel); 
+        }
+
+		public void Server_SendStructDataToAll<T>(T structData, 
+			ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData 
+        {
+            Server_SendStructData(Client_ConnectedClients.Keys.ToArray(), structData, channel); 
+        }
+
+		public void Server_SendStructDataToClients<T>(uint[] clientIDs, T structData, 
+			ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData 
+        {
+            Server_SendStructData(clientIDs, structData, channel); 
+        }
+        
+        private void Server_SendStructData<T>(uint[] clientIDs, T structData, 
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+        {
+            if (!IsServer)
+            {
+                Logger?.Log("The local server must be started before data can be send!");
+                return;
+            }
+            
+            foreach (var id in clientIDs)
+            {
+                if (Server_ConnectedClients.ContainsKey(id)) continue;
+                Logger?.Log("Client IDs contained a non-existing ID. All client IDs must be valid!");
+                return;
+            }
+
+            Writer writer = new(SerialiserSettings);
+            writer.Write(structData);
+            var structBuffer = writer.GetBuffer();
+            writer.Clear();
+            
+            writer.WriteByte(DataPacket.PacketType);
+            DataPacket packet = new(DataPacket.DataPacketType.Forwarded, 0, true,
+                Hashing.GetFNV1Hash32(typeof(T).Name), structBuffer);
+            DataPacket.Write(writer, packet);
+            var data = writer.GetBuffer();
+            foreach (var id in clientIDs)
+            {
+                Transport?.SendDataToClient(id, data, channel);
+            }
+        }
+		
+		private void Server_ReceiveStructData(uint structHash, uint clientID, byte[] data)
+		{
+			if (!_registeredServerStructDataCallbacks.TryGetValue(structHash, out var callbacks))
+				return;
+
+			foreach (var callback in callbacks.Values)
+			{
+				callback?.Invoke(clientID, data);
+			}
+        }
+        
+        #endregion
     }
     
     public enum ELocalServerConnectionState

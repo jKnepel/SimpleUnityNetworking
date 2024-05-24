@@ -2,7 +2,6 @@ using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
-using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using System;
 using System.Collections.Concurrent;
 using UnityEngine;
@@ -167,58 +166,124 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    NetworkManager.StopNetwork();
 	    }
 
-	    public void RegisterByteData(string byteID, Action<uint, byte[]> callback)
+	    public void Client_RegisterByteData(string byteID, Action<uint, byte[]> callback)
 	    {
-		    NetworkManager.RegisterByteData(byteID, callback);
+		    NetworkManager.Client_RegisterByteData(byteID, callback);
 	    }
 
-	    public void UnregisterByteData(string byteID, Action<uint, byte[]> callback)
+	    public void Client_UnregisterByteData(string byteID, Action<uint, byte[]> callback)
 	    {
-		    NetworkManager.UnregisterByteData(byteID, callback);
+		    NetworkManager.Client_UnregisterByteData(byteID, callback);
 	    }
 
-	    public void SendByteDataToClient(uint clientID, string byteID, byte[] byteData,
+	    public void Client_SendByteDataToServer(string byteID, byte[] byteData,
 		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
 	    {
-		    NetworkManager.SendByteDataToClient(clientID, byteID, byteData, channel);
+		    NetworkManager.Client_SendByteDataToServer(byteID, byteData, channel);
 	    }
-
-	    public void SendByteDataToAll(string byteID, byte[] byteData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
-	    {
-		    NetworkManager.SendByteDataToAll(byteID, byteData, channel);
-	    }
-
-	    public void SendByteDataToClients(uint[] clientIDs, string byteID, byte[] byteData,
+	    
+	    public void Client_SendByteDataToClient(uint clientID, string byteID, byte[] byteData,
 		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
 	    {
-		    NetworkManager.SendByteDataToClients(clientIDs, byteID, byteData, channel);
+		    NetworkManager.Client_SendByteDataToClient(clientID, byteID, byteData, channel);
 	    }
 
-	    public void RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+	    public void Client_SendByteDataToAll(string byteID, byte[] byteData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
 	    {
-		    NetworkManager.RegisterStructData(callback);
+		    NetworkManager.Client_SendByteDataToAll(byteID, byteData, channel);
 	    }
 
-	    public void UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+	    public void Client_SendByteDataToClients(uint[] clientIDs, string byteID, byte[] byteData,
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
 	    {
-		    NetworkManager.UnregisterStructData(callback);
+		    NetworkManager.Client_SendByteDataToClients(clientIDs, byteID, byteData, channel);
 	    }
 
-	    public void SendStructDataToClient<T>(uint clientID, T structData,
+	    public void Client_RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+	    {
+		    NetworkManager.Client_RegisterStructData(callback);
+	    }
+
+	    public void Client_UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+	    {
+		    NetworkManager.Client_UnregisterStructData(callback);
+	    }
+	    
+	    public void Client_SendStructDataToServer<T>(T structData,
 		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
 	    {
-		    NetworkManager.SendStructDataToClient(clientID, structData, channel);
+		    NetworkManager.Client_SendStructDataToServer(structData, channel);
 	    }
 
-	    public void SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
-	    {
-		    NetworkManager.SendStructDataToAll(structData, channel);
-	    }
-
-	    public void SendStructDataToClients<T>(uint[] clientIDs, T structData,
+	    public void Client_SendStructDataToClient<T>(uint clientID, T structData,
 		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
 	    {
-		    NetworkManager.SendStructDataToClients(clientIDs, structData, channel);
+		    NetworkManager.Client_SendStructDataToClient(clientID, structData, channel);
+	    }
+
+	    public void Client_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+	    {
+		    NetworkManager.Client_SendStructDataToAll(structData, channel);
+	    }
+
+	    public void Client_SendStructDataToClients<T>(uint[] clientIDs, T structData,
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+	    {
+		    NetworkManager.Client_SendStructDataToClients(clientIDs, structData, channel);
+	    }
+	    
+	    public void Server_RegisterByteData(string byteID, Action<uint, byte[]> callback)
+	    {
+		    NetworkManager.Server_RegisterByteData(byteID, callback);
+	    }
+
+	    public void Server_UnregisterByteData(string byteID, Action<uint, byte[]> callback)
+	    {
+		    NetworkManager.Server_UnregisterByteData(byteID, callback);
+	    }
+
+	    public void Server_SendByteDataToClient(uint clientID, string byteID, byte[] byteData,
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+	    {
+		    NetworkManager.Server_SendByteDataToClient(clientID, byteID, byteData, channel);
+	    }
+
+	    public void Server_SendByteDataToAll(string byteID, byte[] byteData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+	    {
+		    NetworkManager.Server_SendByteDataToAll(byteID, byteData, channel);
+	    }
+
+	    public void Server_SendByteDataToClients(uint[] clientIDs, string byteID, byte[] byteData,
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+	    {
+		    NetworkManager.Server_SendByteDataToClients(clientIDs, byteID, byteData, channel);
+	    }
+
+	    public void Server_RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+	    {
+		    NetworkManager.Server_RegisterStructData(callback);
+	    }
+
+	    public void Server_UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+	    {
+		    NetworkManager.Server_UnregisterStructData(callback);
+	    }
+
+	    public void Server_SendStructDataToClient<T>(uint clientID, T structData,
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+	    {
+		    NetworkManager.Server_SendStructDataToClient(clientID, structData, channel);
+	    }
+
+	    public void Server_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+	    {
+		    NetworkManager.Server_SendStructDataToAll(structData, channel);
+	    }
+
+	    public void Server_SendStructDataToClients<T>(uint[] clientIDs, T structData,
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+	    {
+		    NetworkManager.Server_SendStructDataToClients(clientIDs, structData, channel);
 	    }
     }
 }

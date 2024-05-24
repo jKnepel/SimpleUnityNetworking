@@ -1,5 +1,4 @@
 using jKnepel.SimpleUnityNetworking.Serialising;
-using System;
 
 namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 {
@@ -7,9 +6,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 	{
 		public enum DataPacketType : byte
 		{
+			ToClient,
+			ToClients,
 			Forwarded,
-			Target,
-			Targets
+			ToServer
 		}
 		
 		public static byte PacketType => (byte)EPacketType.Data;
@@ -31,15 +31,15 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 				TargetID = null;
 				TargetIDs = null;
 			}
-			else if (dataType == DataPacketType.Target)
+			else if (dataType == DataPacketType.ToClient)
 			{
 				SenderID = null;
 				TargetID = id;
 				TargetIDs = null;
 			}
-			else
+			else 
 			{
-				throw new Exception("The constructed data packet is not valid!");
+				throw new("The constructed data packet is not valid!");
 			}
 			
 			IsStructData = isStructData;
@@ -49,7 +49,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 		
 		public DataPacket(uint[] targetIDs, bool isStructData, uint dataID, byte[] data)
 		{
-			DataType = DataPacketType.Targets;
+			DataType = DataPacketType.ToClients;
 			SenderID = null;
 			TargetID = null;
 			TargetIDs = targetIDs;
@@ -59,24 +59,46 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 			Data = data;
 		}
 
+		public DataPacket(bool isStructData, uint dataID, byte[] data)
+		{
+			DataType = DataPacketType.ToServer;
+			SenderID = null;
+			TargetID = null;
+			TargetIDs = null;
+			
+			IsStructData = isStructData;
+			DataID = dataID;
+			Data = data;
+		}
+
 		public static DataPacket Read(Reader reader)
 		{
 			var dataType = (DataPacketType)reader.ReadByte();
-			if (dataType == DataPacketType.Targets)
+			switch (dataType)
 			{
-				 var targetIDs = reader.ReadArray<uint>();
-				 var isStructData = reader.ReadBoolean();
-				 var dataID = reader.ReadUInt32();
-				 var simpleData = reader.ReadRemainingBuffer();
-				 return new(targetIDs, isStructData, dataID, simpleData);
-			}
-			else
-			{
-				var id = reader.ReadUInt32();
-				var isStructData = reader.ReadBoolean();
-				var dataID = reader.ReadUInt32();
-				var simpleData = reader.ReadRemainingBuffer();
-				return new(dataType, id, isStructData, dataID, simpleData);
+				case DataPacketType.ToClients:
+				{
+					var targetIDs = reader.ReadArray<uint>();
+					var isStructData = reader.ReadBoolean();
+					var dataID = reader.ReadUInt32();
+					var simpleData = reader.ReadRemainingBuffer();
+					return new(targetIDs, isStructData, dataID, simpleData);
+				}
+				case DataPacketType.ToServer:
+				{
+					var isStructData = reader.ReadBoolean();
+					var dataID = reader.ReadUInt32();
+					var simpleData = reader.ReadRemainingBuffer();
+					return new(isStructData, dataID, simpleData);
+				}
+				default:
+				{
+					var id = reader.ReadUInt32();
+					var isStructData = reader.ReadBoolean();
+					var dataID = reader.ReadUInt32();
+					var simpleData = reader.ReadRemainingBuffer();
+					return new(dataType, id, isStructData, dataID, simpleData);
+				}
 			}
 		}
 
@@ -89,12 +111,12 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 					// ReSharper disable once PossibleInvalidOperationException
 					writer.WriteUInt32((uint)packet.SenderID);
 					break;
-				case DataPacketType.Target:
+				case DataPacketType.ToClient:
 					// ReSharper disable once PossibleInvalidOperationException
 					writer.WriteUInt32((uint)packet.TargetID);
 					break;
-				case DataPacketType.Targets:
-					writer.WriteArray<uint>(packet.TargetIDs);
+				case DataPacketType.ToClients:
+					writer.WriteArray(packet.TargetIDs);
 					break;
 			}
 			
