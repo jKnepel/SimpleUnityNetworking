@@ -76,7 +76,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 
                 // save types that don't have any a type handler and need to be recursively serialised
                 _unknownTypes.Add(type);
-			}
+            }
 
             // recursively serialise type if no handler is found
             // TODO : circular dependencies will cause crash

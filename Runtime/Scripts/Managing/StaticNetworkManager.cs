@@ -2,7 +2,6 @@ using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
-using jKnepel.SimpleUnityNetworking.SyncDataTypes;
 using System;
 using System.Collections.Concurrent;
 using UnityEngine;
@@ -230,19 +229,39 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// Registers a callback for a sent byte array with the defined id
         /// </summary>
         /// <param name="byteID">Id of the data that should invoke the callback</param>
-        /// <param name="callback">Callback which will be invoked after byte data with the given id has been received</param>
-        public static void RegisterByteData(string byteID, Action<uint, byte[]> callback)
+        /// <param name="callback">
+        ///     Callback which will be invoked after byte data with the given id has been received
+        ///     <param name="callback arg1">The ID of the sender. The ID will be 0 if the struct data was sent by the server</param>
+        ///     <param name="callback arg2">The received byte data</param>
+        /// </param>
+        public static void Client_RegisterByteData(string byteID, Action<uint, byte[]> callback)
         {
-            _networkManager.RegisterByteData(byteID, callback);
+            _networkManager.Client_RegisterByteData(byteID, callback);
         }
         /// <summary>
         /// Unregisters a callback for a sent byte array with the defined id
         /// </summary>
         /// <param name="byteID">Id of the data that should invoke the callback</param>
-        /// <param name="callback">Callback which will be invoked after byte data with the given id has been received</param>
-        public static void UnregisterByteData(string byteID, Action<uint, byte[]> callback)
+        /// <param name="callback">
+        ///     Callback which will be invoked after byte data with the given id has been received
+        ///     <param name="callback arg1">The ID of the sender. The ID will be 0 if the struct data was sent by the server</param>
+        ///     <param name="callback arg2">The received byte data</param>
+        /// </param>
+        public static void Client_UnregisterByteData(string byteID, Action<uint, byte[]> callback)
         {
-            _networkManager.UnregisterByteData(byteID, callback);
+            _networkManager.Client_UnregisterByteData(byteID, callback);
+        }
+        /// <summary>
+        /// Sends byte data with a given id from the local client to the server.
+        /// Can only be called after the local client has been authenticated
+        /// </summary>
+        /// <param name="byteID"></param>
+        /// <param name="byteData"></param>
+        /// <param name="channel"></param>
+        public static void Client_SendByteDataToServer(string byteID, byte[] byteData,
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+        {
+            _networkManager.Client_SendByteDataToServer(byteID, byteData, channel);
         }
         /// <summary>
         /// Sends byte data with a given id from the local client to a given remote client.
@@ -252,10 +271,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="byteID"></param>
         /// <param name="byteData"></param>
         /// <param name="channel"></param>
-        public static void SendByteDataToClient(uint clientID, string byteID, byte[] byteData,
+        public static void Client_SendByteDataToClient(uint clientID, string byteID, byte[] byteData,
             ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
         {
-            _networkManager.SendByteDataToClient(clientID, byteID, byteData, channel);
+            _networkManager.Client_SendByteDataToClient(clientID, byteID, byteData, channel);
         }
         /// <summary>
         /// Sends byte data with a given id from the local client to all other remote clients.
@@ -264,9 +283,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="byteID"></param>
         /// <param name="byteData"></param>
         /// <param name="channel"></param>
-        public static void SendByteDataToAll(string byteID, byte[] byteData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+        public static void Client_SendByteDataToAll(string byteID, byte[] byteData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
         {
-            _networkManager.SendByteDataToAll(byteID, byteData, channel);
+            _networkManager.Client_SendByteDataToAll(byteID, byteData, channel);
         }
         /// <summary>
         /// Sends byte data with a given id from the local client to a list of remote clients.
@@ -276,27 +295,46 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="byteID"></param>
         /// <param name="byteData"></param>
         /// <param name="channel"></param>
-        public static void SendByteDataToClients(uint[] clientIDs, string byteID, byte[] byteData,
+        public static void Client_SendByteDataToClients(uint[] clientIDs, string byteID, byte[] byteData,
             ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
         {
-            _networkManager.SendByteDataToClients(clientIDs, byteID, byteData, channel);
+            _networkManager.Client_SendByteDataToClients(clientIDs, byteID, byteData, channel);
         }
 
         /// <summary>
         /// Registers a callback for a sent struct of type <see cref="IStructData"/>
         /// </summary>
-        /// <param name="callback">Callback which will be invoked after a struct of the same type has been received</param>
-        public static void RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        /// <param name="callback">
+        ///     Callback which will be invoked after a struct of the same type has been received
+        ///     <param name="callback arg1">The ID of the sender. The ID will be 0 if the struct data was sent by the server</param>
+        ///     <param name="callback arg2">The received struct data</param>
+        /// </param>
+        public static void Client_RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
         {
-            _networkManager.RegisterStructData(callback);
+            _networkManager.Client_RegisterStructData(callback);
         }
         /// <summary>
         /// Unregisters a callback for a sent struct of type <see cref="IStructData"/>
         /// </summary>
-        /// <param name="callback">Callback which will be invoked after a struct of the same type has been received</param>
-        public static void UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        /// <param name="callback">
+        ///     Callback which will be invoked after a struct of the same type has been received
+        ///     <param name="callback arg1">The ID of the sender. The ID will be 0 if the struct data was sent by the server</param>
+        ///     <param name="callback arg2">The received struct data</param>
+        /// </param>
+        public static void Client_UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
         {
-            _networkManager.UnregisterStructData(callback);
+            _networkManager.Client_UnregisterStructData(callback);
+        }
+        /// <summary>
+        /// Sends a struct of type <see cref="IStructData"/> from the local client to the server.
+        /// Can only be called after the local client has been authenticated
+        /// </summary>
+        /// <param name="structData"></param>
+        /// <param name="channel"></param>
+        public static void Client_SendStructDataToServer<T>(T structData,
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+        {
+            _networkManager.Client_SendStructDataToServer(structData, channel);
         }
         /// <summary>
         /// Sends a struct of type <see cref="IStructData"/> from the local client to a given remote client.
@@ -305,10 +343,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="clientID"></param>
         /// <param name="structData"></param>
         /// <param name="channel"></param>
-        public static void SendStructDataToClient<T>(uint clientID, T structData,
+        public static void Client_SendStructDataToClient<T>(uint clientID, T structData,
             ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
         {
-            _networkManager.SendStructDataToClient(clientID, structData, channel);
+            _networkManager.Client_SendStructDataToClient(clientID, structData, channel);
         }
         /// <summary>
         /// Sends a struct of type <see cref="IStructData"/> from the local client to all other remote client.
@@ -316,9 +354,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         /// <param name="structData"></param>
         /// <param name="channel"></param>
-        public static void SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+        public static void Client_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
         {
-            _networkManager.SendStructDataToAll(structData, channel);
+            _networkManager.Client_SendStructDataToAll(structData, channel);
         }
         /// <summary>
         /// Sends a struct of type <see cref="IStructData"/> from the local client to a list of remote client.
@@ -327,10 +365,133 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="clientIDs"></param>
         /// <param name="structData"></param>
         /// <param name="channel"></param>
-        public static void SendStructDataToClients<T>(uint[] clientIDs, T structData,
+        public static void Client_SendStructDataToClients<T>(uint[] clientIDs, T structData,
             ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
         {
-            _networkManager.SendStructDataToClients(clientIDs, structData, channel);
+            _networkManager.Client_SendStructDataToClients(clientIDs, structData, channel);
+        }
+        
+        /// <summary>
+        /// Registers a callback for a sent byte array with the defined id
+        /// </summary>
+        /// <param name="byteID">Id of the data that should invoke the callback</param>
+        /// <param name="callback">
+        ///     Callback which will be invoked after byte data with the given id has been received
+        ///     <param name="callback arg1">The ID of the sender</param>
+        ///     <param name="callback arg2">The received byte data</param>
+        /// </param>
+        public static void Server_RegisterByteData(string byteID, Action<uint, byte[]> callback)
+        {
+            _networkManager.Server_RegisterByteData(byteID, callback);
+        }
+        /// <summary>
+        /// Unregisters a callback for a sent byte array with the defined id
+        /// </summary>
+        /// <param name="byteID">Id of the data that should invoke the callback</param>
+        /// <param name="callback">
+        ///     Callback which will be invoked after byte data with the given id has been received
+        ///     <param name="callback arg1">The ID of the sender</param>
+        ///     <param name="callback arg2">The received byte data</param>
+        /// </param>
+        public static void Server_UnregisterByteData(string byteID, Action<uint, byte[]> callback)
+        {
+            _networkManager.Server_UnregisterByteData(byteID, callback);
+        }
+        /// <summary>
+        /// Sends byte data with a given id from the local client to a given remote client.
+        /// Can only be called after the local client has been authenticated
+        /// </summary>
+        /// <param name="clientID"></param>
+        /// <param name="byteID"></param>
+        /// <param name="byteData"></param>
+        /// <param name="channel"></param>
+        public static void Server_SendByteDataToClient(uint clientID, string byteID, byte[] byteData,
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+        {
+            _networkManager.Server_SendByteDataToClient(clientID, byteID, byteData, channel);
+        }
+        /// <summary>
+        /// Sends byte data with a given id from the local client to all other remote clients.
+        /// Can only be called after the local client has been authenticated
+        /// </summary>
+        /// <param name="byteID"></param>
+        /// <param name="byteData"></param>
+        /// <param name="channel"></param>
+        public static void Server_SendByteDataToAll(string byteID, byte[] byteData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+        {
+            _networkManager.Server_SendByteDataToAll(byteID, byteData, channel);
+        }
+        /// <summary>
+        /// Sends byte data with a given id from the local client to a list of remote clients.
+        /// Can only be called after the local client has been authenticated
+        /// </summary>
+        /// <param name="clientIDs"></param>
+        /// <param name="byteID"></param>
+        /// <param name="byteData"></param>
+        /// <param name="channel"></param>
+        public static void Server_SendByteDataToClients(uint[] clientIDs, string byteID, byte[] byteData,
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
+        {
+            _networkManager.Server_SendByteDataToClients(clientIDs, byteID, byteData, channel);
+        }
+
+        /// <summary>
+        /// Registers a callback for a sent struct of type <see cref="IStructData"/>
+        /// </summary>
+        /// <param name="callback">
+        ///     Callback which will be invoked after a struct of the same type has been received
+        ///     <param name="callback arg1">The ID of the sender</param>
+        ///     <param name="callback arg2">The received struct data</param>
+        /// </param>
+        public static void Server_RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        {
+            _networkManager.Server_RegisterStructData(callback);
+        }
+        /// <summary>
+        /// Unregisters a callback for a sent struct of type <see cref="IStructData"/>
+        /// </summary>
+        /// <param name="callback">
+        ///     Callback which will be invoked after a struct of the same type has been received
+        ///     <param name="callback arg1">The ID of the sender</param>
+        ///     <param name="callback arg2">The received struct data</param>
+        /// </param>
+        public static void Server_UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        {
+            _networkManager.Server_UnregisterStructData(callback);
+        }
+        /// <summary>
+        /// Sends a struct of type <see cref="IStructData"/> from the local client to a given remote client.
+        /// Can only be called after the local client has been authenticated
+        /// </summary>
+        /// <param name="clientID"></param>
+        /// <param name="structData"></param>
+        /// <param name="channel"></param>
+        public static void Server_SendStructDataToClient<T>(uint clientID, T structData,
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+        {
+            _networkManager.Server_SendStructDataToClient(clientID, structData, channel);
+        }
+        /// <summary>
+        /// Sends a struct of type <see cref="IStructData"/> from the local client to all other remote client.
+        /// Can only be called after the local client has been authenticated
+        /// </summary>
+        /// <param name="structData"></param>
+        /// <param name="channel"></param>
+        public static void Server_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+        {
+            _networkManager.Server_SendStructDataToAll(structData, channel);
+        }
+        /// <summary>
+        /// Sends a struct of type <see cref="IStructData"/> from the local client to a list of remote client.
+        /// Can only be called after the local client has been authenticated
+        /// </summary>
+        /// <param name="clientIDs"></param>
+        /// <param name="structData"></param>
+        /// <param name="channel"></param>
+        public static void Server_SendStructDataToClients<T>(uint[] clientIDs, T structData,
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+        {
+            _networkManager.Server_SendStructDataToClients(clientIDs, structData, channel);
         }
 
 #if UNITY_EDITOR

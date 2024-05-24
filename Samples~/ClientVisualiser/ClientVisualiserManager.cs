@@ -71,9 +71,9 @@ namespace jKnepel.SimpleUnityNetworking.Samples
 		{
             _isUpdating = isUpdating;
             if (isUpdating)
-                _networkManager.RegisterByteData("Visualiser", OnReceiveData);
+                _networkManager.Client_RegisterByteData("Visualiser", OnReceiveData);
             else
-                _networkManager.UnregisterByteData("Visualiser", OnReceiveData);
+                _networkManager.Client_UnregisterByteData("Visualiser", OnReceiveData);
         }
 
         private void OnReceiveData(uint sender, byte[] data)
@@ -116,7 +116,7 @@ namespace jKnepel.SimpleUnityNetworking.Samples
             ClientVisualiserData clientVisualiserData = new(cameraTrf.position, cameraTrf.rotation);
             Writer writer = new();
             ClientVisualiserData.WriteClientVisualiserData(writer, clientVisualiserData);
-            _networkManager.SendByteDataToAll("Visualiser", writer.GetBuffer(), ENetworkChannel.UnreliableOrdered);
+            _networkManager.Client_SendByteDataToAll("Visualiser", writer.GetBuffer(), ENetworkChannel.UnreliableOrdered);
             cameraTrf.hasChanged = false;
         }
 
