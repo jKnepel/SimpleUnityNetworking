@@ -1,270 +1,244 @@
-using jKnepel.SimpleUnityNetworking.Networking.ServerDiscovery;
+using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking;
-using jKnepel.SimpleUnityNetworking.Networking.Sockets;
-using jKnepel.SimpleUnityNetworking.Utilities;
-using jKnepel.SimpleUnityNetworking.SyncDataTypes;
+using jKnepel.SimpleUnityNetworking.Networking.Transporting;
+using jKnepel.SimpleUnityNetworking.Serialising;
 using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Net;
+using UnityEngine;
+
+using Logger = jKnepel.SimpleUnityNetworking.Logging.Logger;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
-    public class NetworkManager : INetworkManager, IDisposable
+    public partial class NetworkManager : INetworkManager, IDisposable
     {
-        #region public members
+        #region fields
+
+        private Transport _transport;
+        public Transport Transport
+        {
+            get => _transport;
+            private set
+            {
+                if (value == _transport) return;
+                
+                if (_transport is not null)
+                {
+                    _transport.Dispose();
+                    ClientInformation = null;
+                    ServerInformation = null;
+                    _authenticatingClients.Clear();
+                    Client_ConnectedClients.Clear();
+                    Server_ConnectedClients.Clear();
+                    _localClientConnectionState = ELocalClientConnectionState.Stopped;
+                    _localServerConnectionState = ELocalServerConnectionState.Stopped;
+                }
+                
+                _transport = value;
+                
+                if (_transport is null) return;
+                _transport.OnServerStateUpdated += HandleTransportServerStateUpdate;
+                _transport.OnClientStateUpdated += HandleTransportClientStateUpdate;
+                _transport.OnServerReceivedData += OnServerReceivedData;
+                _transport.OnClientReceivedData += OnClientReceivedData;
+                _transport.OnConnectionUpdated += OnRemoteConnectionStateUpdated;
+                _transport.OnTickStarted += TickStarted;
+                _transport.OnTickCompleted += TickCompleted;
+                
+                if (Logger is not null)
+                    _transport.OnTransportLogAdded += Logger.Log;
+            }
+        }
+        private TransportConfiguration _transportConfiguration;
+        public TransportConfiguration TransportConfiguration
+        {
+            get => _transportConfiguration;
+            set
+            {
+                if (value == _transportConfiguration) return;
+                if (IsOnline)
+                {
+                    Debug.LogError("Can't change the configuration while a local connection is established!");
+                    return;
+                }
+                
+                _transportConfiguration = value;
+                if (_transportConfiguration is not null)
+                    Transport = _transportConfiguration.GetTransport();
+            }
+        }
+
+        public SerialiserSettings SerialiserSettings { get; private set; }
+        private SerialiserConfiguration _serialiserConfiguration;
+        public SerialiserConfiguration SerialiserConfiguration
+        {
+            get => _serialiserConfiguration;
+            set
+            {
+                if (value == _serialiserConfiguration) return;
+                if (IsOnline)
+                {
+                    Debug.LogError("Can't change the configuration while a local connection is established!");
+                    return;
+                }
+                
+                _serialiserConfiguration = value;
+                if (_serialiserConfiguration is not null)
+                    SerialiserSettings = _serialiserConfiguration.GetSerialiserSettings();
+            }
+        }
+
+        private Logger _logger;
+        public Logger Logger
+        {
+            get => _logger;
+            private set
+            {
+                if (value == _logger) return;
+                if (_logger is not null && Transport is not null)
+                    Transport.OnTransportLogAdded -= Logger.Log;
+
+                _logger = value;
+                if (_logger is not null && Transport is not null)
+                    Transport.OnTransportLogAdded += Logger.Log;
+            }
+        }
+        private LoggerConfiguration _loggerConfiguration;
+        public LoggerConfiguration LoggerConfiguration
+        {
+            get => _loggerConfiguration;
+            set
+            {
+                if (value == _loggerConfiguration) return;
+                if (IsOnline)
+                {
+                    Debug.LogError("Can't change the configuration while a local connection is established!");
+                    return;
+                }
+                
+                _loggerConfiguration = value;
+                if (_loggerConfiguration is not null)
+                    Logger = _loggerConfiguration.GetLogger();
+            }
+        }
+
+        public bool IsServer => Server_LocalState == ELocalServerConnectionState.Started;
+        public bool IsClient => Client_LocalState == ELocalClientConnectionState.Authenticated;
+        public bool IsOnline => IsServer || IsClient;
+        public bool IsHost => IsServer && IsClient;
         
-        public NetworkConfiguration NetworkConfiguration { get; set; }
-        public NetworkEvents Events { get; }
+        public ServerInformation ServerInformation { get; private set; }
+        public ClientInformation ClientInformation { get; private set; }
 
-        public bool IsConnected => _networkSocket?.IsConnected ?? false;
-        public bool IsHost => ClientInformation?.IsHost ?? false;
-        public EConnectionStatus ConnectionStatus => _networkSocket?.ConnectionStatus ?? EConnectionStatus.IsDisconnected;
-        public ServerInformation ServerInformation => _networkSocket?.ServerInformation;
-        public ClientInformation ClientInformation => _networkSocket?.ClientInformation;
-        public ConcurrentDictionary<byte, ClientInformation> ConnectedClients => _networkSocket?.ConnectedClients;
-        public byte NumberConnectedClients => (byte)(ConnectedClients?.Values.Count ?? 0);
+        public event Action OnTickStarted;
+        public event Action OnTickCompleted;
         
-        public bool IsServerDiscoveryActive => _serverDiscovery?.IsActive ?? false;
-        public List<OpenServer> OpenServers => _serverDiscovery?.OpenServers;
-        
-
-        #endregion
-
-        #region private members
-
-        private ANetworkSocket _networkSocket;
-        private ServerDiscoveryManager _serverDiscovery;
+        private bool _disposed;
 
         #endregion
 
         #region lifecycle
 
-        public NetworkManager(bool startServerDiscovery = true)
+        ~NetworkManager()
         {
-            Events = new();
-            Messaging.OnNetworkMessageAdded += Events.FireOnNetworkMessageAdded;
-            if (startServerDiscovery) StartServerDiscovery();
+            Dispose(false);
         }
 
         public void Dispose()
         {
-            if (_serverDiscovery != null)
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        private void Dispose(bool disposing)
+        {
+            if (_disposed) return;
+
+            if (disposing)
             {
-                EndServerDiscovery();
-                _serverDiscovery = null;
             }
+            
+            Transport?.Dispose();
+        }
 
-            Messaging.OnNetworkMessageAdded -= Events.FireOnNetworkMessageAdded;
-
-            if (_networkSocket != null)
-                DisconnectFromServer();
+        public void Tick()
+        {
+            Transport?.Tick();
         }
 
         #endregion
 
         #region public methods
 
-        public void CreateServer(string servername, byte maxNumberClients, Action<bool> onConnectionEstablished = null)
+        public void StartServer(string servername)
         {
-            if (IsConnected)
+            if (TransportConfiguration == null)
             {
-                Messaging.DebugMessage("The Client is already hosting a server!");
-                onConnectionEstablished?.Invoke(false);
+                Debug.LogError("The transport needs to be defined before a server can be started!");
+                return;
+            }
+
+            _cachedServername = servername;
+            _cachedMaxNumberClients = TransportConfiguration.Settings.MaxNumberOfClients;
+            Transport?.StartServer();
+        }
+
+        public void StopServer()
+        {
+            Transport?.StopServer();
+        }
+
+        public void StartClient(string username, Color32 userColour)
+        {
+            if (TransportConfiguration == null)
+            {
+                Debug.LogError("The transport needs to be defined before a client can be started!");
                 return;
             }
             
-            NetworkServer server = new();
-            _networkSocket = server;
-            server.OnConnecting += Events.FireOnConnecting;
-            server.OnConnected += Events.FireOnConnected;
-            server.OnDisconnected += Events.FireOnDisconnected;
-            server.OnConnectionStatusUpdated += Events.FireOnConnectionStatusUpdated;
-            server.OnServerWasClosed += Events.FireOnServerWasClosed;
-            server.OnClientConnected += Events.FireOnClientConnected;
-            server.OnClientDisconnected += Events.FireOnClientDisconnected;
-            server.OnConnectedClientListUpdated += Events.FireOnConnectedClientListUpdated;
-            server.StartServer(NetworkConfiguration, servername, maxNumberClients, onConnectionEstablished);
+            _cachedUsername = username;
+            _cachedColour = userColour;
+            Transport?.StartClient();
+        }
+        
+        public void StopClient()
+        {
+            Transport?.StopClient();
         }
 
-        public void JoinServer(IPAddress serverIP, int serverPort, Action<bool> onConnectionEstablished = null)
+        public void StopNetwork()
         {
-            if (IsConnected)
+            StopClient();
+            StopServer();
+        }
+
+        #endregion
+        
+        #region utilities
+        
+        private delegate void ByteDataCallback(uint senderID, byte[] data);
+        private delegate void StructDataCallback(uint senderID, byte[] data);
+        
+        private static ByteDataCallback CreateByteDataDelegate(Action<uint, byte[]> callback)
+        {
+            return ParseDelegate;
+            void ParseDelegate(uint senderID, byte[] data)
             {
-                Messaging.DebugMessage("The Client is already connected to a server!");
-                onConnectionEstablished?.Invoke(false);
-                return;
+                callback?.Invoke(senderID, data);
             }
-            
-            NetworkClient client = new();
-            _networkSocket = client;
-            client.OnConnecting += Events.FireOnConnecting;
-            client.OnConnected += Events.FireOnConnected;
-            client.OnDisconnected += Events.FireOnDisconnected;
-            client.OnConnectionStatusUpdated += Events.FireOnConnectionStatusUpdated;
-            client.OnServerWasClosed += Events.FireOnServerWasClosed;
-            client.OnClientConnected += Events.FireOnClientConnected;
-            client.OnClientDisconnected += Events.FireOnClientDisconnected;
-            client.OnConnectedClientListUpdated += Events.FireOnConnectedClientListUpdated;
-            client.ConnectToServer(NetworkConfiguration, serverIP, serverPort, onConnectionEstablished);
         }
-
-        public void DisconnectFromServer()
+        
+        private StructDataCallback CreateStructDataDelegate<T>(Action<uint, T> callback)
         {
-            if (_networkSocket == null)
-                return;
-
-            if (IsConnected)
-                _networkSocket.DisconnectFromServer();
-
-            switch (_networkSocket)
+            return ParseDelegate;
+            void ParseDelegate(uint senderID, byte[] data)
             {
-                case NetworkServer server:
-                    server.OnConnecting -= Events.FireOnConnecting;
-                    server.OnConnected -= Events.FireOnConnected;
-                    server.OnDisconnected -= Events.FireOnDisconnected;
-                    server.OnConnectionStatusUpdated -= Events.FireOnConnectionStatusUpdated;
-                    server.OnServerWasClosed -= Events.FireOnServerWasClosed;
-                    server.OnClientConnected -= Events.FireOnClientConnected;
-                    server.OnClientDisconnected -= Events.FireOnClientDisconnected;
-                    server.OnConnectedClientListUpdated -= Events.FireOnConnectedClientListUpdated;
-                    break;
-                case NetworkClient client:
-                    client.OnConnecting -= Events.FireOnConnecting;
-                    client.OnConnected -= Events.FireOnConnected;
-                    client.OnDisconnected -= Events.FireOnDisconnected;
-                    client.OnConnectionStatusUpdated -= Events.FireOnConnectionStatusUpdated;
-                    client.OnServerWasClosed -= Events.FireOnServerWasClosed;
-                    client.OnClientConnected -= Events.FireOnClientConnected;
-                    client.OnClientDisconnected -= Events.FireOnClientDisconnected;
-                    client.OnConnectedClientListUpdated -= Events.FireOnConnectedClientListUpdated;
-                    break;
+                Reader reader = new(data, SerialiserSettings);
+                callback?.Invoke(senderID, reader.Read<T>());
             }
-            _networkSocket = null;
         }
 
-        public void StartServerDiscovery()
-        {
-            if (_serverDiscovery is { IsActive: true })
-                return;
-
-            _serverDiscovery = new();
-            _serverDiscovery.OnServerDiscoveryActivated += Events.FireOnServerDiscoveryActivated;
-            _serverDiscovery.OnServerDiscoveryDeactivated += Events.FireOnServerDiscoveryDeactivated;
-            _serverDiscovery.OnOpenServerListUpdated += Events.FireOnOpenServerListUpdated;
-            _serverDiscovery.StartServerDiscovery(NetworkConfiguration);
-        }
-
-        public void EndServerDiscovery()
-        {
-            if (_serverDiscovery is not { IsActive: true })
-                return;
-
-            _serverDiscovery.EndServerDiscovery();
-            _serverDiscovery.OnServerDiscoveryActivated -= Events.FireOnServerDiscoveryActivated;
-            _serverDiscovery.OnServerDiscoveryDeactivated -= Events.FireOnServerDiscoveryDeactivated;
-            _serverDiscovery.OnOpenServerListUpdated -= Events.FireOnOpenServerListUpdated;
-        }
-
-        public void RestartServerDiscovery()
-        {
-            EndServerDiscovery();
-            StartServerDiscovery();
-        }
-
-        public void RegisterStructData<T>(Action<byte, T> callback) where T : struct, IStructData
-        {
-            if (!IsConnected)
-            {
-                Messaging.DebugMessage("The Client is not connected to a server and can't register any data callbacks!");
-                return;
-            }
-
-            _networkSocket.RegisterStructData(callback);
-        }
-
-        public void UnregisterStructData<T>(Action<byte, T> callback) where T : struct, IStructData
-        {
-            if (!IsConnected)
-            {
-                Messaging.DebugMessage("The Client is not connected to a server and can't unregister any data callbacks!");
-                return;
-            }
-
-            _networkSocket.UnregisterStructData(callback);
-        }
-
-        public void RegisterByteData(string dataID, Action<byte, byte[]> callback)
-        {
-            if (!IsConnected)
-            {
-                Messaging.DebugMessage("The Client is not connected to a server and can't register any data callbacks!");
-                return;
-            }
-
-            _networkSocket.RegisterByteData(dataID, callback);
-        }
-
-        public void UnregisterByteData(string dataID, Action<byte, byte[]> callback)
-        {
-            if (!IsConnected)
-            {
-                Messaging.DebugMessage("The Client is not connected to a server and can't unregister any data callbacks!");
-                return;
-            }
-
-            _networkSocket.UnregisterByteData(dataID, callback);
-        }
-
-        public void SendStructDataToAll<T>(T structData, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
-            Action<bool> onDataSend = null) where T : struct, IStructData
-        {
-            SendStructData(0, structData, networkChannel, onDataSend);
-        }
-
-        public void SendStructDataToServer<T>(T structData, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
-            Action<bool> onDataSend = null) where T : struct, IStructData
-        {
-            SendStructData(1, structData, networkChannel, onDataSend);
-        }
-
-        public void SendStructData<T>(byte receiverID, T structData, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
-            Action<bool> onDataSend = null) where T : struct, IStructData
-        {
-            if (!IsConnected)
-            {
-                Messaging.DebugMessage("The Client is not connected to a server and can't send any data!");
-                onDataSend?.Invoke(false);
-                return;
-            }
-
-            _networkSocket.SendStructData(receiverID, structData, networkChannel, onDataSend);
-        }
-
-        public void SendByteDataToAll(string dataID, byte[] data, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
-            Action<bool> onDataSend = null)
-        {
-            SendByteData(0, dataID, data, networkChannel, onDataSend);
-        }
-
-        public void SendByteDataToServer(string dataID, byte[] data, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
-            Action<bool> onDataSend = null)
-        {
-            SendByteData(1, dataID, data, networkChannel, onDataSend);
-        }
-
-        public void SendByteData(byte receiverID, string dataID, byte[] data, ENetworkChannel networkChannel = ENetworkChannel.ReliableOrdered,
-            Action<bool> onDataSend = null)
-        {
-            if (!IsConnected)
-            {
-                Messaging.DebugMessage("The Client is not connected to a server and can't send any data!");
-                onDataSend?.Invoke(false);
-                return;
-            }
-
-            _networkSocket.SendByteData(receiverID, dataID, data, networkChannel, onDataSend);
-        }
+        private void TickStarted() => OnTickStarted?.Invoke();
+        private void TickCompleted() => OnTickCompleted?.Invoke();
 
         #endregion
     }
