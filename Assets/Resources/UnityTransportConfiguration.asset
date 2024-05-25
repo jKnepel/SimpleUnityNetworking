@@ -19,7 +19,7 @@ MonoBehaviour:
     ServerListenAddress: 
     MaxNumberOfClients: 100
     ConnectTimeoutMS: 1000
-    MaxConnectAttempts: 1
+    MaxConnectAttempts: 60
     DisconnectTimeoutMS: 30000
     HeartbeatTimeoutMS: 500
     PayloadCapacity: 4096
