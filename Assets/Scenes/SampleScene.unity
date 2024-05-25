@@ -615,8 +615,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _manager: {fileID: 516821387}
-  _targetClientID: 0
-  _message: 
 --- !u!114 &1872444381
 MonoBehaviour:
   m_ObjectHideFlags: 0

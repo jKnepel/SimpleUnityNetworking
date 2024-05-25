@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c13305a8a2b94c4bb063c475918991e, type: 3}
   m_Name: LoggerConfiguration
   m_EditorClassIdentifier: 
-  _settings:
+  Settings:
     PrintToConsole: 1
     PrintLog: 1
     PrintWarning: 1

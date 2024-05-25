@@ -12,14 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4dc461e3267698d4aa8e77c334f0e8c3, type: 3}
   m_Name: UnityTransportConfiguration
   m_EditorClassIdentifier: 
-  _settings:
+  Settings:
     ProtocolType: 0
     Address: 127.0.0.1
     Port: 24856
     ServerListenAddress: 
     MaxNumberOfClients: 100
     ConnectTimeoutMS: 1000
-    MaxConnectAttempts: 60
+    MaxConnectAttempts: 1
     DisconnectTimeoutMS: 30000
     HeartbeatTimeoutMS: 500
     PayloadCapacity: 4096

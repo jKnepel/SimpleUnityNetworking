@@ -21,7 +21,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// </summary>
         Transport Transport { get; }
         /// <summary>
-        /// The configuration containing the instance of the <see cref="Transport"/>
+        /// The configuration that will create the instance of the <see cref="Transport"/>
         /// </summary>
         TransportConfiguration TransportConfiguration { get; set; }
         
@@ -35,14 +35,10 @@ namespace jKnepel.SimpleUnityNetworking
         /// </summary>
         Logger Logger { get; }
         /// <summary>
-        /// The configuration containing the instance of the <see cref="Logger"/>
+        /// The configuration that will create the instance of the <see cref="Logger"/>
         /// </summary>
         LoggerConfiguration LoggerConfiguration { get; set; }
         
-        /// <summary>
-        /// Whether a local server is started or a client is authenticated
-        /// </summary>
-        bool IsOnline { get; }
         /// <summary>
         /// Whether a local server is started
         /// </summary>
@@ -51,6 +47,10 @@ namespace jKnepel.SimpleUnityNetworking
         /// Whether a local client is started and authenticated
         /// </summary>
         bool IsClient { get; }
+        /// <summary>
+        /// Whether a local server is started or local client is authenticated
+        /// </summary>
+        bool IsOnline { get; }
         /// <summary>
         /// Whether a local server is started and local client is authenticated
         /// </summary>

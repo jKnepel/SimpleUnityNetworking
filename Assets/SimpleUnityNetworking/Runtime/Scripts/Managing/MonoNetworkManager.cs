@@ -16,7 +16,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 {
     public class MonoNetworkManager : MonoBehaviour, INetworkManager
     {
-	    public Transport Transport => TransportConfiguration?.Transport;
+	    public Transport Transport => NetworkManager.Transport;
 	    [SerializeField] private TransportConfiguration _cachedTransportConfiguration;
 	    public TransportConfiguration TransportConfiguration
 	    {
@@ -53,7 +53,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    }
 	    }
 
-	    public Logger Logger => LoggerConfiguration?.Logger;
+	    public Logger Logger => NetworkManager.Logger;
 	    [SerializeField] private LoggerConfiguration _cachedLoggerConfiguration;
 	    public LoggerConfiguration LoggerConfiguration
 	    {
@@ -72,9 +72,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    }
 	    }
 
-	    public bool IsOnline => NetworkManager.IsOnline;
 	    public bool IsServer => NetworkManager.IsServer;
 	    public bool IsClient => NetworkManager.IsClient;
+	    public bool IsOnline => NetworkManager.IsOnline;
 	    public bool IsHost => NetworkManager.IsHost;
 	    
 	    public ServerInformation ServerInformation => NetworkManager.ServerInformation;

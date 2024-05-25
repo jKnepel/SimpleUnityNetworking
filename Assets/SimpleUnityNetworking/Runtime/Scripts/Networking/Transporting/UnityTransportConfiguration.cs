@@ -7,8 +7,13 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
     {
         public UnityTransportConfiguration()
         {
-            _settings = new();
-            _transport = new UnityTransport(_settings);
+            Settings = new();
+        }
+        
+        public override string TransportName => "UnityTransport";
+        public override Transport GetTransport()
+        {
+            return new UnityTransport(Settings);
         }
     }
 }

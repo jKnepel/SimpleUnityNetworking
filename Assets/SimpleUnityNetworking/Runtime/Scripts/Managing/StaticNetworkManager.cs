@@ -20,8 +20,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public static Transport Transport => _networkManager.Transport;
         /// <summary>
-        /// The configuration containing the instance of the <see cref="Transport"/>,
-        /// which will be used for sending and receiving data
+        /// The configuration that will create the instance of the <see cref="Transport"/>
         /// </summary>
         public static TransportConfiguration TransportConfiguration
         {
@@ -43,7 +42,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public static Logger Logger => _networkManager.Logger;
         /// <summary>
-        /// The configuration for the logger, used to show or save messages by the framework.
+        /// The configuration that will create the instance of the <see cref="Logger"/>
         /// </summary>
         public static LoggerConfiguration LoggerConfiguration
         {
@@ -52,10 +51,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         }
 
         /// <summary>
-        /// Whether a local server is started or a client is authenticated
-        /// </summary>
-        public static bool IsOnline => _networkManager.IsOnline;
-        /// <summary>
         /// Whether a local server is started
         /// </summary>
         public static bool IsServer => _networkManager.IsServer;
@@ -63,6 +58,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// Whether a local client is started and authenticated
         /// </summary>
         public static bool IsClient => _networkManager.IsClient;
+        /// <summary>
+        /// Whether a local server is started or local client is authenticated
+        /// </summary>
+        public static bool IsOnline => _networkManager.IsOnline;
         /// <summary>
         /// Whether a local server is started and local client is authenticated
         /// </summary>

@@ -9,8 +9,8 @@ namespace jKnepel.SimpleUnityNetworking.Logging
         public LoggerSettings Settings => _settings;
         private LoggerSettings _settings;
 
-        private readonly List<Message> _messages = new();
         public List<Message> Messages => _messages;
+        private readonly List<Message> _messages = new();
 
         public event Action<Message> OnMessageAdded;
 
