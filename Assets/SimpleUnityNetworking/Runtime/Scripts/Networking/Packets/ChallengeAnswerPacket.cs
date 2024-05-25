@@ -1,37 +1,37 @@
-using jKnepel.SimpleUnityNetworking.Serialisation;
+using jKnepel.SimpleUnityNetworking.Serialising;
 using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 {
-	internal struct ChallengeAnswerPacket : IConnectionPacket
+	internal struct ChallengeAnswerPacket
 	{
-		public EPacketType PacketType => EPacketType.ChallengeAnswer;
+		public static byte PacketType => (byte)EPacketType.ChallengeAnswer;
 		public byte[] ChallengeAnswer;
 		public string Username;
-		public Color32 Color;
+		public Color32 Colour;
 
 		public const int CHALLENGE_ANSWER_LENGTH = 32;
 
-		public ChallengeAnswerPacket(byte[] challengeAnswer, string username, Color32 color)
+		public ChallengeAnswerPacket(byte[] challengeAnswer, string username, Color32 colour)
 		{
 			ChallengeAnswer = challengeAnswer;
 			Username = username;
-			Color = color;
+			Colour = colour;
 		}
 
-		public static ChallengeAnswerPacket ReadChallengeAnswerPacket(Reader reader)
+		public static ChallengeAnswerPacket Read(Reader reader)
 		{
-			byte[] challengeAnswer = reader.ReadByteArray(CHALLENGE_ANSWER_LENGTH);
-			string username = reader.ReadString();
-			Color32 color = reader.ReadColor32WithoutAlpha();
-			return new(challengeAnswer, username, color);
+			var challengeAnswer = reader.ReadByteArray(CHALLENGE_ANSWER_LENGTH);
+			var username = reader.ReadString();
+			var colour = reader.ReadColor32WithoutAlpha();
+			return new(challengeAnswer, username, colour);
 		}
 
-		public static void WriteChallengeAnswerPacket(Writer writer, ChallengeAnswerPacket packet)
+		public static void Write(Writer writer, ChallengeAnswerPacket packet)
 		{
 			writer.BlockCopy(ref packet.ChallengeAnswer, 0, CHALLENGE_ANSWER_LENGTH);
 			writer.WriteString(packet.Username);
-			writer.WriteColor32WithoutAlpha(packet.Color);
+			writer.WriteColor32WithoutAlpha(packet.Colour);
 		}
 	}
 }

@@ -1,10 +1,10 @@
-using jKnepel.SimpleUnityNetworking.Serialisation;
+using jKnepel.SimpleUnityNetworking.Serialising;
 
 namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 {
-    internal struct ConnectionChallengePacket : IConnectionPacket
+    internal struct ConnectionChallengePacket
     {
-        public EPacketType PacketType => EPacketType.ConnectionChallenge;
+        public static byte PacketType => (byte)EPacketType.ConnectionChallenge;
         public ulong Challenge;
 
         public ConnectionChallengePacket(ulong challenge)
@@ -12,13 +12,13 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
             Challenge = challenge;
 		}
 
-        public static ConnectionChallengePacket ReadConnectionChallengePacket(Reader reader)
+        public static ConnectionChallengePacket Read(Reader reader)
 		{
             ulong challenge = reader.ReadUInt64();
             return new(challenge);
 		}
 
-        public static void WriteConnectionChallengePacket(Writer writer, ConnectionChallengePacket packet)
+        public static void Write(Writer writer, ConnectionChallengePacket packet)
 		{
             writer.WriteUInt64(packet.Challenge);
 		}

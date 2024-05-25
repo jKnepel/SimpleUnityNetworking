@@ -1,16 +1,12 @@
 using System;
 using System.Collections.Concurrent;
 using UnityEngine;
-using jKnepel.SimpleUnityNetworking.Serialisation;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
 namespace jKnepel.SimpleUnityNetworking.Utilities
 {
-#if UNITY_EDITOR
-    [InitializeOnLoad]
-#endif
     public static class MainThreadQueue
     {
         private static readonly ConcurrentQueue<Action> _mainThreadQueue = new();
@@ -18,31 +14,21 @@ namespace jKnepel.SimpleUnityNetworking.Utilities
 #if UNITY_EDITOR
         static MainThreadQueue()
         {
-            Start();
-            EditorApplication.update += Update;
-            Reader.Init();
-            Writer.Init();
+            EditorApplication.update += UpdateQueue;
         }
 #else
         [RuntimeInitializeOnLoadMethod]
         private static void InitRuntime()
         {
-            MainThreadQueueRuntime.Instance.OnUpdate += Update;
-            Reader.Init();
-            Writer.Init();
+            UnityMainThreadHook.Instance.OnUpdate += UpdateQueue;
         }
 #endif
 
-		private static void Start()
-        {
-
-        }
-
-        private static void Update()
+        private static void UpdateQueue()
         {
             while (_mainThreadQueue.Count > 0)
 			{
-                _mainThreadQueue.TryDequeue(out Action action);
+                _mainThreadQueue.TryDequeue(out var action);
                 action?.Invoke();
 			}
         }
@@ -51,36 +37,30 @@ namespace jKnepel.SimpleUnityNetworking.Utilities
 		{
             _mainThreadQueue.Enqueue(action);
 		}
-    }
-
-    internal class MainThreadQueueRuntime : MonoBehaviour
-    {
-        public Action OnUpdate;
-
-        private static MainThreadQueueRuntime _instance;
-        public static MainThreadQueueRuntime Instance
+        
+        private class UnityMainThreadHook : MonoBehaviour
         {
-            get
+            public Action OnUpdate;
+
+            private static UnityMainThreadHook _instance;
+            public static UnityMainThreadHook Instance
             {
-                if (_instance == null)
+                get
                 {
-                    _instance = (MainThreadQueueRuntime)FindObjectOfType(typeof(MainThreadQueueRuntime));
+                    if (_instance != null) return _instance;
 
-                    if (_instance == null)
-                    {
-						GameObject singletonObject = new() { hideFlags = HideFlags.HideInHierarchy };
-						DontDestroyOnLoad(singletonObject);
-                        _instance = singletonObject.AddComponent<MainThreadQueueRuntime>();
-                    }
+                    GameObject singletonObject = new() { hideFlags = HideFlags.HideAndDontSave };
+                    _instance = singletonObject.AddComponent<UnityMainThreadHook>();
+                    DontDestroyOnLoad(singletonObject);
+
+                    return _instance;
                 }
-
-                return _instance;
             }
-        }
 
-        private void Update()
-        {
-            OnUpdate?.Invoke();
+            private void Update()
+            {
+                OnUpdate?.Invoke();
+            }
         }
     }
 }

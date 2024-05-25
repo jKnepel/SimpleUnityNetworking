@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
+using jKnepel.SimpleUnityNetworking.Serialising;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -12,125 +13,112 @@ namespace jKnepel.SimpleUnityNetworking.Samples
 {
     public class ClientVisualiserManager : MonoBehaviour
     {
-        [SerializeField] private NetworkManager _networkManager;
+        [SerializeField] private MonoNetworkManager _networkManager;
         [SerializeField] private ClientVisualiser _visualiserPrefab;
         [SerializeField] private Transform _visualiserParent;
-        [SerializeField] private float _visualiserUpdateDelay = 0.05f;
 
-        private readonly Dictionary<byte, ClientVisualiser> _visualisers = new();
+        private readonly Dictionary<uint, ClientVisualiser> _visualisers = new();
 
-        private Vector3 _lastCameraPosition;
-        private Quaternion _lastCameraRotation;
-        private float _clientVisualiserDelay;
         private bool _isUpdating;
 
 		#region lifecycle
 
 		private void OnEnable()
-		{
-            if (_networkManager != null)
-			{
-                _networkManager.OnConnected += () => SetIsUpdating(true);
-                _networkManager.OnDisconnected += () => SetIsUpdating(false);
-                _networkManager.OnClientDisconnected += RemoveConnectedClient;
-			}
+        {
+            _networkManager.Client_OnLocalStateUpdated += OnClientStateUpdated;
+            _networkManager.Client_OnRemoteClientDisconnected += RemoveConnectedClient;
+            _networkManager.OnTickStarted += UpdateCameraTick;
         }
 
 		private void OnDisable()
         {
-            if (_networkManager != null)
-            {
-                _networkManager.OnConnected -= () => SetIsUpdating(true);
-                _networkManager.OnDisconnected -= () => SetIsUpdating(false);
-                _networkManager.OnClientDisconnected -= RemoveConnectedClient;
-            }
-        }
-
-        private void Update()
-        {
-            _clientVisualiserDelay += Time.deltaTime;
-#if UNITY_EDITOR
-            if (SceneView.lastActiveSceneView.camera.transform.hasChanged)
-                CurrentCameraMoved(SceneView.lastActiveSceneView.camera.transform);
-#else
-			if (Camera.current.transform && Camera.current.transform.hasChanged)
-				CurrentCameraMoved(Camera.current.transform);
-#endif
+            _networkManager.Client_OnLocalStateUpdated -= OnClientStateUpdated;
+            _networkManager.Client_OnRemoteClientDisconnected -= RemoveConnectedClient;
+            _networkManager.OnTickStarted -= UpdateCameraTick;
         }
 
 		#endregion
 
 		#region private methods
 
-        private void RemoveConnectedClient(byte id)
+        private void OnClientStateUpdated(ELocalClientConnectionState state)
         {
-            if (!_visualisers.Remove(id, out ClientVisualiser visualiser))
+            Debug.Log(state);
+            switch (state)
+            {
+                case ELocalClientConnectionState.Authenticated:
+                    SetIsUpdating(true);
+                    break;
+                case ELocalClientConnectionState.Stopping:
+                    SetIsUpdating(false);
+                    break;
+            }
+        }
+
+        private void RemoveConnectedClient(uint id)
+        {
+            if (!_visualisers.Remove(id, out var visualiser))
                 return;
 
-            if (visualiser == null) return;
 #if UNITY_EDITOR
             GameObject.DestroyImmediate(visualiser.gameObject);
 #else
 			GameObject.Destroy(visualiser.gameObject);
 #endif
-            visualiser = null;
         }
 
         private void SetIsUpdating(bool isUpdating)
 		{
             _isUpdating = isUpdating;
             if (isUpdating)
-                _networkManager.RegisterStructData<ClientVisualiserData>(OnReceiveData);
+                _networkManager.Client_RegisterByteData("Visualiser", OnReceiveData);
             else
-                _networkManager.UnregisterStructData<ClientVisualiserData>(OnReceiveData);
+                _networkManager.Client_UnregisterByteData("Visualiser", OnReceiveData);
         }
 
-        private void OnReceiveData(byte sender, ClientVisualiserData data)
+        private void OnReceiveData(uint sender, byte[] data)
         {
-            if (!_networkManager.ConnectedClients.TryGetValue(sender, out ClientInformation client))
+            if (!_networkManager.Client_ConnectedClients.TryGetValue(sender, out var client))
                 return;
 
-            if (!_visualisers.TryGetValue(sender, out ClientVisualiser visualiser))
+            if (!_visualisers.TryGetValue(sender, out var visualiser))
             {
-                visualiser = GameObject.Instantiate(_visualiserPrefab, _visualiserParent);
-                visualiser.UpdateVisualiser(client.ID, client.Username, client.Color);
+                visualiser = Instantiate(_visualiserPrefab, _visualiserParent);
+                visualiser.UpdateVisualiser(client.ID, client.Username, client.Colour);
                 _visualisers.Add(sender, visualiser);
             }
 
-            visualiser.transform.SetPositionAndRotation(data.Position, data.Rotation);
+            Reader reader = new(data);
+            var visualiserData = ClientVisualiserData.ReadClientVisualiserData(reader);
+
+            visualiser.transform.SetPositionAndRotation(visualiserData.Position, visualiserData.Rotation);
 
             if (!visualiser.gameObject.activeSelf)
                 visualiser.gameObject.SetActive(true);
         }
 
-        private void CurrentCameraMoved(Transform camera)
+        private void UpdateCameraTick()
         {
             if (!_isUpdating)
                 return;
 
-            // limit camera syncs
-            if (_clientVisualiserDelay < _visualiserUpdateDelay)
-            {
-                camera.hasChanged = false;
-                return;
-            }
+            Transform cameraTrf = null;
+            if (Camera.current && Camera.current.transform.hasChanged)
+                cameraTrf = Camera.current.transform;
+            
+#if UNITY_EDITOR
+            if (SceneView.lastActiveSceneView.camera.transform.hasChanged)
+                cameraTrf = SceneView.lastActiveSceneView.camera.transform;
+#endif
+            
+            if (cameraTrf == null) return;
 
-            if (_lastCameraPosition != null
-                && camera.position.Equals(_lastCameraPosition)
-                && camera.rotation.Equals(_lastCameraRotation))
-            {
-                camera.hasChanged = false;
-                return;
-            }
-
-            _networkManager.SendStructData(0, new ClientVisualiserData(camera.position, camera.rotation), ENetworkChannel.UnreliableOrdered);
-
-            _lastCameraPosition = camera.position;
-            _lastCameraRotation = camera.rotation;
-            camera.hasChanged = false;
-            _clientVisualiserDelay = 0;
+            ClientVisualiserData clientVisualiserData = new(cameraTrf.position, cameraTrf.rotation);
+            Writer writer = new();
+            ClientVisualiserData.WriteClientVisualiserData(writer, clientVisualiserData);
+            _networkManager.Client_SendByteDataToAll("Visualiser", writer.GetBuffer(), ENetworkChannel.UnreliableOrdered);
+            cameraTrf.hasChanged = false;
         }
-
 
         #endregion
     }

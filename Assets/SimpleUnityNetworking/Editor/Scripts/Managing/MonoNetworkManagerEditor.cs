@@ -1,96 +1,134 @@
-using jKnepel.SimpleUnityNetworking.Networking;
-using jKnepel.SimpleUnityNetworking.Utilities;
-using UnityEngine;
+using jKnepel.SimpleUnityNetworking.Logging;
+using jKnepel.SimpleUnityNetworking.Networking.Transporting;
+using jKnepel.SimpleUnityNetworking.Serialising;
 using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
     [CustomEditor(typeof(MonoNetworkManager))]
     internal class MonoNetworkManagerEditor : Editor
     {
-        private NetworkConfiguration NetworkConfiguration
+        private MonoNetworkManager NetworkManager => (MonoNetworkManager)target;
+
+        private INetworkManagerEditor _networkManagerEditor;
+        private INetworkManagerEditor NetworkManagerEditor
         {
-            get => Target.NetworkConfiguration;
+            get
+            {
+                if (_networkManagerEditor != null)
+                    return _networkManagerEditor;
+                return _networkManagerEditor = new(
+                    (MonoNetworkManager)target,
+                    INetworkManagerEditor.EAllowStart.OnlyPlaymode
+                );
+            }
+        }
+
+        public TransportConfiguration TransportConfiguration
+        {
+            get => NetworkManager.TransportConfiguration;
             set
             {
-                if (Target.NetworkConfiguration == value) return;
-                
-                _settingsEditor = null;
-                Target.NetworkConfiguration = value;
+                if (NetworkManager.TransportConfiguration == value) return;
+                NetworkManager.TransportConfiguration = value;
+
+#if UNITY_EDITOR
+                if (!EditorApplication.isPlaying)
+                    EditorSceneManager.MarkSceneDirty(NetworkManager.gameObject.scene);
+#endif
             }
         }
-
-        private Editor _settingsEditor;
-        private Editor SettingsEditor
+        public SerialiserConfiguration SerialiserConfiguration
         {
-            get
+            get => NetworkManager.SerialiserConfiguration;
+            set
             {
-                if (_settingsEditor == null && NetworkConfiguration)
-                    _settingsEditor = Editor.CreateEditor(NetworkConfiguration);
-                return _settingsEditor;
+                if (NetworkManager.SerialiserConfiguration == value) return;
+                NetworkManager.SerialiserConfiguration = value;
+
+#if UNITY_EDITOR
+                if (!EditorApplication.isPlaying)
+                    EditorSceneManager.MarkSceneDirty(NetworkManager.gameObject.scene);
+#endif
             }
         }
-
-        private NetworkManagerEditor _networkManagerEditor;
-        private NetworkManagerEditor NetworkManagerEditor
+        public LoggerConfiguration LoggerConfiguration
         {
-            get
+            get => NetworkManager.LoggerConfiguration;
+            set
             {
-               return _networkManagerEditor ??= new();
+                if (NetworkManager.LoggerConfiguration == value) return;
+                NetworkManager.LoggerConfiguration = value;
+
+#if UNITY_EDITOR
+                if (!EditorApplication.isPlaying)
+                    EditorSceneManager.MarkSceneDirty(NetworkManager.gameObject.scene);
+#endif
             }
         }
 
-        [SerializeField] private MonoNetworkManager _target;
-        private MonoNetworkManager Target
-        {
-            get
-            {
-                if (_target == null)
-                {
-                    _target = (MonoNetworkManager)target;
-                    NetworkManagerEditor.SubscribeNetworkEvents(_target.Events, Repaint);
-                }
-                return _target;
-            }
-        }
+        [SerializeField] private bool _showTransportWindow = true;
+        [SerializeField] private bool _showSerialiserWindow = true;
+        [SerializeField] private bool _showLoggerWindow = true;
 
-        public void OnEnable()
+        private void Awake()
         {
-            NetworkConfiguration = NetworkConfiguration != null 
-                ? NetworkConfiguration 
-                : UnityUtilities.LoadOrCreateScriptableObject<NetworkConfiguration>("NetworkConfiguration", "Assets/Resources/");
+            NetworkManager.Client_OnRemoteClientConnected += RepaintOnUpdate;
+            NetworkManager.Client_OnRemoteClientDisconnected += RepaintOnUpdate;
+            NetworkManager.Client_OnRemoteClientUpdated += RepaintOnUpdate;
+            NetworkManager.Client_OnLocalStateUpdated += RepaintOnUpdate;
+            NetworkManager.Server_OnRemoteClientConnected += RepaintOnUpdate;
+            NetworkManager.Server_OnRemoteClientDisconnected += RepaintOnUpdate;
+            NetworkManager.Server_OnRemoteClientUpdated += RepaintOnUpdate;
+            NetworkManager.Server_OnLocalStateUpdated += RepaintOnUpdate;
         }
 
         private void OnDestroy()
         {
-            NetworkManagerEditor.UnsubscribeNetworkEvents(Target.Events, Repaint);
+            NetworkManager.Client_OnRemoteClientConnected -= RepaintOnUpdate;
+            NetworkManager.Client_OnRemoteClientDisconnected -= RepaintOnUpdate;
+            NetworkManager.Client_OnRemoteClientUpdated -= RepaintOnUpdate;
+            NetworkManager.Client_OnLocalStateUpdated -= RepaintOnUpdate;
+            NetworkManager.Server_OnRemoteClientConnected -= RepaintOnUpdate;
+            NetworkManager.Server_OnRemoteClientDisconnected -= RepaintOnUpdate;
+            NetworkManager.Server_OnRemoteClientUpdated -= RepaintOnUpdate;
+            NetworkManager.Server_OnLocalStateUpdated -= RepaintOnUpdate;
         }
 
-        public override void OnInspectorGUI()                   
+        private void RepaintOnUpdate(uint _) => Repaint();
+        private void RepaintOnUpdate(ELocalClientConnectionState _) => Repaint();
+        private void RepaintOnUpdate(ELocalServerConnectionState _) => Repaint();
+
+        public override void OnInspectorGUI()
         {
-            if (Target.NetworkManager == null)
+            EditorGUILayout.Space();
+            GUILayout.Label("Configurations:", EditorStyles.boldLabel);
             {
-                GUILayout.Label("The network manager is null. Can not show settings.", EditorStyles.largeLabel);
-                return;
+                TransportGUI();
+                SerialiserGUI();
+                LoggerGUI();
             }
-            
-            NetworkConfiguration = (NetworkConfiguration)EditorGUILayout.ObjectField(NetworkConfiguration, typeof(NetworkConfiguration), false);
 
-            if (SettingsEditor == null) return;
-            
-            EditorGUILayout.Space();
-            
-            SettingsEditor.OnInspectorGUI();
+            NetworkManagerEditor.ManagerGUIs();
 
-            EditorGUILayout.Space();
-            EditorGUILayout.Space();
+            serializedObject.ApplyModifiedProperties();
+        }
 
-            if (!Application.isPlaying)
-                GUILayout.Label("Functionality is disabled in edit mode.");
+        private void TransportGUI()
+        {
+            TransportConfiguration = NetworkManagerEditor.ConfigurationGUI<TransportConfiguration>(TransportConfiguration, "Transport", ref _showTransportWindow);
+        }
 
-            EditorGUI.BeginDisabledGroup(!Application.isPlaying);
-            NetworkManagerEditor.OnInspectorGUI(Target.NetworkManager);
-            EditorGUI.EndDisabledGroup();
+        private void SerialiserGUI()
+        {
+            SerialiserConfiguration = NetworkManagerEditor.ConfigurationGUI<SerialiserConfiguration>(SerialiserConfiguration, "Serialiser", ref _showSerialiserWindow);
+        }
+
+        private void LoggerGUI()
+        {
+            LoggerConfiguration = NetworkManagerEditor.ConfigurationGUI<LoggerConfiguration>(LoggerConfiguration, "Logger", ref _showLoggerWindow);
         }
     }
 }

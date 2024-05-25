@@ -1,6 +1,5 @@
 using UnityEngine;
-using jKnepel.SimpleUnityNetworking.SyncDataTypes;
-using jKnepel.SimpleUnityNetworking.Serialisation;
+using jKnepel.SimpleUnityNetworking.Serialising;
 
 namespace jKnepel.SimpleUnityNetworking.Samples
 {
@@ -17,8 +16,8 @@ namespace jKnepel.SimpleUnityNetworking.Samples
 
         public static ClientVisualiserData ReadClientVisualiserData(Reader reader)
 	    {
-            Vector3 position = reader.ReadVector3();
-            Quaternion rotation = reader.ReadQuaternion();
+            var position = reader.ReadVector3();
+            var rotation = reader.ReadQuaternion();
             return new(position, rotation);
 	    }
 

@@ -4,12 +4,17 @@ namespace jKnepel.SimpleUnityNetworking.Utilities
     {
 		private const uint FNV_PRIME_32 = 16777619;
 		private const uint FNV_OFFSET_BASIS_32 = 2166136261;
+		/// <summary>
+		/// FNV1 hash for 32 bit integers based on <a href="http://www.isthe.com/chongo/tech/comp/fnv/">link</a>
+		/// and <a href="https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function#FNV-1_hash">link</a>.
+		/// </summary>
+		/// <param name="msg"></param>
+		/// <returns></returns>
 		public static uint GetFNV1Hash32(string msg)
 		{
-			uint hash = FNV_OFFSET_BASIS_32;
-			for (int i = 0; i < msg.Length; i++)
+			var hash = FNV_OFFSET_BASIS_32;
+			foreach (byte cha in msg)
 			{
-				uint cha = msg[i];
 				hash *= FNV_PRIME_32;
 				hash ^= cha;
 			}
@@ -65,16 +70,14 @@ namespace jKnepel.SimpleUnityNetworking.Utilities
 
 		public static uint GetCRC32Hash(byte[] bytes)
 		{
-			uint oldcrc32;
-			oldcrc32 = 0xFFFFFFFF;
-			int len = bytes.Length;
-
+			var crc3Val = 0xFFFFFFFF;
+			var len = bytes.Length;
 			while (len > 0)
 			{
 				--len;
-				oldcrc32 = crc32[((oldcrc32) ^ bytes[len]) & 0xff] ^ ((oldcrc32) >> 8);
+				crc3Val = crc32[(crc3Val ^ bytes[len]) & 0xFF] ^ (crc3Val >> 8);
 			}
-			return ~oldcrc32;
+			return ~crc3Val;
 		}
 	}
 }
