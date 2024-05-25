@@ -83,7 +83,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         /// The rate at which updates are performed per second. These updates include all network events,
         /// incoming and outgoing packets and client connections.
         /// </summary>
-        public int Tickrate = 60;
+        public int Tickrate = 30;
     }
 
     public enum EProtocolType

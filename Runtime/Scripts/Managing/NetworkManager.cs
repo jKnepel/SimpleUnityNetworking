@@ -13,29 +13,17 @@ namespace jKnepel.SimpleUnityNetworking.Managing
     {
         #region fields
 
-        public Transport Transport => _transportConfiguration?.Transport;
-        private TransportConfiguration _transportConfiguration;
-        public TransportConfiguration TransportConfiguration
+        private Transport _transport;
+        public Transport Transport
         {
-            get => _transportConfiguration;
-            set
+            get => _transport;
+            private set
             {
-                if (value == _transportConfiguration) return;
-
-                if (Transport is not null)
+                if (value == _transport) return;
+                
+                if (_transport is not null)
                 {
-                    Transport.Dispose();
-                    Transport.OnServerStateUpdated -= HandleTransportServerStateUpdate;
-                    Transport.OnClientStateUpdated -= HandleTransportClientStateUpdate;
-                    Transport.OnServerReceivedData -= OnServerReceivedData;
-                    Transport.OnClientReceivedData -= OnClientReceivedData;
-                    Transport.OnConnectionUpdated -= OnRemoteConnectionStateUpdated;
-                    Transport.OnTickStarted -= TickStarted;
-                    Transport.OnTickCompleted -= TickCompleted;
-                    
-                    if (Logger is not null)
-                        Transport.OnTransportLogAdded -= Logger.Log;
-                    
+                    _transport.Dispose();
                     ClientInformation = null;
                     ServerInformation = null;
                     _authenticatingClients.Clear();
@@ -44,26 +32,76 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     _localClientConnectionState = ELocalClientConnectionState.Stopped;
                     _localServerConnectionState = ELocalServerConnectionState.Stopped;
                 }
-                _transportConfiguration = value;
                 
-                if (_transportConfiguration is null) return;
-                Transport.OnServerStateUpdated += HandleTransportServerStateUpdate;
-                Transport.OnClientStateUpdated += HandleTransportClientStateUpdate;
-                Transport.OnServerReceivedData += OnServerReceivedData;
-                Transport.OnClientReceivedData += OnClientReceivedData;
-                Transport.OnConnectionUpdated += OnRemoteConnectionStateUpdated;
-                Transport.OnTickStarted += TickStarted;
-                Transport.OnTickCompleted += TickCompleted;
+                _transport = value;
+                
+                if (_transport is null) return;
+                _transport.OnServerStateUpdated += HandleTransportServerStateUpdate;
+                _transport.OnClientStateUpdated += HandleTransportClientStateUpdate;
+                _transport.OnServerReceivedData += OnServerReceivedData;
+                _transport.OnClientReceivedData += OnClientReceivedData;
+                _transport.OnConnectionUpdated += OnRemoteConnectionStateUpdated;
+                _transport.OnTickStarted += TickStarted;
+                _transport.OnTickCompleted += TickCompleted;
                 
                 if (Logger is not null)
-                    Transport.OnTransportLogAdded += Logger.Log;
+                    _transport.OnTransportLogAdded += Logger.Log;
+            }
+        }
+        private TransportConfiguration _transportConfiguration;
+        public TransportConfiguration TransportConfiguration
+        {
+            get => _transportConfiguration;
+            set
+            {
+                if (value == _transportConfiguration) return;
+                if (IsOnline)
+                {
+                    Debug.LogError("Can't change the configuration while a local connection is established!");
+                    return;
+                }
+                
+                _transportConfiguration = value;
+                if (_transportConfiguration is not null)
+                    Transport = _transportConfiguration.GetTransport();
             }
         }
 
-        public SerialiserSettings SerialiserSettings => SerialiserConfiguration?.Settings;
-        public SerialiserConfiguration SerialiserConfiguration { get; set; }
+        public SerialiserSettings SerialiserSettings { get; private set; }
+        private SerialiserConfiguration _serialiserConfiguration;
+        public SerialiserConfiguration SerialiserConfiguration
+        {
+            get => _serialiserConfiguration;
+            set
+            {
+                if (value == _serialiserConfiguration) return;
+                if (IsOnline)
+                {
+                    Debug.LogError("Can't change the configuration while a local connection is established!");
+                    return;
+                }
+                
+                _serialiserConfiguration = value;
+                if (_serialiserConfiguration is not null)
+                    SerialiserSettings = _serialiserConfiguration.GetSerialiserSettings();
+            }
+        }
 
-        public Logger Logger => LoggerConfiguration?.Logger;
+        private Logger _logger;
+        public Logger Logger
+        {
+            get => _logger;
+            private set
+            {
+                if (value == _logger) return;
+                if (_logger is not null && Transport is not null)
+                    Transport.OnTransportLogAdded -= Logger.Log;
+
+                _logger = value;
+                if (_logger is not null && Transport is not null)
+                    Transport.OnTransportLogAdded += Logger.Log;
+            }
+        }
         private LoggerConfiguration _loggerConfiguration;
         public LoggerConfiguration LoggerConfiguration
         {
@@ -71,24 +109,21 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             set
             {
                 if (value == _loggerConfiguration) return;
-
-                if (Logger is not null)
+                if (IsOnline)
                 {
-                    if (Transport is not null)
-                        Transport.OnTransportLogAdded -= Logger.Log;
+                    Debug.LogError("Can't change the configuration while a local connection is established!");
+                    return;
                 }
-                _loggerConfiguration = value;
-
-                if (_loggerConfiguration is null) return;
                 
-                if (Transport is not null)
-                    Transport.OnTransportLogAdded += Logger.Log;
+                _loggerConfiguration = value;
+                if (_loggerConfiguration is not null)
+                    Logger = _loggerConfiguration.GetLogger();
             }
         }
 
-        public bool IsOnline => IsServer || IsClient;
         public bool IsServer => Server_LocalState == ELocalServerConnectionState.Started;
         public bool IsClient => Client_LocalState == ELocalClientConnectionState.Authenticated;
+        public bool IsOnline => IsServer || IsClient;
         public bool IsHost => IsServer && IsClient;
         
         public ServerInformation ServerInformation { get; private set; }
@@ -136,9 +171,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         public void StartServer(string servername)
         {
-            if (Transport == null)
+            if (TransportConfiguration == null)
             {
-                Logger?.Log("The transport needs to be defined before a server can be started!");
+                Debug.LogError("The transport needs to be defined before a server can be started!");
                 return;
             }
 
@@ -154,12 +189,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         public void StartClient(string username, Color32 userColour)
         {
-            if (Transport == null)
+            if (TransportConfiguration == null)
             {
-                Logger?.Log("The transport needs to be defined before a client can be started!");
+                Debug.LogError("The transport needs to be defined before a client can be started!");
                 return;
             }
-
+            
             _cachedUsername = username;
             _cachedColour = userColour;
             Transport?.StartClient();

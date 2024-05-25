@@ -8,7 +8,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         /// <summary>
         /// The settings used by the current transport
         /// </summary>
-        public TransportSettings Settings { get; private set; }
+        public TransportSettings Settings { get; }
         
         /// <summary>
         /// Whether a local server or client is started
@@ -84,6 +84,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         protected abstract void Dispose(bool disposing);

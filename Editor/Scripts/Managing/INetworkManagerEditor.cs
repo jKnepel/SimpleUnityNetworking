@@ -55,8 +55,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             DrawToggleFoldout(title, ref showSection);
             if (showSection)
             {
-                if (!_manager.IsOnline)
-                    configuration = (T)EditorGUILayout.ObjectField("Asset:", configuration, typeof(T), false);
+                configuration = (T)EditorGUILayout.ObjectField("Asset:", configuration, typeof(T), false);
 
                 if (configuration)
                     Editor.CreateEditor(configuration).OnInspectorGUI();

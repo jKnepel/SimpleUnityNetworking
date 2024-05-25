@@ -8,15 +8,16 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 	[CreateAssetMenu(fileName = "SerialiserConfiguration", menuName = "SimpleUnityNetworking/SerialiserConfiguration")]
     public class SerialiserConfiguration : ScriptableObject
     {
-	    public SerialiserSettings Settings => _settings;
-	    [SerializeField] private SerialiserSettings _settings;
-        
-	    public SerialiserConfiguration()
-		    : this(new()) {}
+	    public SerialiserSettings Settings = new();
 
-	    public SerialiserConfiguration(SerialiserSettings settings)
+	    public SerialiserSettings GetSerialiserSettings()
 	    {
-		    _settings = settings;
+		    return new()
+		    {
+				UseCompression = Settings.UseCompression,
+				NumberOfDecimalPlaces = Settings.NumberOfDecimalPlaces,
+				BitsPerComponent = Settings.BitsPerComponent
+		    };
 	    }
     }
 
@@ -27,7 +28,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		public override void OnInspectorGUI()
 		{
 			EditorGUI.indentLevel++;
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("_settings"), new GUIContent("Settings:"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("Settings"), new GUIContent("Settings:"));
 			EditorGUI.indentLevel--;
             
 			serializedObject.ApplyModifiedProperties();

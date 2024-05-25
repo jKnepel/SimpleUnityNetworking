@@ -72,8 +72,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         
         #region lifecycle
 
-        public UnityTransport(TransportSettings settings)
-            : base(settings)
+        public UnityTransport(TransportSettings settings) : base(settings)
         {
             _tickrateTimer.Elapsed += (_, _) => MainThreadQueue.Enqueue(TickInternal);
         }
@@ -90,8 +89,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                 _clientIDToConnection = null;
                 _connectionToClientID = null;
                 _serverConnection = default;
-                _clientIDs = 1;
-                _hostClientID = 1;
             }
 
             // TODO : clean/flush outgoing messages
@@ -314,10 +311,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         private void StopHostClient()
         {
             SetLocalClientState(ELocalConnectionState.Stopping);
-            _hostClientID = 0;
             AutomaticTicks(false, false);
-            OnConnectionUpdated?.Invoke(_hostClientID, ERemoteConnectionState.Disconnected);
             SetLocalClientState(ELocalConnectionState.Stopped);
+            OnConnectionUpdated?.Invoke(_hostClientID, ERemoteConnectionState.Disconnected);
+            _hostClientID = 0;
         }
 
         public override void DisconnectClient(uint clientID)
@@ -330,10 +327,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 
             if (IsHost && clientID == _hostClientID)
             {
-                _hostClientID = 0;
-                OnConnectionUpdated?.Invoke(_hostClientID, ERemoteConnectionState.Disconnected);
-                SetLocalClientState(ELocalConnectionState.Stopping);
-                SetLocalClientState(ELocalConnectionState.Stopped);
+                StopHostClient();
                 return;
             }
 
@@ -457,13 +451,13 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                     SetLocalClientState(ELocalConnectionState.Started);
                     return true;
                 case NetworkEvent.Type.Disconnect:
-                    if (LocalClientState is ELocalConnectionState.Starting or ELocalConnectionState.Started
-                        && conn.Equals(_serverConnection))
+                    if (LocalClientState is ELocalConnectionState.Starting or ELocalConnectionState.Started && conn.Equals(_serverConnection))
                     {
                         SetLocalClientState(ELocalConnectionState.Stopping);
                         // TODO : flush send queues
                         CleanOutgoingMessages(_serverConnection);
                         DisposeInternals();
+                        AutomaticTicks(false, false);
                         SetLocalClientState(ELocalConnectionState.Stopped);
                     }
                     else if (LocalServerState is ELocalConnectionState.Starting or ELocalConnectionState.Started)
@@ -614,8 +608,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                     {
                         sendQueue.Dequeue().Dispose();
                         OnTransportLogAdded?.Invoke($"Sending data end failed: {ParseStatusCode(result)}", EMessageSeverity.Error);
+                        return;
                     }
 
+                    OnTransportLogAdded?.Invoke($"{ParseStatusCode(result)} Resend will be attempted next tick.", EMessageSeverity.Warning);
                     return;
                 }
             }
@@ -714,7 +710,11 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 
         private void DisposeInternals()
         {
-            if (_driver.IsCreated) _driver.Dispose();
+            if (_driver.IsCreated)
+            {
+                _driver.Dispose();
+                _driver = default;
+            }
             if (_networkSettings.IsCreated)
             {
                 _networkSettings.Dispose();

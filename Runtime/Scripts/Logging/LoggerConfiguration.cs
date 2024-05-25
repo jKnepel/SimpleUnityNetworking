@@ -8,18 +8,17 @@ namespace jKnepel.SimpleUnityNetworking.Logging
     [CreateAssetMenu(fileName = "LoggerConfiguration", menuName = "SimpleUnityNetworking/LoggerConfiguration")]
     public class LoggerConfiguration : ScriptableObject
     {
-        public Logger Logger => _logger;
-        private Logger _logger;
-        public LoggerSettings Settings => _settings;
-        [SerializeField] private LoggerSettings _settings;
-        
-        public LoggerConfiguration()
-            : this(new()) {}
+        public LoggerSettings Settings = new();
 
-        public LoggerConfiguration(LoggerSettings settings)
+        public Logger GetLogger()
         {
-            _settings = settings;
-            _logger = new(Settings);
+            return new(new()
+            {
+                PrintToConsole = Settings.PrintToConsole,
+                PrintLog = Settings.PrintLog,
+                PrintWarning = Settings.PrintWarning,
+                PrintError = Settings.PrintError
+            });
         }
     }
     
@@ -30,7 +29,7 @@ namespace jKnepel.SimpleUnityNetworking.Logging
         public override void OnInspectorGUI()
         {
             EditorGUI.indentLevel++;
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("_settings"), new GUIContent("Settings:"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("Settings"), new GUIContent("Settings:"));
             EditorGUI.indentLevel--;
             
             serializedObject.ApplyModifiedProperties();
