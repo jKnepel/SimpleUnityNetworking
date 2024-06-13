@@ -23,16 +23,18 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
 
         public override string Name => "ServerDiscovery";
 
-        private bool _isActive;
-        public bool IsActive
+        private bool _isServerAnnounceActive;
+
+        private bool _isServerDiscoveryActive;
+        public bool IsServerDiscoveryActive
         {
-            get => _isActive;
+            get => _isServerDiscoveryActive;
             private set
             {
-                if (_isActive == value) return;
+                if (_isServerDiscoveryActive == value) return;
 
-                _isActive = value;
-                if (_isActive)
+                _isServerDiscoveryActive = value;
+                if (_isServerDiscoveryActive)
                     OnServerDiscoveryActivated?.Invoke();
                 else
                     OnServerDiscoveryDeactivated?.Invoke();
@@ -79,7 +81,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
 
         public bool StartServerDiscovery()
         {
-            if (IsActive)
+            if (IsServerDiscoveryActive)
                 return true;
 
             try
@@ -100,7 +102,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 _discoveryThread = new(DiscoveryThread) { IsBackground = true };
                 _discoveryThread.Start();
 
-                return IsActive = true;
+                return IsServerDiscoveryActive = true;
             }
             catch (Exception ex)
             {
@@ -126,13 +128,13 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                         throw;
                 }
                 
-                return IsActive = false;
+                return IsServerDiscoveryActive = false;
             }
         }
 
         public void EndServerDiscovery()
 		{
-            if (!IsActive)
+            if (!IsServerDiscoveryActive)
                 return;
 
             if (_discoveryClient != null)
@@ -147,7 +149,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 _discoveryThread.Join();
             }
 
-            IsActive = false;
+            IsServerDiscoveryActive = false;
         }
 
         public bool RestartServerDiscovery()
@@ -197,11 +199,11 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                             continue;
                         case SocketException:
                         case ThreadAbortException:
-                            IsActive = false;
+                            IsServerDiscoveryActive = false;
                             return;
                         default:
                             Debug.LogError("An error occurred in the server discovery!");
-                            IsActive = false;
+                            IsServerDiscoveryActive = false;
                             return;
                     }
                 }
@@ -266,6 +268,8 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
 
                 _announceThread = new(AnnounceThread) { IsBackground = true };
                 _announceThread.Start();
+
+                _isServerAnnounceActive = true;
             }
             catch (Exception ex)
             {
@@ -295,6 +299,9 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
 
         private void EndServerAnnouncement()
         {
+            if (!_isServerAnnounceActive)
+                return;
+            
             if (_announceClient != null)
             {
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DropMembership, new MulticastOption(_discoveryIP));
@@ -306,6 +313,8 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 _announceThread.Abort();
                 _announceThread.Join();
             }
+
+            _isServerAnnounceActive = false;
         }
 
         private void AnnounceThread()
@@ -377,7 +386,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 StartServerDiscovery();
             if (GUILayout.Button("Stop Server Discovery"))
                 EndServerDiscovery();
-            EditorGUILayout.Toggle("Is Discovery Active:", IsActive);
+            EditorGUILayout.Toggle("Is Discovery Active:", IsServerDiscoveryActive);
             
             EditorGUILayout.BeginHorizontal();
             GUILayout.Label("Server Discovery", EditorStyles.boldLabel);

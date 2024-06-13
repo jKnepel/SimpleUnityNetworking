@@ -82,7 +82,7 @@ public class TransformTest : MonoBehaviour
         _receiveObject.SetPositionAndRotation(message.Position, message.Rotation);
     }
 
-    private struct TransformStruct : IStructData
+    private struct TransformStruct
     {
         public Vector3 Position;
         public Quaternion Rotation;

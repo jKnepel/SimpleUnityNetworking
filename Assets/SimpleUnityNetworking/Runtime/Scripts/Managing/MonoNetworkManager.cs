@@ -231,35 +231,35 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    NetworkManager.Client_SendByteDataToClients(clientIDs, byteID, byteData, channel);
 	    }
 
-	    public void Client_RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+	    public void Client_RegisterStructData<T>(Action<uint, T> callback) where T : struct
 	    {
 		    NetworkManager.Client_RegisterStructData(callback);
 	    }
 
-	    public void Client_UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+	    public void Client_UnregisterStructData<T>(Action<uint, T> callback) where T : struct
 	    {
 		    NetworkManager.Client_UnregisterStructData(callback);
 	    }
 	    
 	    public void Client_SendStructDataToServer<T>(T structData,
-		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
 	    {
 		    NetworkManager.Client_SendStructDataToServer(structData, channel);
 	    }
 
 	    public void Client_SendStructDataToClient<T>(uint clientID, T structData,
-		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
 	    {
 		    NetworkManager.Client_SendStructDataToClient(clientID, structData, channel);
 	    }
 
-	    public void Client_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+	    public void Client_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
 	    {
 		    NetworkManager.Client_SendStructDataToAll(structData, channel);
 	    }
 
 	    public void Client_SendStructDataToClients<T>(uint[] clientIDs, T structData,
-		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
 	    {
 		    NetworkManager.Client_SendStructDataToClients(clientIDs, structData, channel);
 	    }
@@ -291,29 +291,29 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    NetworkManager.Server_SendByteDataToClients(clientIDs, byteID, byteData, channel);
 	    }
 
-	    public void Server_RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+	    public void Server_RegisterStructData<T>(Action<uint, T> callback) where T : struct
 	    {
 		    NetworkManager.Server_RegisterStructData(callback);
 	    }
 
-	    public void Server_UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+	    public void Server_UnregisterStructData<T>(Action<uint, T> callback) where T : struct
 	    {
 		    NetworkManager.Server_UnregisterStructData(callback);
 	    }
 
 	    public void Server_SendStructDataToClient<T>(uint clientID, T structData,
-		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
 	    {
 		    NetworkManager.Server_SendStructDataToClient(clientID, structData, channel);
 	    }
 
-	    public void Server_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+	    public void Server_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
 	    {
 		    NetworkManager.Server_SendStructDataToAll(structData, channel);
 	    }
 
 	    public void Server_SendStructDataToClients<T>(uint[] clientIDs, T structData,
-		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+		    ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
 	    {
 		    NetworkManager.Server_SendStructDataToClients(clientIDs, structData, channel);
 	    }
