@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
@@ -626,6 +627,22 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         public DateTime ReadDateTime()
 		{
             return DateTime.FromBinary(ReadInt64());
+		}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public IPAddress ReadIPAddress()
+		{
+			var length = ReadByte();
+			var bytes = ReadByteArray(length);
+			return new(bytes);
+		}
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public IPEndPoint ReadIPEndpoint()
+		{
+			var ipAddress = ReadIPAddress();
+			var port = ReadUInt16();
+			return new(ipAddress, port);
 		}
 
         #endregion

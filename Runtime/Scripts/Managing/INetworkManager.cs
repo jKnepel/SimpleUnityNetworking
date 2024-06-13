@@ -57,9 +57,17 @@ namespace jKnepel.SimpleUnityNetworking
         bool IsHost { get; }
         
         /// <summary>
-        /// Information about the local or connected remote server
+        /// Listen endpoint of the local server
         /// </summary>
-        ServerInformation ServerInformation { get; }
+        IPEndPoint Server_ServerEndpoint { get; }
+        /// <summary>
+        /// Name of the local server
+        /// </summary>
+        string Server_Servername { get; }
+        /// <summary>
+        /// Max number of connected clients of the local server
+        /// </summary>
+        uint Server_MaxNumberOfClients { get; }
         /// <summary>
         /// The current connection state of the local server
         /// </summary>
@@ -68,10 +76,31 @@ namespace jKnepel.SimpleUnityNetworking
         /// The clients that are connected to the local server
         /// </summary>
         ConcurrentDictionary<uint, ClientInformation> Server_ConnectedClients { get; }
+        
         /// <summary>
-        /// Information about the authenticated local client
+        /// Endpoint of the server to which the local client is connected
         /// </summary>
-        ClientInformation ClientInformation { get; }
+        IPEndPoint Client_ServerEndpoint { get; }
+        /// <summary>
+        /// Name of the local server
+        /// </summary>
+        string Client_Servername { get; }
+        /// <summary>
+        /// Max number of connected clients of the server to which the local client is connected
+        /// </summary>
+        uint Client_MaxNumberOfClients { get; }
+        /// <summary>
+        /// Identifier of the local client
+        /// </summary>
+        uint Client_ClientID { get; }
+        /// <summary>
+        /// Username of the local client
+        /// </summary>
+        string Client_Username { get; }
+        /// <summary>
+        /// UserColour of the local client
+        /// </summary>
+        Color32 Client_UserColour { get; }
         /// <summary>
         /// The current connection state of the local client
         /// </summary>

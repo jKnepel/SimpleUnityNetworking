@@ -12,13 +12,7 @@ namespace jKnepel.SimpleUnityNetworking.Logging
 
         public Logger GetLogger()
         {
-            return new(new()
-            {
-                PrintToConsole = Settings.PrintToConsole,
-                PrintLog = Settings.PrintLog,
-                PrintWarning = Settings.PrintWarning,
-                PrintError = Settings.PrintError
-            });
+            return new(Settings);
         }
     }
     

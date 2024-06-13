@@ -46,7 +46,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
 #if UNITY_EDITOR
                 if (value != null)
-                    EditorUtility.SetDirty(_cachedTransportConfiguration);
+                    EditorUtility.SetDirty(_cachedSerialiserConfiguration);
                 if (!EditorApplication.isPlaying)
 				    EditorSceneManager.MarkSceneDirty(gameObject.scene);
 #endif
@@ -65,8 +65,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
 #if UNITY_EDITOR
                 if (value != null)
-                    EditorUtility.SetDirty(_cachedTransportConfiguration);
+                    EditorUtility.SetDirty(_cachedLoggerConfiguration);
                 if (!EditorApplication.isPlaying)
+				    EditorSceneManager.MarkSceneDirty(gameObject.scene);
+#endif
+		    }
+	    }
+
 				    EditorSceneManager.MarkSceneDirty(gameObject.scene);
 #endif
 		    }
@@ -76,11 +81,19 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    public bool IsClient => NetworkManager.IsClient;
 	    public bool IsOnline => NetworkManager.IsOnline;
 	    public bool IsHost => NetworkManager.IsHost;
-	    
-	    public ServerInformation ServerInformation => NetworkManager.ServerInformation;
+
+	    public IPEndPoint Server_ServerEndpoint => NetworkManager.Server_ServerEndpoint;
+	    public string Server_Servername => NetworkManager.Server_Servername;
+	    public uint Server_MaxNumberOfClients => NetworkManager.Server_MaxNumberOfClients;
 	    public ELocalServerConnectionState Server_LocalState => NetworkManager.Server_LocalState;
 	    public ConcurrentDictionary<uint, ClientInformation> Server_ConnectedClients => NetworkManager.Server_ConnectedClients;
-	    public ClientInformation ClientInformation => NetworkManager.ClientInformation;
+
+	    public IPEndPoint Client_ServerEndpoint => NetworkManager.Client_ServerEndpoint;
+	    public string Client_Servername => NetworkManager.Client_Servername;
+	    public uint Client_MaxNumberOfClients => NetworkManager.Client_MaxNumberOfClients;
+	    public uint Client_ClientID => NetworkManager.Client_ClientID;
+	    public string Client_Username => NetworkManager.Client_Username;
+	    public Color32 Client_UserColour => NetworkManager.Client_UserColour;
 	    public ELocalClientConnectionState Client_LocalState => NetworkManager.Client_LocalState;
 	    public ConcurrentDictionary<uint, ClientInformation> Client_ConnectedClients => NetworkManager.Client_ConnectedClients;
 
@@ -109,6 +122,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 			    _networkManager.LoggerConfiguration = _cachedLoggerConfiguration;
 			    return _networkManager;
 		    }
+		    private set => _networkManager = value;
 	    }
 
 	    private void Awake()
@@ -133,6 +147,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    private void OnDestroy()
 	    {
 		    NetworkManager.Dispose();
+		    NetworkManager = null;
 	    }
 
 	    public void StartServer(string servername)

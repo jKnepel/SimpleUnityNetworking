@@ -8,6 +8,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
@@ -16,9 +17,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
     {
         #region server logic
         
+        public IPEndPoint Server_ServerEndpoint { get; private set; }
+        public string Server_Servername { get; private set; }
+        public uint Server_MaxNumberOfClients { get; private set; }
+        public ELocalServerConnectionState Server_LocalState { get; private set; } = ELocalServerConnectionState.Stopped;
         public ConcurrentDictionary<uint, ClientInformation> Server_ConnectedClients { get; } = new();
-        
-        public ELocalServerConnectionState Server_LocalState => _localServerConnectionState;
         
         public event Action<ELocalServerConnectionState> Server_OnLocalStateUpdated;
         public event Action<uint> Server_OnRemoteClientConnected;
@@ -28,9 +31,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private readonly ConcurrentDictionary<uint, byte[]> _authenticatingClients = new();
 
         private string _cachedServername;
-        private int _cachedMaxNumberClients;
-        
-        private ELocalServerConnectionState _localServerConnectionState = ELocalServerConnectionState.Stopped;
         
         private void HandleTransportServerStateUpdate(ELocalConnectionState state)
         {
@@ -40,19 +40,22 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     Logger?.Log("Server is starting...", EMessageSeverity.Log);
                     break;
                 case ELocalConnectionState.Started:
-                    ServerInformation = new(_cachedServername, _cachedMaxNumberClients);
+                    Server_ServerEndpoint = Transport.ServerEndpoint;
+                    Server_Servername = _cachedServername;
+                    Server_MaxNumberOfClients = Transport.MaxNumberOfClients;
                     Logger?.Log("Server was started", EMessageSeverity.Log);
                     break;
                 case ELocalConnectionState.Stopping:
                     Logger?.Log("Server is stopping...", EMessageSeverity.Log);
                     break;
                 case ELocalConnectionState.Stopped:
-                    ServerInformation = null;
+                    Server_ServerEndpoint = null;
+                    Server_MaxNumberOfClients = 0;
                     Logger?.Log("Server was stopped", EMessageSeverity.Log);
                     break;
             }
-            _localServerConnectionState = (ELocalServerConnectionState)state;
-            Server_OnLocalStateUpdated?.Invoke(_localServerConnectionState);
+            Server_LocalState = (ELocalServerConnectionState)state;
+            Server_OnLocalStateUpdated?.Invoke(Server_LocalState);
         }
         
         private void OnRemoteConnectionStateUpdated(uint clientID, ERemoteConnectionState state)
@@ -105,6 +108,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             ClientUpdatePacket.Write(writer, new(clientID));
             foreach (var id in Server_ConnectedClients.Keys)
                 Transport?.SendDataToClient(id, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
+
         }
         
         private void OnServerReceivedData(ServerReceivedData data)
@@ -152,8 +156,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             // inform client of authentication
             Writer writer = new(SerialiserSettings);
             writer.WriteByte(ConnectionAuthenticatedPacket.PacketType);
-            ConnectionAuthenticatedPacket authentication = new(clientID, ServerInformation.Servername,
-                ServerInformation.MaxNumberConnectedClients);
+            ConnectionAuthenticatedPacket authentication = new(clientID, Server_Servername, Server_MaxNumberOfClients);
             ConnectionAuthenticatedPacket.Write(writer, authentication);
             Transport?.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
             writer.Clear();
@@ -166,7 +169,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 writer.Position = pos;
                 var clientInfo = kvp.Value;
                 ClientUpdatePacket existingClient = new(clientInfo.ID, ClientUpdatePacket.UpdateType.Connected,
-                    clientInfo.Username, clientInfo.Colour);
+                    clientInfo.Username, clientInfo.UserColour);
                 ClientUpdatePacket.Write(writer, existingClient);
                 Transport?.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
             }
@@ -200,7 +203,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             
             // apply update
             Server_ConnectedClients[clientID].Username = packet.Username;
-            Server_ConnectedClients[clientID].Colour = packet.Colour;
+            Server_ConnectedClients[clientID].UserColour = packet.Colour;
             Server_OnRemoteClientUpdated?.Invoke(clientID);
 
             // inform other clients of update

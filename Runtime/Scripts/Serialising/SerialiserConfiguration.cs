@@ -9,16 +9,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
     public class SerialiserConfiguration : ScriptableObject
     {
 	    public SerialiserSettings Settings = new();
-
-	    public SerialiserSettings GetSerialiserSettings()
-	    {
-		    return new()
-		    {
-				UseCompression = Settings.UseCompression,
-				NumberOfDecimalPlaces = Settings.NumberOfDecimalPlaces,
-				BitsPerComponent = Settings.BitsPerComponent
-		    };
-	    }
     }
 
 #if UNITY_EDITOR
