@@ -8,6 +8,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Security.Cryptography;
 using UnityEngine;
 
@@ -17,9 +18,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
     {
         #region client logic
         
+        public IPEndPoint Client_ServerEndpoint { get; private set; }
+        public string Client_Servername { get; private set; }
+        public uint Client_MaxNumberOfClients { get; private set; }
+        public uint Client_ClientID { get; private set; }
+        public string Client_Username { get; private set; }
+        public Color32 Client_UserColour { get; private set; }
+        public ELocalClientConnectionState Client_LocalState { get; private set; } = ELocalClientConnectionState.Stopped;
         public ConcurrentDictionary<uint, ClientInformation> Client_ConnectedClients { get; } = new();
-        
-        public ELocalClientConnectionState Client_LocalState => _localClientConnectionState;
         
         public event Action<ELocalClientConnectionState> Client_OnLocalStateUpdated;
         public event Action<uint> Client_OnRemoteClientConnected;
@@ -27,9 +33,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public event Action<uint> Client_OnRemoteClientUpdated;
 
         private string _cachedUsername;
-        private Color32 _cachedColour;
-        
-        private ELocalClientConnectionState _localClientConnectionState = ELocalClientConnectionState.Stopped;
+        private Color32 _cachedUserColour;
         
         private void HandleTransportClientStateUpdate(ELocalConnectionState state)
         {
@@ -45,13 +49,17 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     Logger?.Log("Client is stopping...", EMessageSeverity.Log);
                     break;
                 case ELocalConnectionState.Stopped:
-                    ClientInformation = null;
-                    if (!IsServer) ServerInformation = null;
+                    Client_ServerEndpoint = null;
+                    Client_MaxNumberOfClients = 0;
+                    Client_Servername = string.Empty;
+                    Client_ClientID = 0;
+                    Client_Username = string.Empty;
+                    Client_UserColour = Color.white;
                     Logger?.Log("Client was stopped", EMessageSeverity.Log);
                     break;
             }
-            _localClientConnectionState = (ELocalClientConnectionState)state;
-            Client_OnLocalStateUpdated?.Invoke(_localClientConnectionState);
+            Client_LocalState = (ELocalClientConnectionState)state;
+            Client_OnLocalStateUpdated?.Invoke(Client_LocalState);
         }
         
         private void OnClientReceivedData(ClientReceivedData data)
@@ -88,7 +96,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private void HandleConnectionChallengePacket(Reader reader)
         {
-            if (_localClientConnectionState != ELocalClientConnectionState.Started)
+            if (Client_LocalState != ELocalClientConnectionState.Started)
                 return;
             
             var packet = ConnectionChallengePacket.Read(reader);
@@ -96,27 +104,30 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             
             Writer writer = new(SerialiserSettings);
             writer.WriteByte(ChallengeAnswerPacket.PacketType);
-            ChallengeAnswerPacket.Write(writer, new(hashedChallenge, _cachedUsername, _cachedColour));
+            ChallengeAnswerPacket.Write(writer, new(hashedChallenge, _cachedUsername, _cachedUserColour));
             Transport?.SendDataToServer(writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
         }
 
         private void HandleConnectionAuthenticatedPacket(Reader reader)
         {
-            if (_localClientConnectionState != ELocalClientConnectionState.Started)
+            if (Client_LocalState != ELocalClientConnectionState.Started)
                 return;
             
             var packet = ConnectionAuthenticatedPacket.Read(reader);
-            ClientInformation = new(packet.ClientID, _cachedUsername, _cachedColour);
-            if (!IsServer)
-                ServerInformation = new(packet.Servername, packet.MaxNumberConnectedClients);
-            _localClientConnectionState = ELocalClientConnectionState.Authenticated;
-            Client_OnLocalStateUpdated?.Invoke(_localClientConnectionState);
+            Client_ServerEndpoint = Transport.ServerEndpoint;
+            Client_MaxNumberOfClients = Transport.MaxNumberOfClients;
+            Client_Servername = string.Empty;
+            Client_ClientID = packet.ClientID;
+            Client_Username = _cachedUsername;
+            Client_UserColour = _cachedUserColour;
+            Client_LocalState = ELocalClientConnectionState.Authenticated;
+            Client_OnLocalStateUpdated?.Invoke(Client_LocalState);
             Logger?.Log("Client was authenticated", EMessageSeverity.Log);
         }
 
         private void HandleDataPacket(Reader reader)
         {
-            if (_localClientConnectionState != ELocalClientConnectionState.Authenticated)
+            if (Client_LocalState != ELocalClientConnectionState.Authenticated)
                 return;
 
             var packet = DataPacket.Read(reader);
@@ -133,7 +144,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private void HandleClientUpdatePacket(Reader reader)
         {
-            if (_localClientConnectionState != ELocalClientConnectionState.Authenticated)
+            if (Client_LocalState != ELocalClientConnectionState.Authenticated)
                 return;
 
             var packet = ClientUpdatePacket.Read(reader);
@@ -154,7 +165,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     break;
                 case ClientUpdatePacket.UpdateType.Updated:
                     Client_ConnectedClients[clientID].Username = packet.Username;
-                    Client_ConnectedClients[clientID].Colour = packet.Colour;
+                    Client_ConnectedClients[clientID].UserColour = packet.Colour;
                     Client_OnRemoteClientUpdated?.Invoke(clientID);
                     break;
             }

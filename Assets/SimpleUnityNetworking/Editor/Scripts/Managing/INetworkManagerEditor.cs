@@ -1,3 +1,4 @@
+using jKnepel.SimpleUnityNetworking.Modules;
 using System.Linq;
 using UnityEngine;
 using UnityEditor;
@@ -44,6 +45,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             EditorGUILayout.Space();
             GUILayout.Label("Managers:", EditorStyles.boldLabel);
             {
+                ModuleGUI();
                 ServerGUI();
                 ClientGUI();
             }
@@ -69,6 +71,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         #region guis
 
+        private void ModuleGUI()
+        {
+            _manager.ModuleConfiguration = (ModuleConfiguration)EditorGUILayout.ObjectField(GUIContent.none, _manager.ModuleConfiguration, typeof(ModuleConfiguration), false);
+            if (_manager.ModuleConfiguration is null) return;
+            
+            _manager.Module.ModuleGUI();
+        }
+
         private void ServerGUI()
         {
             GUILayout.BeginVertical(EditorStyles.helpBox);
@@ -83,8 +93,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 }
                 else
                 {
-                    EditorGUILayout.TextField("Servername:", _manager.ServerInformation.Servername);
-                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server_ConnectedClients.Count}/{_manager.ServerInformation.MaxNumberConnectedClients}");
+                    EditorGUILayout.TextField("Servername:", _manager.Server_Servername);
+                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server_ConnectedClients.Count}/{_manager.Server_MaxNumberOfClients}");
                     if (GUILayout.Button(new GUIContent("Stop Server")))
                         _manager.StopServer();
 
@@ -102,7 +112,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                             var client = _manager.Server_ConnectedClients.Values.ElementAt(i);
                             EditorGUILayout.BeginHorizontal();
                             {
-                                _style.normal.textColor = client.Colour;
+                                _style.normal.textColor = client.UserColour;
                                 GUILayout.Label($"#{client.ID} {client.Username}", _style);
                             }
                             EditorGUILayout.EndHorizontal();
@@ -130,11 +140,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 }
                 else
                 {
-                    EditorGUILayout.TextField("ID:", $"{_manager.ClientInformation.ID}");
-                    EditorGUILayout.TextField("Username:", _manager.ClientInformation.Username);
-                    EditorGUILayout.ColorField("User colour:", _manager.ClientInformation.Colour);
-                    EditorGUILayout.TextField("Servername:", _manager.ServerInformation.Servername);
-                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server_ConnectedClients.Count}/{_manager.ServerInformation.MaxNumberConnectedClients}");
+                    EditorGUILayout.TextField("ID:", $"{_manager.Client_ClientID}");
+                    EditorGUILayout.TextField("Username:", _manager.Client_Username);
+                    EditorGUILayout.ColorField("User colour:", _manager.Client_UserColour);
+                    EditorGUILayout.TextField("Servername:", _manager.Client_Servername);
+                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Client_ConnectedClients.Count}/{_manager.Client_MaxNumberOfClients}");
                     if (GUILayout.Button(new GUIContent("Stop Client")))
                         _manager.StopClient();
 
@@ -152,7 +162,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                             var client = _manager.Client_ConnectedClients.Values.ElementAt(i);
                             EditorGUILayout.BeginHorizontal();
                             {
-                                _style.normal.textColor = client.Colour;
+                                _style.normal.textColor = client.UserColour;
                                 GUILayout.Label($"#{client.ID} {client.Username}", _style);
                             }
                             EditorGUILayout.EndHorizontal();

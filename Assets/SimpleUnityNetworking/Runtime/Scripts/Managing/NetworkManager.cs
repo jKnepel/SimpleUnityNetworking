@@ -24,13 +24,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 if (_transport is not null)
                 {
                     _transport.Dispose();
-                    ClientInformation = null;
-                    ServerInformation = null;
                     _authenticatingClients.Clear();
                     Client_ConnectedClients.Clear();
                     Server_ConnectedClients.Clear();
-                    _localClientConnectionState = ELocalClientConnectionState.Stopped;
-                    _localServerConnectionState = ELocalServerConnectionState.Stopped;
+                    Client_LocalState = ELocalClientConnectionState.Stopped;
+                    Server_LocalState = ELocalServerConnectionState.Stopped;
                 }
                 
                 _transport = value;
@@ -83,7 +81,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 
                 _serialiserConfiguration = value;
                 if (_serialiserConfiguration is not null)
-                    SerialiserSettings = _serialiserConfiguration.GetSerialiserSettings();
+                    SerialiserSettings = _serialiserConfiguration.Settings;
             }
         }
 
@@ -125,9 +123,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public bool IsClient => Client_LocalState == ELocalClientConnectionState.Authenticated;
         public bool IsOnline => IsServer || IsClient;
         public bool IsHost => IsServer && IsClient;
-        
-        public ServerInformation ServerInformation { get; private set; }
-        public ClientInformation ClientInformation { get; private set; }
 
         public event Action OnTickStarted;
         public event Action OnTickCompleted;
@@ -155,9 +150,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             if (disposing)
             {
+                Transport?.Dispose();
             }
-            
-            Transport?.Dispose();
         }
 
         public void Tick()
@@ -178,7 +172,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
 
             _cachedServername = servername;
-            _cachedMaxNumberClients = TransportConfiguration.Settings.MaxNumberOfClients;
             Transport?.StartServer();
         }
 
@@ -192,11 +185,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             if (TransportConfiguration == null)
             {
                 Debug.LogError("The transport needs to be defined before a client can be started!");
-                return;
+                return; 
             }
             
             _cachedUsername = username;
-            _cachedColour = userColour;
+            _cachedUserColour = userColour;
             Transport?.StartClient();
         }
         
@@ -218,7 +211,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private delegate void ByteDataCallback(uint senderID, byte[] data);
         private delegate void StructDataCallback(uint senderID, byte[] data);
         
-        private static ByteDataCallback CreateByteDataDelegate(Action<uint, byte[]> callback)
+        private ByteDataCallback CreateByteDataDelegate(Action<uint, byte[]> callback)
         {
             return ParseDelegate;
             void ParseDelegate(uint senderID, byte[] data)

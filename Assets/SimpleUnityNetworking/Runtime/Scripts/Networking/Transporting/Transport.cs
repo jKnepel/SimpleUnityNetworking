@@ -1,14 +1,19 @@
 using jKnepel.SimpleUnityNetworking.Logging;
 using System;
+using System.Net;
 
 namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 {
     public abstract class Transport : IDisposable
     {
         /// <summary>
-        /// The settings used by the current transport
+        /// The endpoint of the local server or the server the local client is connected to
         /// </summary>
-        public TransportSettings Settings { get; }
+        public abstract IPEndPoint ServerEndpoint { get; }
+        /// <summary>
+        /// Max number of connected clients of the local server or the server the local client is connected to
+        /// </summary>
+        public abstract uint MaxNumberOfClients { get; }
         
         /// <summary>
         /// Whether a local server or client is started
@@ -70,11 +75,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         /// Called when a tick was completed
         /// </summary>
         public abstract event Action OnTickCompleted;
-
-        protected Transport(TransportSettings settings)
-        {
-            Settings = settings;
-        }
         
         ~Transport()
         {

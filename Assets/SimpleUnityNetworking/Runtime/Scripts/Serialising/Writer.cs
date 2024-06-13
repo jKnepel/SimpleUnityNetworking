@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -735,7 +736,22 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteDateTime(DateTime val)
 		{
-            WriteInt64(val.ToBinary());
+            WriteInt64(val.ToBinary()); 
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void WriteIPAddress(IPAddress val)
+		{
+			var bytes = val.GetAddressBytes();
+			WriteByte((byte)bytes.Length);
+			WriteByteArray(bytes);
+		}
+		
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public void WriteIPEndpoint(IPEndPoint val)
+		{
+			WriteIPAddress(val.Address);
+			WriteUInt16((ushort)val.Port);
 		}
 
 		#endregion
