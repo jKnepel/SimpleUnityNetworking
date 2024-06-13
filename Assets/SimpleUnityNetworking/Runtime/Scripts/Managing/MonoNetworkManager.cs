@@ -1,9 +1,11 @@
 using jKnepel.SimpleUnityNetworking.Logging;
+using jKnepel.SimpleUnityNetworking.Modules;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using System;
 using System.Collections.Concurrent;
+using System.Net;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -72,6 +74,20 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    }
 	    }
 
+	    public Module Module => NetworkManager.Module;
+	    [SerializeField] private ModuleConfiguration _cachedModuleConfiguration;
+	    public ModuleConfiguration ModuleConfiguration
+	    {
+		    get => NetworkManager.ModuleConfiguration;
+		    set
+		    {
+			    if (NetworkManager.ModuleConfiguration == value) return;
+			    NetworkManager.ModuleConfiguration = _cachedModuleConfiguration = value;
+
+#if UNITY_EDITOR
+			    if (value != null)
+				    EditorUtility.SetDirty(_cachedModuleConfiguration);
+			    if (!EditorApplication.isPlaying)
 				    EditorSceneManager.MarkSceneDirty(gameObject.scene);
 #endif
 		    }
@@ -120,6 +136,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 			    _networkManager.TransportConfiguration = _cachedTransportConfiguration;
 			    _networkManager.SerialiserConfiguration = _cachedSerialiserConfiguration;
 			    _networkManager.LoggerConfiguration = _cachedLoggerConfiguration;
+			    _networkManager.ModuleConfiguration = _cachedModuleConfiguration;
 			    return _networkManager;
 		    }
 		    private set => _networkManager = value;
