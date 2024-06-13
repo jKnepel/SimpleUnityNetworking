@@ -1,12 +1,13 @@
 using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Managing;
+using jKnepel.SimpleUnityNetworking.Modules;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using System;
 using System.Collections.Concurrent;
+using System.Net;
 using UnityEngine;
-
 using Logger = jKnepel.SimpleUnityNetworking.Logging.Logger;
 
 namespace jKnepel.SimpleUnityNetworking
@@ -38,6 +39,9 @@ namespace jKnepel.SimpleUnityNetworking
         /// The configuration that will create the instance of the <see cref="Logger"/>
         /// </summary>
         LoggerConfiguration LoggerConfiguration { get; set; }
+        
+        Module Module { get; }
+        ModuleConfiguration ModuleConfiguration { get; set; }
         
         /// <summary>
         /// Whether a local server is started

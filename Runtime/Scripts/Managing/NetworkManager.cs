@@ -1,5 +1,5 @@
 using jKnepel.SimpleUnityNetworking.Logging;
-using jKnepel.SimpleUnityNetworking.Networking;
+using jKnepel.SimpleUnityNetworking.Modules;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using System;
@@ -119,6 +119,26 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
+        public Module Module { get; private set; }
+        private ModuleConfiguration _moduleConfiguration;
+        public ModuleConfiguration ModuleConfiguration
+        {
+            get => _moduleConfiguration;
+            set
+            {
+                if (_moduleConfiguration == value) return;
+                if (value is null && Module is not null)
+                {
+                    Module.Dispose();
+                    Module = null;
+                }
+
+                _moduleConfiguration = value;
+                if (_moduleConfiguration is not null)
+                    Module = _moduleConfiguration.GetModule(this);
+            }
+        }
+
         public bool IsServer => Server_LocalState == ELocalServerConnectionState.Started;
         public bool IsClient => Client_LocalState == ELocalClientConnectionState.Authenticated;
         public bool IsOnline => IsServer || IsClient;
@@ -150,6 +170,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             if (disposing)
             {
+                Module?.Dispose();
                 Transport?.Dispose();
             }
         }
