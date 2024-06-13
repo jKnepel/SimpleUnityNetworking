@@ -15,26 +15,16 @@ namespace jKnepel.SimpleUnityNetworking.Utilities
             return (ushort)((IPEndPoint)socket.LocalEndPoint).Port;
         }
 
-        /// <summary>
-        /// Fetch all local IPv4 addresses.
-        /// See for <a href="https://stackoverflow.com/a/24814027">reference</a>. 
-        /// </summary>
-        /// <param name="allowVirtualIPs"></param>
-        /// <returns></returns>
         public static IPAddress[] GetLocalIPAddresses(bool allowVirtualIPs = false)
         {   
             List<IPAddress> ipAddresses = new();
             foreach (var item in NetworkInterface.GetAllNetworkInterfaces())
             {
                 if (item.OperationalStatus != OperationalStatus.Up) continue; 
-                // Fetch the properties of this adapter
                 var adapterProperties = item.GetIPProperties();
-                // Check if the gateway address exist, if not its most likely a virtual network or smth
                 if (!allowVirtualIPs && adapterProperties.GatewayAddresses.FirstOrDefault() == null) continue; 
-                // Iterate over each available unicast addresses
                 foreach (var ip in adapterProperties.UnicastAddresses)
                 {
-                    // If the IP is a local IPv4 address
                     if (ip.Address.AddressFamily != AddressFamily.InterNetwork) continue;
                     ipAddresses.Add(ip.Address);
                     break;
@@ -43,7 +33,7 @@ namespace jKnepel.SimpleUnityNetworking.Utilities
             return ipAddresses.ToArray();
         }
 
-        public static bool CheckLocalIPAddress(IPAddress address)
+        public static bool CheckIsLocalIPAddress(IPAddress address)
 		{
             var inter = NetworkInterface
                 .GetAllNetworkInterfaces()

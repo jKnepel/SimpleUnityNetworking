@@ -338,7 +338,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         ///     <param name="callback arg1">The ID of the sender. The ID will be 0 if the struct data was sent by the server</param>
         ///     <param name="callback arg2">The received struct data</param>
         /// </param>
-        public static void Client_RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        public static void Client_RegisterStructData<T>(Action<uint, T> callback) where T : struct
         {
             _networkManager.Client_RegisterStructData(callback);
         }
@@ -350,7 +350,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         ///     <param name="callback arg1">The ID of the sender. The ID will be 0 if the struct data was sent by the server</param>
         ///     <param name="callback arg2">The received struct data</param>
         /// </param>
-        public static void Client_UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        public static void Client_UnregisterStructData<T>(Action<uint, T> callback) where T : struct
         {
             _networkManager.Client_UnregisterStructData(callback);
         }
@@ -361,7 +361,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         public static void Client_SendStructDataToServer<T>(T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             _networkManager.Client_SendStructDataToServer(structData, channel);
         }
@@ -373,7 +373,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         public static void Client_SendStructDataToClient<T>(uint clientID, T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             _networkManager.Client_SendStructDataToClient(clientID, structData, channel);
         }
@@ -383,7 +383,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         /// <param name="structData"></param>
         /// <param name="channel"></param>
-        public static void Client_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+        public static void Client_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             _networkManager.Client_SendStructDataToAll(structData, channel);
         }
@@ -395,7 +395,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         public static void Client_SendStructDataToClients<T>(uint[] clientIDs, T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             _networkManager.Client_SendStructDataToClients(clientIDs, structData, channel);
         }
@@ -472,7 +472,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         ///     <param name="callback arg1">The ID of the sender</param>
         ///     <param name="callback arg2">The received struct data</param>
         /// </param>
-        public static void Server_RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        public static void Server_RegisterStructData<T>(Action<uint, T> callback) where T : struct
         {
             _networkManager.Server_RegisterStructData(callback);
         }
@@ -484,7 +484,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         ///     <param name="callback arg1">The ID of the sender</param>
         ///     <param name="callback arg2">The received struct data</param>
         /// </param>
-        public static void Server_UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        public static void Server_UnregisterStructData<T>(Action<uint, T> callback) where T : struct
         {
             _networkManager.Server_UnregisterStructData(callback);
         }
@@ -496,7 +496,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         public static void Server_SendStructDataToClient<T>(uint clientID, T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             _networkManager.Server_SendStructDataToClient(clientID, structData, channel);
         }
@@ -506,7 +506,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         /// <param name="structData"></param>
         /// <param name="channel"></param>
-        public static void Server_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+        public static void Server_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             _networkManager.Server_SendStructDataToAll(structData, channel);
         }
@@ -518,7 +518,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         public static void Server_SendStructDataToClients<T>(uint[] clientIDs, T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             _networkManager.Server_SendStructDataToClients(clientIDs, structData, channel);
         }

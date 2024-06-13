@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Concurrent;
-using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
+#else
+using UnityEngine;
 #endif
 
 namespace jKnepel.SimpleUnityNetworking.Utilities
@@ -22,25 +23,10 @@ namespace jKnepel.SimpleUnityNetworking.Utilities
         {
             UnityMainThreadHook.Instance.OnUpdate += UpdateQueue;
         }
-#endif
-
-        private static void UpdateQueue()
-        {
-            while (_mainThreadQueue.Count > 0)
-			{
-                _mainThreadQueue.TryDequeue(out var action);
-                action?.Invoke();
-			}
-        }
-
-        public static void Enqueue(Action action)
-		{
-            _mainThreadQueue.Enqueue(action);
-		}
         
         private class UnityMainThreadHook : MonoBehaviour
         {
-            public Action OnUpdate;
+            public event Action OnUpdate;
 
             private static UnityMainThreadHook _instance;
             public static UnityMainThreadHook Instance
@@ -62,5 +48,20 @@ namespace jKnepel.SimpleUnityNetworking.Utilities
                 OnUpdate?.Invoke();
             }
         }
+#endif
+
+        private static void UpdateQueue()
+        {
+            while (_mainThreadQueue.Count > 0)
+			{
+                _mainThreadQueue.TryDequeue(out var action);
+                action?.Invoke();
+			}
+        }
+
+        public static void Enqueue(Action action)
+		{
+            _mainThreadQueue.Enqueue(action);
+		}
     }
 }

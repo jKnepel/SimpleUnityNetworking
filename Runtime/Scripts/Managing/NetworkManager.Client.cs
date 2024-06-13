@@ -115,8 +115,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             
             var packet = ConnectionAuthenticatedPacket.Read(reader);
             Client_ServerEndpoint = Transport.ServerEndpoint;
-            Client_MaxNumberOfClients = Transport.MaxNumberOfClients;
-            Client_Servername = string.Empty;
+            Client_MaxNumberOfClients = packet.MaxNumberConnectedClients;
+            Client_Servername = packet.Servername;
             Client_ClientID = packet.ClientID;
             Client_Username = _cachedUsername;
             Client_UserColour = _cachedUserColour;
@@ -275,7 +275,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         
         private readonly ConcurrentDictionary<uint, Dictionary<int, StructDataCallback>> _registeredClientStructDataCallbacks = new();
 
-        public void Client_RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        public void Client_RegisterStructData<T>(Action<uint, T> callback) where T : struct
         {
 	        var structDataHash = Hashing.GetFNV1Hash32(typeof(T).Name);
             
@@ -291,7 +291,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 callbacks.TryAdd(key, del); 
         }
 
-        public void Client_UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        public void Client_UnregisterStructData<T>(Action<uint, T> callback) where T : struct
 		{
 			var structDataHash = Hashing.GetFNV1Hash32(typeof(T).Name);
             
@@ -302,7 +302,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         }
         
         public void Client_SendStructDataToServer<T>(T structData, 
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData 
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct 
         {
             if (!IsClient)
             {
@@ -322,25 +322,25 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         }
         
 		public void Client_SendStructDataToClient<T>(uint clientID, T structData, 
-			ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData 
+			ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct 
         {
             Client_SendStructData(new [] { clientID }, structData, channel); 
         }
 
 		public void Client_SendStructDataToAll<T>(T structData, 
-			ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData 
+			ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct 
         {
             Client_SendStructData(Client_ConnectedClients.Keys.ToArray(), structData, channel); 
         }
 
 		public void Client_SendStructDataToClients<T>(uint[] clientIDs, T structData, 
-			ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData 
+			ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct 
         {
             Client_SendStructData(clientIDs, structData, channel); 
         }
         
         private void Client_SendStructData<T>(uint[] clientIDs, T structData, 
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             if (!IsClient)
             {

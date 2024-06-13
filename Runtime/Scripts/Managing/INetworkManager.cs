@@ -268,7 +268,7 @@ namespace jKnepel.SimpleUnityNetworking
         ///     <param name="callback arg1">The ID of the sender. The ID will be 0 if the struct data was sent by the server</param>
         ///     <param name="callback arg2">The received struct data</param>
         /// </param>
-        void Client_RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData;
+        void Client_RegisterStructData<T>(Action<uint, T> callback) where T : struct;
         /// <summary>
         /// Unregisters a callback for a sent struct of type <see cref="IStructData"/>
         /// </summary>
@@ -277,7 +277,7 @@ namespace jKnepel.SimpleUnityNetworking
         ///     <param name="callback arg1">The ID of the sender. The ID will be 0 if the struct data was sent by the server</param>
         ///     <param name="callback arg2">The received struct data</param>
         /// </param>
-        void Client_UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData;
+        void Client_UnregisterStructData<T>(Action<uint, T> callback) where T : struct;
         /// <summary>
         /// Sends a struct of type <see cref="IStructData"/> from the local client to the server.
         /// Can only be called after the local client has been authenticated
@@ -285,7 +285,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         void Client_SendStructDataToServer<T>(T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData;
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct;
         /// <summary>
         /// Sends a struct of type <see cref="IStructData"/> from the local client to a given remote client.
         /// Can only be called after the local client has been authenticated
@@ -294,7 +294,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         void Client_SendStructDataToClient<T>(uint clientID, T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData;
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct;
         /// <summary>
         /// Sends a struct of type <see cref="IStructData"/> from the local client to all other remote client.
         /// Can only be called after the local client has been authenticated
@@ -302,7 +302,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         void Client_SendStructDataToAll<T>(T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData;
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct;
         /// <summary>
         /// Sends a struct of type <see cref="IStructData"/> from the local client to a list of remote client.
         /// Can only be called after the local client has been authenticated
@@ -311,7 +311,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         void Client_SendStructDataToClients<T>(uint[] clientIDs, T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData;
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct;
         
         /// <summary>
         /// Registers a callback for a sent byte array with the defined id
@@ -371,7 +371,7 @@ namespace jKnepel.SimpleUnityNetworking
         ///     <param name="callback arg1">The ID of the sender</param>
         ///     <param name="callback arg2">The received struct data</param>
         /// </param>
-        void Server_RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData;
+        void Server_RegisterStructData<T>(Action<uint, T> callback) where T : struct;
         /// <summary>
         /// Unregisters a callback for a sent struct of type <see cref="IStructData"/>
         /// </summary>
@@ -380,7 +380,7 @@ namespace jKnepel.SimpleUnityNetworking
         ///     <param name="callback arg1">The ID of the sender</param>
         ///     <param name="callback arg2">The received struct data</param>
         /// </param>
-        void Server_UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData;
+        void Server_UnregisterStructData<T>(Action<uint, T> callback) where T : struct;
         /// <summary>
         /// Sends a struct of type <see cref="IStructData"/> from the local client to a given remote client.
         /// Can only be called after the local client has been authenticated
@@ -389,7 +389,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         void Server_SendStructDataToClient<T>(uint clientID, T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData;
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct;
         /// <summary>
         /// Sends a struct of type <see cref="IStructData"/> from the local client to all other remote client.
         /// Can only be called after the local client has been authenticated
@@ -397,7 +397,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         void Server_SendStructDataToAll<T>(T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData;
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct;
         /// <summary>
         /// Sends a struct of type <see cref="IStructData"/> from the local client to a list of remote client.
         /// Can only be called after the local client has been authenticated
@@ -406,7 +406,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         void Server_SendStructDataToClients<T>(uint[] clientIDs, T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData;
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct;
         
         #endregion
     }
