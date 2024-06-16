@@ -57,6 +57,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         private byte[] _protocolBytes;
 
         private readonly ConcurrentDictionary<IPEndPoint, ActiveServer> _openServers = new();
+        private readonly SerialiserSettings _serialiserSettings = new() { UseCompression = false };
 
 		#endregion
 
@@ -88,7 +89,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             {
                 _discoveryIP = IPAddress.Parse(_settings.DiscoveryIP);
                 
-                Writer writer = new();
+                Writer writer = new(_serialiserSettings);
                 writer.WriteUInt32(_settings.ProtocolID);
                 _protocolBytes = writer.GetBuffer();
 
@@ -97,7 +98,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 _discoveryClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 _discoveryClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastLoopback, true);
                 _discoveryClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(_discoveryIP, IPAddress.Any));
-                _discoveryClient.Client.Bind(new IPEndPoint(IPAddress.Any, 0));
+                _discoveryClient.Client.Bind(new IPEndPoint(IPAddress.Any, _settings.DiscoveryPort));
 
                 _discoveryThread = new(DiscoveryThread) { IsBackground = true };
                 _discoveryThread.Start();
@@ -106,8 +107,6 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             }
             catch (Exception ex)
             {
-                ExceptionDispatchInfo.Capture(ex).Throw();
-                throw;
                 switch (ex)
                 {
                     case FormatException:
@@ -164,17 +163,17 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             {
                 try
                 {
-                    IPEndPoint remoteEP = new(IPAddress.Any, 0);
+                    IPEndPoint remoteEP = new(0, 0);
                     var receivedBytes = _discoveryClient.Receive(ref remoteEP);
-                    Debug.Log("received");
-                    Reader reader = new(receivedBytes);
+                    Reader reader = new(receivedBytes, _serialiserSettings);
 
                     // check crc32
                     var crc32 = reader.ReadUInt32();
                     var typePosition = reader.Position;
                     var bytesToHash = new byte[reader.Length];
+                    var readerRemaining = reader.Remaining;
                     Buffer.BlockCopy(_protocolBytes, 0, bytesToHash, 0, 4);
-                    reader.BlockCopy(ref bytesToHash, 4, reader.Remaining);
+                    Buffer.BlockCopy(reader.ReadRemainingBuffer(), 0, bytesToHash, 4, readerRemaining);
                     if (crc32 != Hashing.GetCRC32Hash(bytesToHash))
                         continue;
                     
@@ -190,8 +189,6 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 }
                 catch (Exception ex)
                 {
-                    ExceptionDispatchInfo.Capture(ex).Throw();
-                    throw;
                     switch (ex)
                     {
                         case IndexOutOfRangeException:
@@ -254,7 +251,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             {
                 _discoveryIP = IPAddress.Parse(_settings.DiscoveryIP);
 
-                Writer writer = new();
+                Writer writer = new(_serialiserSettings);
                 writer.WriteUInt32(_settings.ProtocolID);
                 _protocolBytes = writer.GetBuffer();
                 
@@ -262,8 +259,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, false);
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastLoopback, true);
-                _announceClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(_discoveryIP, IPAddress.Any));
-                _announceClient.Client.Bind(new IPEndPoint(IPAddress.Any, 0));
+                _announceClient.Client.Bind(new IPEndPoint(_networkManager.Server_ServerEndpoint.Address, _settings.DiscoveryPort));
                 _announceClient.Connect(new(_discoveryIP, _settings.DiscoveryPort));
 
                 _announceThread = new(AnnounceThread) { IsBackground = true };
@@ -273,8 +269,6 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             }
             catch (Exception ex)
             {
-                ExceptionDispatchInfo.Capture(ex).Throw();
-                throw;
                 switch (ex)
                 {
                     case FormatException:
@@ -304,7 +298,6 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             
             if (_announceClient != null)
             {
-                _announceClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DropMembership, new MulticastOption(_discoveryIP, IPAddress.Any));
                 _announceClient.Close();
                 _announceClient.Dispose();
             }
@@ -324,7 +317,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 try
                 {
                     // TODO : optimise this
-                    Writer writer = new();
+                    Writer writer = new(_serialiserSettings);
                     writer.Skip(4);
                     ServerAnnouncePacket.Write(writer, new(
                         _networkManager.Server_ServerEndpoint,
@@ -339,13 +332,11 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                     writer.Position = 0;
                     writer.WriteUInt32(Hashing.GetCRC32Hash(bytesToHash));
 
-                    Debug.Log(_announceClient.Send(writer.GetBuffer(), writer.Length));
+                    _announceClient.Send(writer.GetBuffer(), writer.Length);
                     Thread.Sleep(_settings.ServerHeartbeatDelay);
                 }
                 catch (Exception ex)
                 {
-                    ExceptionDispatchInfo.Capture(ex).Throw();
-                    throw;
                     switch (ex)
                     {
                         case IndexOutOfRangeException:
