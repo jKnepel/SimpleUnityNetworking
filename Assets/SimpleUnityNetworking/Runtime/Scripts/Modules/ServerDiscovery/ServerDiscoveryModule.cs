@@ -96,7 +96,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 _discoveryClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, false);
                 _discoveryClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 _discoveryClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastLoopback, true);
-                _discoveryClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(_discoveryIP));
+                _discoveryClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(_discoveryIP, IPAddress.Any));
                 _discoveryClient.Client.Bind(new IPEndPoint(IPAddress.Any, 0));
 
                 _discoveryThread = new(DiscoveryThread) { IsBackground = true };
@@ -139,7 +139,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
 
             if (_discoveryClient != null)
             {
-                _discoveryClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DropMembership, new MulticastOption(_discoveryIP));
+                _discoveryClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DropMembership, new MulticastOption(_discoveryIP, IPAddress.Any));
                 _discoveryClient.Close();
                 _discoveryClient.Dispose();
             }
@@ -262,7 +262,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, false);
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastLoopback, true);
-                _announceClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(_discoveryIP));
+                _announceClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.AddMembership, new MulticastOption(_discoveryIP, IPAddress.Any));
                 _announceClient.Client.Bind(new IPEndPoint(IPAddress.Any, 0));
                 _announceClient.Connect(new(_discoveryIP, _settings.DiscoveryPort));
 
@@ -304,7 +304,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             
             if (_announceClient != null)
             {
-                _announceClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DropMembership, new MulticastOption(_discoveryIP));
+                _announceClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.DropMembership, new MulticastOption(_discoveryIP, IPAddress.Any));
                 _announceClient.Close();
                 _announceClient.Dispose();
             }
