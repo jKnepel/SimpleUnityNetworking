@@ -3,6 +3,7 @@ using jKnepel.SimpleUnityNetworking.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Timers;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -20,8 +21,12 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         private const int LOCAL_HOST_RTT = 50;
         
         private bool _disposed;
-        
-        private int _maxNumberOfClients;
+
+        private TransportSettings _settings;
+        private IPEndPoint _serverEndpoint;
+        private uint _maxNumberOfClients;
+        private bool _automaticTicks;
+        private uint _tickrate;
         
         private readonly Timer _tickrateTimer = new();
         private bool _serverIsTicking;
@@ -57,6 +62,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         public override bool IsOnline => IsServer || IsClient;
         public override bool IsHost => IsServer && IsClient;
 
+        public override IPEndPoint ServerEndpoint => _serverEndpoint;
+        public override uint MaxNumberOfClients => _maxNumberOfClients;
+
         public override event Action<ServerReceivedData> OnServerReceivedData;
         public override event Action<ClientReceivedData> OnClientReceivedData;
         public override event Action<ELocalConnectionState> OnServerStateUpdated;
@@ -72,8 +80,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         
         #region lifecycle
 
-        public UnityTransport(TransportSettings settings) : base(settings)
+        public UnityTransport(TransportSettings settings)
         {
+            _settings = settings;
             _tickrateTimer.Elapsed += (_, _) => MainThreadQueue.Enqueue(TickInternal);
         }
         
@@ -108,21 +117,21 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 
             SetLocalServerState(ELocalConnectionState.Starting);
             
-            InitialiseSettings();
+            Initialise_settings();
 
+            var port = _settings.Port == 0 ? NetworkUtilities.FindNextAvailablePort() : _settings.Port;
             NetworkEndpoint endpoint = default;
-            switch (Settings.ProtocolType)
+            switch (_settings.ProtocolType)
             {
                 case EProtocolType.UnityTransport:
-                    var port = Settings.Port == 0 ? NetworkUtilities.FindNextAvailablePort() : Settings.Port;
-                    if (!string.IsNullOrEmpty(Settings.ServerListenAddress))
+                    if (!string.IsNullOrEmpty(_settings.ServerListenAddress))
                     {
-                        if (!NetworkEndpoint.TryParse(Settings.Address, port, out endpoint))
-                            NetworkEndpoint.TryParse(Settings.Address, port, out endpoint, NetworkFamily.Ipv6);
+                        if (!NetworkEndpoint.TryParse(_settings.ServerListenAddress, port, out endpoint))
+                            NetworkEndpoint.TryParse(_settings.ServerListenAddress, port, out endpoint, NetworkFamily.Ipv6);
                     }
                     else
                     {
-                        endpoint = NetworkEndpoint.LoopbackIpv4.WithPort(port);
+                        endpoint = NetworkEndpoint.AnyIpv4.WithPort(port);
                     }
                     break;
                 case EProtocolType.UnityRelayTransport:
@@ -135,8 +144,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                         return;
                     }
 
-                    _networkSettings.WithRelayParameters(ref _relayServerData, Settings.HeartbeatTimeoutMS);
-                    endpoint = NetworkEndpoint.AnyIpv4;
+                    _networkSettings.WithRelayParameters(ref _relayServerData, (int)_settings.HeartbeatTimeoutMS);
+                    endpoint = NetworkEndpoint.AnyIpv4.WithPort(port);
                     break;
             }
             
@@ -159,7 +168,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                 return;
             }
 
-            _maxNumberOfClients = Settings.MaxNumberOfClients;
+            _serverEndpoint = ParseNetworkEndpoint(endpoint);
+            _maxNumberOfClients = _settings.MaxNumberOfClients;
+            _automaticTicks = _settings.AutomaticTicks;
+            _tickrate = _settings.Tickrate;
             _clientIDToConnection = new();
             _connectionToClientID = new();
             _driver.Listen();
@@ -184,6 +196,11 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                 _driver.Disconnect(conn);
                 while (_driver.PopEventForConnection(conn, out _) != NetworkEvent.Type.Empty) {}
             }
+
+            _serverEndpoint = null;
+            _maxNumberOfClients = 0;
+            _automaticTicks = true;
+            _tickrate = 0;
 
             _driver.ScheduleUpdate().Complete();
             _clientIDToConnection = null;
@@ -211,14 +228,14 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             
             SetLocalClientState(ELocalConnectionState.Starting);
 
-            InitialiseSettings();
+            Initialise_settings();
             
             NetworkEndpoint serverEndpoint = default;
-            switch (Settings.ProtocolType)
+            switch (_settings.ProtocolType)
             {
                 case EProtocolType.UnityTransport:
-                    if (!NetworkEndpoint.TryParse(Settings.Address, Settings.Port, out serverEndpoint))
-                        NetworkEndpoint.TryParse(Settings.Address, Settings.Port, out serverEndpoint, NetworkFamily.Ipv6);
+                    if (!NetworkEndpoint.TryParse(_settings.Address, _settings.Port, out serverEndpoint))
+                        NetworkEndpoint.TryParse(_settings.Address, _settings.Port, out serverEndpoint, NetworkFamily.Ipv6);
                     break;
                 case EProtocolType.UnityRelayTransport:
                     if (_relayServerData.Equals(default(RelayServerData)))
@@ -230,7 +247,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                         return;
                     }
 
-                    _networkSettings.WithRelayParameters(ref _relayServerData, Settings.HeartbeatTimeoutMS);
+                    _networkSettings.WithRelayParameters(ref _relayServerData, (int)_settings.HeartbeatTimeoutMS);
                     serverEndpoint = _relayServerData.Endpoint;
                     break;
             }
@@ -254,6 +271,11 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                 SetLocalClientState(ELocalConnectionState.Stopped);
                 return;
             }
+            
+            _serverEndpoint = ParseNetworkEndpoint(serverEndpoint);
+            _maxNumberOfClients = _settings.MaxNumberOfClients;
+            _automaticTicks = _settings.AutomaticTicks;
+            _tickrate = _settings.Tickrate;
 
             _serverConnection = _driver.Connect(serverEndpoint);
             AutomaticTicks(true, false);
@@ -276,10 +298,17 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             {
             }
             
+            _serverEndpoint = null;
+            _maxNumberOfClients = 0;
+            _automaticTicks = true;
+            _tickrate = 0;
+            
             _driver.ScheduleUpdate().Complete();
             _serverConnection = default;
-            DisposeInternals();
+            _clientIDToConnection = null;
+            _connectionToClientID = null;
             AutomaticTicks(false, false);
+            DisposeInternals();
 
             SetLocalClientState(ELocalConnectionState.Stopped);
         }
@@ -360,13 +389,17 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             }
             
             _relayServerData = relayServerData;
-            Settings.ProtocolType = EProtocolType.UnityRelayTransport;
+            _settings.ProtocolType = EProtocolType.UnityRelayTransport;
         }
 
         public override void Tick()
         {
-            Settings.AutomaticTicks = false;
-            _tickrateTimer.Enabled = false;
+            if (_automaticTicks)
+            {
+                _automaticTicks = false;
+                _tickrateTimer.Enabled = false;
+            }
+            
             TickInternal();
         }
 
@@ -390,10 +423,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             switch (start)
             {
                 case true when _tickrateTimer.Enabled:
-                case true when !Settings.AutomaticTicks:
+                case true when !_automaticTicks:
                     return;
                 case true:
-                    _tickrateTimer.Interval = 1000f / Settings.Tickrate;
+                    _tickrateTimer.Interval = 1000f / _tickrate;
                     _tickrateTimer.Start();
                     return;
                 case false when !_serverIsTicking && !_clientIsTicking:
@@ -680,22 +713,22 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             OnClientStateUpdated?.Invoke(_clientState);
         }
 
-        private void InitialiseSettings()
+        private void Initialise_settings()
         {
             _networkSettings = new(Allocator.Persistent);
             _networkSettings.WithNetworkConfigParameters(
-                connectTimeoutMS: Settings.ConnectTimeoutMS,
-                maxConnectAttempts: Settings.MaxConnectAttempts,
-                disconnectTimeoutMS: Settings.DisconnectTimeoutMS,
-                heartbeatTimeoutMS: Settings.HeartbeatTimeoutMS
+                connectTimeoutMS: (int)_settings.ConnectTimeoutMS,
+                maxConnectAttempts: (int)_settings.MaxConnectAttempts,
+                disconnectTimeoutMS: (int)_settings.DisconnectTimeoutMS,
+                heartbeatTimeoutMS: (int)_settings.HeartbeatTimeoutMS
             );
             _networkSettings.WithFragmentationStageParameters(
-                payloadCapacity: Settings.PayloadCapacity
+                payloadCapacity: (int)_settings.PayloadCapacity
             );
             _networkSettings.WithReliableStageParameters(
-                windowSize: Settings.WindowSize,
-                minimumResendTime: Settings.MinimumResendTime,
-                maximumResendTime: Settings.MaximumResendTime
+                windowSize: (int)_settings.WindowSize,
+                minimumResendTime: (int)_settings.MinimumResendTime,
+                maximumResendTime: (int)_settings.MaximumResendTime
             );
         }
 
@@ -773,6 +806,12 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             }
 
             sendTargets.Dispose();
+        }
+
+        private static IPEndPoint ParseNetworkEndpoint(NetworkEndpoint val)
+        {
+            var values = val.Address.Split(":");
+            return new(IPAddress.Parse(values[0]), ushort.Parse(values[1]));
         }
         
         private static string ParseStatusCode(int code)

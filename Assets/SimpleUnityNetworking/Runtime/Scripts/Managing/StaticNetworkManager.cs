@@ -4,6 +4,7 @@ using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using System;
 using System.Collections.Concurrent;
+using System.Net;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -68,9 +69,17 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public static bool IsHost => _networkManager.IsHost;
 
         /// <summary>
-        /// Information about the local or connected remote server
+        /// Endpoint address of the local server
         /// </summary>
-        public static ServerInformation ServerInformation => _networkManager.ServerInformation;
+        public static IPEndPoint Server_ServerEndpoint => _networkManager.Server_ServerEndpoint;
+        /// <summary>
+        /// Name of the local server
+        /// </summary>
+        public static string Server_Servername => _networkManager.Server_Servername;
+        /// <summary>
+        /// Max number of connected clients of the local server
+        /// </summary>
+        public static uint Server_MaxNumberOfClients => _networkManager.Server_MaxNumberOfClients;
         /// <summary>
         /// The current connection state of the local server
         /// </summary>
@@ -79,10 +88,31 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// The clients that are connected to the local server
         /// </summary>
         public static ConcurrentDictionary<uint, ClientInformation> Server_ConnectedClients => _networkManager.Server_ConnectedClients;
+
         /// <summary>
-        /// Information about the authenticated local client
+        /// Endpoint of the server to which the local client is connected
         /// </summary>
-        public static ClientInformation ClientInformation => _networkManager.ClientInformation;
+        public static IPEndPoint Client_ServerEndpoint => _networkManager.Client_ServerEndpoint;
+        /// <summary>
+        /// Name of the local server
+        /// </summary>
+        public static string Client_Servername => _networkManager.Client_Servername;
+        /// <summary>
+        /// Max number of connected clients of the server to which the local client is connected
+        /// </summary>
+        public static uint Client_MaxNumberOfClients => _networkManager.Client_MaxNumberOfClients;
+        /// <summary>
+        /// Identifier of the local client
+        /// </summary>
+        public static uint Client_ClientID => _networkManager.Client_ClientID;
+        /// <summary>
+        /// Username of the local client
+        /// </summary>
+        public static string Client_Username => _networkManager.Client_Username;
+        /// <summary>
+        /// UserColour of the local client
+        /// </summary>
+        public static Color32 Client_UserColour => _networkManager.Client_UserColour;
         /// <summary>
         /// The current connection state of the local client
         /// </summary>
@@ -308,7 +338,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         ///     <param name="callback arg1">The ID of the sender. The ID will be 0 if the struct data was sent by the server</param>
         ///     <param name="callback arg2">The received struct data</param>
         /// </param>
-        public static void Client_RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        public static void Client_RegisterStructData<T>(Action<uint, T> callback) where T : struct
         {
             _networkManager.Client_RegisterStructData(callback);
         }
@@ -320,7 +350,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         ///     <param name="callback arg1">The ID of the sender. The ID will be 0 if the struct data was sent by the server</param>
         ///     <param name="callback arg2">The received struct data</param>
         /// </param>
-        public static void Client_UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        public static void Client_UnregisterStructData<T>(Action<uint, T> callback) where T : struct
         {
             _networkManager.Client_UnregisterStructData(callback);
         }
@@ -331,7 +361,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         public static void Client_SendStructDataToServer<T>(T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             _networkManager.Client_SendStructDataToServer(structData, channel);
         }
@@ -343,7 +373,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         public static void Client_SendStructDataToClient<T>(uint clientID, T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             _networkManager.Client_SendStructDataToClient(clientID, structData, channel);
         }
@@ -353,7 +383,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         /// <param name="structData"></param>
         /// <param name="channel"></param>
-        public static void Client_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+        public static void Client_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             _networkManager.Client_SendStructDataToAll(structData, channel);
         }
@@ -365,7 +395,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         public static void Client_SendStructDataToClients<T>(uint[] clientIDs, T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             _networkManager.Client_SendStructDataToClients(clientIDs, structData, channel);
         }
@@ -442,7 +472,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         ///     <param name="callback arg1">The ID of the sender</param>
         ///     <param name="callback arg2">The received struct data</param>
         /// </param>
-        public static void Server_RegisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        public static void Server_RegisterStructData<T>(Action<uint, T> callback) where T : struct
         {
             _networkManager.Server_RegisterStructData(callback);
         }
@@ -454,7 +484,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         ///     <param name="callback arg1">The ID of the sender</param>
         ///     <param name="callback arg2">The received struct data</param>
         /// </param>
-        public static void Server_UnregisterStructData<T>(Action<uint, T> callback) where T : struct, IStructData
+        public static void Server_UnregisterStructData<T>(Action<uint, T> callback) where T : struct
         {
             _networkManager.Server_UnregisterStructData(callback);
         }
@@ -466,7 +496,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         public static void Server_SendStructDataToClient<T>(uint clientID, T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             _networkManager.Server_SendStructDataToClient(clientID, structData, channel);
         }
@@ -476,7 +506,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         /// <param name="structData"></param>
         /// <param name="channel"></param>
-        public static void Server_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+        public static void Server_SendStructDataToAll<T>(T structData, ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             _networkManager.Server_SendStructDataToAll(structData, channel);
         }
@@ -488,7 +518,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="structData"></param>
         /// <param name="channel"></param>
         public static void Server_SendStructDataToClients<T>(uint[] clientIDs, T structData,
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct, IStructData
+            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             _networkManager.Server_SendStructDataToClients(clientIDs, structData, channel);
         }

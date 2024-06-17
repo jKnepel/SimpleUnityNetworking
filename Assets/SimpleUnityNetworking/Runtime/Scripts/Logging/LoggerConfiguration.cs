@@ -12,13 +12,7 @@ namespace jKnepel.SimpleUnityNetworking.Logging
 
         public Logger GetLogger()
         {
-            return new(new()
-            {
-                PrintToConsole = Settings.PrintToConsole,
-                PrintLog = Settings.PrintLog,
-                PrintWarning = Settings.PrintWarning,
-                PrintError = Settings.PrintError
-            });
+            return new(Settings);
         }
     }
     
@@ -29,7 +23,7 @@ namespace jKnepel.SimpleUnityNetworking.Logging
         public override void OnInspectorGUI()
         {
             EditorGUI.indentLevel++;
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("Settings"), new GUIContent("Settings:"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("Settings"));
             EditorGUI.indentLevel--;
             
             serializedObject.ApplyModifiedProperties();

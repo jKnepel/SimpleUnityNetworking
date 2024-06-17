@@ -1,3 +1,5 @@
+using jKnepel.SimpleUnityNetworking.Modules;
+using jKnepel.SimpleUnityNetworking.Utilities;
 using System.Linq;
 using UnityEngine;
 using UnityEditor;
@@ -19,6 +21,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private readonly EAllowStart _allowStart;
 
         private readonly GUIStyle _style = new();
+        
+        private bool _isModuleVisible = true;
 
         private bool _showServerWindow = true;
         private string _servername = "New Server";
@@ -39,6 +43,23 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             _allowStart = allowStart;
         }
 
+        public void ModuleGUI()
+        {
+            EditorGUILayout.Space();
+            GUILayout.Label("Modules:", EditorStyles.boldLabel);
+            {
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                UnityUtilities.DrawToggleFoldout("Module", ref _isModuleVisible);
+                if (_isModuleVisible)
+                {
+                    _manager.ModuleConfiguration = (ModuleConfiguration)EditorGUILayout.ObjectField(new GUIContent("Asset:"), _manager.ModuleConfiguration, typeof(ModuleConfiguration), false);
+                    if (_manager.ModuleConfiguration)
+                        Editor.CreateEditor(_manager.ModuleConfiguration).OnInspectorGUI();
+                }
+                EditorGUILayout.EndVertical();
+            }
+        }
+        
         public void ManagerGUIs()
         {
             EditorGUILayout.Space();
@@ -52,7 +73,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public T ConfigurationGUI<T>(ScriptableObject configuration, string title, ref bool showSection) where T : ScriptableObject
         {
             GUILayout.BeginVertical(EditorStyles.helpBox);
-            DrawToggleFoldout(title, ref showSection);
+            UnityUtilities.DrawToggleFoldout(title, ref showSection);
             if (showSection)
             {
                 configuration = (T)EditorGUILayout.ObjectField("Asset:", configuration, typeof(T), false);
@@ -68,11 +89,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         #endregion
 
         #region guis
-
+        
         private void ServerGUI()
         {
             GUILayout.BeginVertical(EditorStyles.helpBox);
-            DrawToggleFoldout("Server", ref _showServerWindow, _manager.IsServer, "Is Server:");
+            UnityUtilities.DrawToggleFoldout("Server", ref _showServerWindow, _manager.IsServer, "Is Server:");
             if (_showServerWindow)
             {
                 if (!_manager.IsServer)
@@ -83,8 +104,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 }
                 else
                 {
-                    EditorGUILayout.TextField("Servername:", _manager.ServerInformation.Servername);
-                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server_ConnectedClients.Count}/{_manager.ServerInformation.MaxNumberConnectedClients}");
+                    EditorGUILayout.TextField("Servername:", _manager.Server_Servername);
+                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server_ConnectedClients.Count}/{_manager.Server_MaxNumberOfClients}");
                     if (GUILayout.Button(new GUIContent("Stop Server")))
                         _manager.StopServer();
 
@@ -102,7 +123,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                             var client = _manager.Server_ConnectedClients.Values.ElementAt(i);
                             EditorGUILayout.BeginHorizontal();
                             {
-                                _style.normal.textColor = client.Colour;
+                                _style.normal.textColor = client.UserColour;
                                 GUILayout.Label($"#{client.ID} {client.Username}", _style);
                             }
                             EditorGUILayout.EndHorizontal();
@@ -118,7 +139,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private void ClientGUI()
         {
             GUILayout.BeginVertical(EditorStyles.helpBox);
-            DrawToggleFoldout("Client", ref _showClientWindow, _manager.IsClient, "Is Client:");
+            UnityUtilities.DrawToggleFoldout("Client", ref _showClientWindow, _manager.IsClient, "Is Client:");
             if (_showClientWindow)
             {
                 if (!_manager.IsClient)
@@ -130,11 +151,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 }
                 else
                 {
-                    EditorGUILayout.TextField("ID:", $"{_manager.ClientInformation.ID}");
-                    EditorGUILayout.TextField("Username:", _manager.ClientInformation.Username);
-                    EditorGUILayout.ColorField("User colour:", _manager.ClientInformation.Colour);
-                    EditorGUILayout.TextField("Servername:", _manager.ServerInformation.Servername);
-                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server_ConnectedClients.Count}/{_manager.ServerInformation.MaxNumberConnectedClients}");
+                    EditorGUILayout.TextField("ID:", $"{_manager.Client_ClientID}");
+                    EditorGUILayout.TextField("Username:", _manager.Client_Username);
+                    EditorGUILayout.ColorField("User colour:", _manager.Client_UserColour);
+                    EditorGUILayout.TextField("Servername:", _manager.Client_Servername);
+                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Client_ConnectedClients.Count}/{_manager.Client_MaxNumberOfClients}");
                     if (GUILayout.Button(new GUIContent("Stop Client")))
                         _manager.StopClient();
 
@@ -152,7 +173,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                             var client = _manager.Client_ConnectedClients.Values.ElementAt(i);
                             EditorGUILayout.BeginHorizontal();
                             {
-                                _style.normal.textColor = client.Colour;
+                                _style.normal.textColor = client.UserColour;
                                 GUILayout.Label($"#{client.ID} {client.Username}", _style);
                             }
                             EditorGUILayout.EndHorizontal();
@@ -178,64 +199,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 EAllowStart.OnlyPlaymode => EditorApplication.isPlaying,
                 _ => false
             };
-        }
-
-        private static void DrawToggleFoldout(string title, ref bool isExpanded,
-            bool? checkbox = null, string checkboxLabel = null)
-        {
-            Color normalColour = new(0.24f, 0.24f, 0.24f);
-            Color hoverColour = new(0.27f, 0.27f, 0.27f);
-            var currentColour = normalColour;
-
-            var backgroundRect = GUILayoutUtility.GetRect(1f, 17f);
-            var labelRect = backgroundRect;
-            labelRect.xMin += 16f;
-            labelRect.xMax -= 2f;
-
-            var foldoutRect = backgroundRect;
-            foldoutRect.y += 1f;
-            foldoutRect.width = 13f;
-            foldoutRect.height = 13f;
-
-            var toggleRect = backgroundRect;
-            toggleRect.x = backgroundRect.width - 7f;
-            toggleRect.y += 2f;
-            toggleRect.width = 13f;
-            toggleRect.height = 13f;
-
-            var toggleLabelRect = backgroundRect;
-            toggleLabelRect.x = -10f;
-
-            var e = Event.current;
-            if (labelRect.Contains(e.mousePosition))
-                currentColour = hoverColour;
-            EditorGUI.DrawRect(backgroundRect, currentColour);
-
-            if (isExpanded)
-            {
-                var borderBot = GUILayoutUtility.GetRect(1f, 0.6f);
-                EditorGUI.DrawRect(borderBot, new(0, 0, 0));
-            }
-
-            EditorGUI.LabelField(labelRect, title, EditorStyles.boldLabel);
-
-            isExpanded = GUI.Toggle(foldoutRect, isExpanded, GUIContent.none, EditorStyles.foldout);
-
-            if (checkbox is not null)
-            {
-                if (checkboxLabel is not null)
-                {
-                    var labelStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.MiddleRight };
-                    EditorGUI.LabelField(toggleLabelRect, checkboxLabel, labelStyle);
-                }
-                EditorGUI.Toggle(toggleRect, (bool)checkbox, new("ShurikenToggle"));
-            }
-
-            if (e.type == EventType.MouseDown && labelRect.Contains(e.mousePosition) && e.button == 0)
-            {
-                isExpanded = !isExpanded;
-                e.Use();
-            }
         }
 
         #endregion
