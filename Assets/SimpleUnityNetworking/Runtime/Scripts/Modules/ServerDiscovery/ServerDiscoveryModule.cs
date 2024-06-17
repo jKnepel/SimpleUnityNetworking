@@ -39,7 +39,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             }
         }
         
-        public List<ActiveServer> ActiveServers => _openServers.Values.ToList();
+        public List<DiscoveredServer> DiscoveredServers => _openServers.Values.ToList();
 
         public event Action OnServerDiscoveryActivated;
         public event Action OnServerDiscoveryDeactivated;
@@ -47,14 +47,18 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
 
         private INetworkManager _networkManager;
         private ServerDiscoverySettings _settings;
+        
+        private byte[] _discoveryProtocolBytes;
 		private IPAddress _discoveryIP;
-        private UdpClient _announceClient;
         private UdpClient _discoveryClient;
-        private Thread _announceThread;
         private Thread _discoveryThread;
-        private byte[] _protocolBytes;
+        
+        private byte[] _announceProtocolBytes;
+		private IPAddress _announceIP;
+        private UdpClient _announceClient;
+        private Thread _announceThread;
 
-        private readonly ConcurrentDictionary<IPEndPoint, ActiveServer> _openServers = new();
+        private readonly ConcurrentDictionary<IPEndPoint, DiscoveredServer> _openServers = new();
         private readonly SerialiserSettings _serialiserSettings = new() { UseCompression = false };
 
 		#endregion
@@ -89,7 +93,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 
                 Writer writer = new(_serialiserSettings);
                 writer.WriteUInt32(_settings.ProtocolID);
-                _protocolBytes = writer.GetBuffer();
+                _discoveryProtocolBytes = writer.GetBuffer();
 
                 _discoveryClient = new();
                 _discoveryClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, false);
@@ -146,6 +150,8 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 _discoveryThread.Join();
             }
 
+            _discoveryProtocolBytes = null;
+            _discoveryIP = null;
             IsServerDiscoveryActive = false;
         }
 
@@ -170,7 +176,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                     var typePosition = reader.Position;
                     var bytesToHash = new byte[reader.Length];
                     var readerRemaining = reader.Remaining;
-                    Buffer.BlockCopy(_protocolBytes, 0, bytesToHash, 0, 4);
+                    Buffer.BlockCopy(_discoveryProtocolBytes, 0, bytesToHash, 0, 4);
                     Buffer.BlockCopy(reader.ReadRemainingBuffer(), 0, bytesToHash, 4, readerRemaining);
                     if (crc32 != Hashing.GetCRC32Hash(bytesToHash))
                         continue;
@@ -178,10 +184,11 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                     // read and update server
                     reader.Position = typePosition;
                     var packet = ServerAnnouncePacket.Read(reader);
-                    ActiveServer newServer = new(packet.EndPoint, packet.Servername, packet.MaxNumberOfClients, packet.NumberOfClients);
-                    if (!_openServers.TryGetValue(packet.EndPoint, out _))
-                        _ = TimeoutServer(packet.EndPoint);
-                    _openServers[packet.EndPoint] = newServer;
+                    IPEndPoint endpoint = new(remoteEP.Address, packet.Port);
+                    DiscoveredServer newServer = new(endpoint, packet.Servername, packet.MaxNumberOfClients, packet.NumberOfClients);
+                    if (!_openServers.TryGetValue(endpoint, out _))
+                        _ = TimeoutServer(endpoint);
+                    _openServers[endpoint] = newServer;
 
                     MainThreadQueue.Enqueue(() => OnActiveServerListUpdated?.Invoke());
                 }
@@ -221,7 +228,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             }
         }
         
-        public void StartClientOnActiveServer(ActiveServer server, string username, Color32 userColour)
+        public void StartClientOnDiscoveredServer(DiscoveredServer server, string username, Color32 userColour)
         {
             if (_networkManager.TransportConfiguration == null)
             {
@@ -255,18 +262,18 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         {
             try
             {
-                _discoveryIP = IPAddress.Parse(_settings.DiscoveryIP);
+                _announceIP = IPAddress.Parse(_settings.DiscoveryIP);
 
                 Writer writer = new(_serialiserSettings);
                 writer.WriteUInt32(_settings.ProtocolID);
-                _protocolBytes = writer.GetBuffer();
+                _announceProtocolBytes = writer.GetBuffer();
                 
                 _announceClient = new();
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, false);
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastLoopback, true);
                 _announceClient.Client.Bind(new IPEndPoint(_networkManager.Server_ServerEndpoint.Address, _settings.DiscoveryPort));
-                _announceClient.Connect(new(_discoveryIP, _settings.DiscoveryPort));
+                _announceClient.Connect(new(_announceIP, _settings.DiscoveryPort));
 
                 _announceThread = new(AnnounceThread) { IsBackground = true };
                 _announceThread.Start();
@@ -313,6 +320,8 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 _announceThread.Join();
             }
 
+            _announceProtocolBytes = null;
+            _announceIP = null;
             _isServerAnnounceActive = false;
         }
 
@@ -325,15 +334,16 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                     // TODO : optimise this
                     Writer writer = new(_serialiserSettings);
                     writer.Skip(4);
+                    Debug.Log(_networkManager.Server_ServerEndpoint);
                     ServerAnnouncePacket.Write(writer, new(
-                        _networkManager.Server_ServerEndpoint,
+                        (ushort)_networkManager.Server_ServerEndpoint.Port,
                         _networkManager.Server_Servername,
                         _networkManager.Server_MaxNumberOfClients, 
                         (uint)_networkManager.Server_ConnectedClients.Count
                     ));
 
                     var bytesToHash = new byte[writer.Length];
-                    Buffer.BlockCopy(_protocolBytes, 0, bytesToHash, 0, 4);
+                    Buffer.BlockCopy(_announceProtocolBytes, 0, bytesToHash, 0, 4);
                     Buffer.BlockCopy(writer.GetBuffer(), 4, bytesToHash, 4, bytesToHash.Length - 4);
                     writer.Position = 0;
                     writer.WriteUInt32(Hashing.GetCRC32Hash(bytesToHash));
@@ -374,7 +384,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             }
         }
 
-        private readonly Vector2 _scrollPos = new();
+        private Vector2 _scrollPos;
         private readonly Color[] _scrollViewColors = { new(0.25f, 0.25f, 0.25f), new(0.23f, 0.23f, 0.23f) };
         private const float ROW_HEIGHT = 20;
         
@@ -394,32 +404,31 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             using (new GUILayout.HorizontalScope())
             {
                 GUILayout.Space(EditorGUI.indentLevel * 15);
-                GUILayout.Label("Open Servers", EditorStyles.boldLabel);
+                GUILayout.Label("Discovered Servers", EditorStyles.boldLabel);
                 GUILayout.FlexibleSpace();
-                GUILayout.Label($"Count: {ActiveServers?.Count}");
+                GUILayout.Label($"Count: {DiscoveredServers?.Count}");
             }
 
             using (new GUILayout.HorizontalScope())
             {
                 GUILayout.Space(EditorGUI.indentLevel * 15);
-                using (new EditorGUILayout.ScrollViewScope(_scrollPos, EditorStyles.helpBox, GUILayout.MinHeight(128.0f)))
+                _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, EditorStyles.helpBox, GUILayout.MinHeight(128.0f));
+                using (new GUILayout.VerticalScope())
                 {
-                    using (new GUILayout.VerticalScope())
+                    for (var i = 0; i < DiscoveredServers?.Count; i++)
                     {
-                        for (var i = 0; i < ActiveServers?.Count; i++)
+                        var server = DiscoveredServers[i];
+                        EditorGUILayout.BeginHorizontal(GetScrollviewRowStyle(_scrollViewColors[i % 2]));
                         {
-                            var server = ActiveServers[i];
-                            EditorGUILayout.BeginHorizontal(GetScrollviewRowStyle(_scrollViewColors[i % 2]));
-                            {
-                                GUILayout.Label(server.Servername);
-                                GUILayout.Label($"#{server.NumberConnectedClients}/{server.MaxNumberConnectedClients}");
-                                if (GUILayout.Button(new GUIContent("Connect To Server"), GUILayout.ExpandWidth(false)))
-                                    StartClientOnActiveServer(server, _settings.Username, _settings.UserColour);
-                            }
-                            EditorGUILayout.EndHorizontal();
+                            GUILayout.Label(server.Servername);
+                            GUILayout.Label($"#{server.NumberConnectedClients}/{server.MaxNumberConnectedClients}");
+                            if (GUILayout.Button(new GUIContent("Join Server"), GUILayout.ExpandWidth(false)))
+                                StartClientOnDiscoveredServer(server, _settings.Username, _settings.UserColour);
                         }
+                        EditorGUILayout.EndHorizontal();
                     }
                 }
+                EditorGUILayout.EndScrollView();
             }
 
             EditorGUILayout.Space();
