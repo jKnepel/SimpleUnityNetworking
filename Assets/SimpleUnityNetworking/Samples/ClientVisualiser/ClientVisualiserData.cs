@@ -3,7 +3,7 @@ using jKnepel.SimpleUnityNetworking.Serialising;
 
 namespace jKnepel.SimpleUnityNetworking.Samples
 {
-    public struct ClientVisualiserData : IStructData
+    public struct ClientVisualiserData
     {
         public Vector3 Position;
         public Quaternion Rotation;
