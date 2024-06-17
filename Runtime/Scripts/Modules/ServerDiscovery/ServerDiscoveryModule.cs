@@ -334,7 +334,6 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                     // TODO : optimise this
                     Writer writer = new(_serialiserSettings);
                     writer.Skip(4);
-                    Debug.Log(_networkManager.Server_ServerEndpoint);
                     ServerAnnouncePacket.Write(writer, new(
                         (ushort)_networkManager.Server_ServerEndpoint.Port,
                         _networkManager.Server_Servername,
