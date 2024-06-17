@@ -37,7 +37,7 @@ namespace jKnepel.SimpleUnityNetworking.Logging
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             EditorGUI.BeginProperty(position, label, property);
-            _areSettingsVisible = EditorGUILayout.Foldout(_areSettingsVisible, "Settings:");
+            _areSettingsVisible = EditorGUILayout.Foldout(_areSettingsVisible, "Settings:", true);
             if (_areSettingsVisible)
             {
                 var printToConsole = property.FindPropertyRelative("PrintToConsole");

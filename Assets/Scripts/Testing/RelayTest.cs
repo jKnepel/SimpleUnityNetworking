@@ -124,7 +124,7 @@ public class RelayTest : MonoBehaviour
                   $"Ints = {string.Join(",", message.Ints)},\n");
     }
 
-    private struct MessageStruct : IStructData
+    private struct MessageStruct
     {
         public string String;
         public byte Byte;

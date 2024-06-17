@@ -7,9 +7,9 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
         public static byte PacketType => (byte)EPacketType.ConnectionAuthenticated;
         public uint ClientID;
         public string Servername;
-        public int MaxNumberConnectedClients;
+        public uint MaxNumberConnectedClients;
 
-        public ConnectionAuthenticatedPacket(uint clientID, string servername, int maxNumberConnectedClients)
+        public ConnectionAuthenticatedPacket(uint clientID, string servername, uint maxNumberConnectedClients)
         {
             ClientID = clientID;
             Servername = servername;
@@ -20,7 +20,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
         {
             var clientID = reader.ReadUInt32();
             var servername = reader.ReadString();
-            var maxNumberConnectedClients = reader.ReadInt32();
+            var maxNumberConnectedClients = reader.ReadUInt32();
             return new(clientID, servername, maxNumberConnectedClients);
         }
 
@@ -28,7 +28,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
         {
             writer.WriteUInt32(packet.ClientID);
             writer.WriteString(packet.Servername);
-            writer.WriteInt32(packet.MaxNumberConnectedClients);
+            writer.WriteUInt32(packet.MaxNumberConnectedClients);
         }
     }
 }
