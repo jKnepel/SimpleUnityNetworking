@@ -18,7 +18,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 		public override void OnInspectorGUI()
 		{
 			EditorGUI.indentLevel++;
-			EditorGUILayout.PropertyField(serializedObject.FindProperty("Settings"), new GUIContent("Settings:"));
+			EditorGUILayout.PropertyField(serializedObject.FindProperty("Settings"));
 			EditorGUI.indentLevel--;
             
 			serializedObject.ApplyModifiedProperties();
