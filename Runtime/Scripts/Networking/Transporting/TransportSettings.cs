@@ -101,8 +101,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
             EditorGUI.BeginProperty(position, label, property);
-            _areSettingsVisible = EditorGUILayout.Foldout(_areSettingsVisible, "Settings:");
-
+            _areSettingsVisible = EditorGUILayout.Foldout(_areSettingsVisible, "Settings:", true);
             if (_areSettingsVisible)
             {
                 EditorGUILayout.PropertyField(property.FindPropertyRelative("ProtocolType"), new GUIContent("Protocol Type:", "The type of protocol used by the protocol."));

@@ -25,7 +25,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             
             EditorGUILayout.TextField("Type:", config.TransportName, EditorStyles.label);
             EditorGUI.indentLevel++;
-            EditorGUILayout.PropertyField(serializedObject.FindProperty("Settings"), new GUIContent("Settings:"));
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("Settings"));
             EditorGUI.indentLevel--;
             
             serializedObject.ApplyModifiedProperties();

@@ -119,7 +119,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
-        public Module Module { get; private set; }
+        public Module Module => _moduleConfiguration == null ? null : _moduleConfiguration.GetModule();
         private ModuleConfiguration _moduleConfiguration;
         public ModuleConfiguration ModuleConfiguration
         {
@@ -128,14 +128,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             {
                 if (_moduleConfiguration == value) return;
                 if (value is null && Module is not null)
-                {
                     Module.Dispose();
-                    Module = null;
-                }
 
                 _moduleConfiguration = value;
                 if (_moduleConfiguration is not null)
-                    Module = _moduleConfiguration.GetModule(this);
+                    _moduleConfiguration.SetModule(this);
             }
         }
 

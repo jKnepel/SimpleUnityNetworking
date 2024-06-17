@@ -21,8 +21,6 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
     {
         #region fields
 
-        public override string Name => "ServerDiscovery";
-
         private bool _isServerAnnounceActive;
 
         private bool _isServerDiscoveryActive;
@@ -223,9 +221,17 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             }
         }
         
-        public void JoinActiveServer(ActiveServer server)
+        public void StartClientOnActiveServer(ActiveServer server, string username, Color32 userColour)
         {
-            
+            if (_networkManager.TransportConfiguration == null)
+            {
+                Debug.LogError("The transport needs to be defined before a client can be started!");
+                return;
+            }
+
+            _networkManager.TransportConfiguration.Settings.Address = server.Endpoint.Address.ToString();
+            _networkManager.TransportConfiguration.Settings.Port = (ushort)server.Endpoint.Port;
+            _networkManager.StartClient(username, userColour);
         }
         
         #endregion
@@ -367,36 +373,56 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 return _texture;
             }
         }
-        
+
+        private readonly Vector2 _scrollPos = new();
         private readonly Color[] _scrollViewColors = { new(0.25f, 0.25f, 0.25f), new(0.23f, 0.23f, 0.23f) };
         private const float ROW_HEIGHT = 20;
         
         public override void ModuleGUI()
         {
-            if (GUILayout.Button("Start Server Discovery"))
-                StartServerDiscovery();
-            if (GUILayout.Button("Stop Server Discovery"))
-                EndServerDiscovery();
-            EditorGUILayout.Toggle("Is Discovery Active:", IsServerDiscoveryActive);
-            
-            EditorGUILayout.BeginHorizontal();
-            GUILayout.Label("Server Discovery", EditorStyles.boldLabel);
-            GUILayout.FlexibleSpace();
-            GUILayout.Label($"Open Servers Count: {ActiveServers?.Count}");
-            EditorGUILayout.EndHorizontal();
-
-            for (var i = 0; i < ActiveServers?.Count; i++)
+            using(new GUILayout.HorizontalScope())
             {
-                var server = ActiveServers[i];
-                EditorGUILayout.BeginHorizontal(GetScrollviewRowStyle(_scrollViewColors[i % 2]));
-                {
-                    GUILayout.Label(server.Servername);
-                    GUILayout.Label($"#{server.NumberConnectedClients}/{server.MaxNumberConnectedClients}");
-                    if (GUILayout.Button(new GUIContent("Connect To Server"), GUILayout.ExpandWidth(false)))
-                        JoinActiveServer(server);
-                }
-                EditorGUILayout.EndHorizontal();
+                GUILayout.Space(EditorGUI.indentLevel * 15);
+                if (!IsServerDiscoveryActive && GUILayout.Button("Start Server Discovery"))
+                    StartServerDiscovery();
+                if (IsServerDiscoveryActive && GUILayout.Button("Stop Server Discovery"))
+                    EndServerDiscovery();
             }
+            
+            EditorGUILayout.Space();
+
+            using (new GUILayout.HorizontalScope())
+            {
+                GUILayout.Space(EditorGUI.indentLevel * 15);
+                GUILayout.Label("Open Servers", EditorStyles.boldLabel);
+                GUILayout.FlexibleSpace();
+                GUILayout.Label($"Count: {ActiveServers?.Count}");
+            }
+
+            using (new GUILayout.HorizontalScope())
+            {
+                GUILayout.Space(EditorGUI.indentLevel * 15);
+                using (new EditorGUILayout.ScrollViewScope(_scrollPos, EditorStyles.helpBox, GUILayout.MinHeight(128.0f)))
+                {
+                    using (new GUILayout.VerticalScope())
+                    {
+                        for (var i = 0; i < ActiveServers?.Count; i++)
+                        {
+                            var server = ActiveServers[i];
+                            EditorGUILayout.BeginHorizontal(GetScrollviewRowStyle(_scrollViewColors[i % 2]));
+                            {
+                                GUILayout.Label(server.Servername);
+                                GUILayout.Label($"#{server.NumberConnectedClients}/{server.MaxNumberConnectedClients}");
+                                if (GUILayout.Button(new GUIContent("Connect To Server"), GUILayout.ExpandWidth(false)))
+                                    StartClientOnActiveServer(server, _settings.Username, _settings.UserColour);
+                            }
+                            EditorGUILayout.EndHorizontal();
+                        }
+                    }
+                }
+            }
+
+            EditorGUILayout.Space();
         }
         
         private GUIStyle GetScrollviewRowStyle(Color color)

@@ -1,7 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Modules
 {
@@ -19,8 +16,6 @@ namespace jKnepel.SimpleUnityNetworking.Modules
         }
 
         protected abstract void Dispose(bool disposing);
-        
-        public abstract string Name { get; }
         
 #if UNITY_EDITOR
         public abstract void ModuleGUI();
