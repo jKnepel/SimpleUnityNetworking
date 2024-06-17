@@ -31,6 +31,8 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             if (config.IsModuleGUIVisible)
                 config.GetModule()?.ModuleGUI();
             EditorGUI.indentLevel--;
+            
+            serializedObject.ApplyModifiedProperties();
         }
     }
 #endif

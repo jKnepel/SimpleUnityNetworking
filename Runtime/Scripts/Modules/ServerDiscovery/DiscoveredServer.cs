@@ -3,7 +3,7 @@ using System.Net;
 
 namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
 {
-    public class ActiveServer
+    public class DiscoveredServer
     {
         public IPEndPoint Endpoint { get; }
         public string Servername { get; }
@@ -12,7 +12,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         public bool IsServerFull => NumberConnectedClients >= MaxNumberConnectedClients;
         public DateTime LastHeartbeat { get; }
 
-        public ActiveServer(IPEndPoint endpoint, string servername, uint maxNumberConnectedClients, uint numberConnectedClients)
+        public DiscoveredServer(IPEndPoint endpoint, string servername, uint maxNumberConnectedClients, uint numberConnectedClients)
         {
             Endpoint = endpoint;
             Servername = servername;
