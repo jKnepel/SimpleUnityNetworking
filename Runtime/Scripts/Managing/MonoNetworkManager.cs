@@ -145,6 +145,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    }
 
 	    private NetworkManager _networkManager;
+	    /// <summary>
+	    /// Instance of the internal network manager held by the scene context 
+	    /// </summary>
 	    public NetworkManager NetworkManager
 	    {
 		    get

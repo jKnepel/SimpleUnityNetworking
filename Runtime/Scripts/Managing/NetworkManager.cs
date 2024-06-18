@@ -131,8 +131,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
-        public Server Server { get; }
-        public Client Client { get; }
+        public Server Server { get; private set; }
+        public Client Client { get; private set; }
 
         public bool IsServer => Server.IsActive;
         public bool IsClient => Client.IsActive;
@@ -184,6 +184,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             Transport = null;
             Logger = null;
+            Server = null;
+            Client = null;
         }
 
         public void Tick()

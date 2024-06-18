@@ -169,6 +169,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         }
 
         private static NetworkManager _networkManager;
+        /// <summary>
+        /// Instance of the internal network manager held by the static context 
+        /// </summary>
         public static NetworkManager NetworkManager
         {
             get
