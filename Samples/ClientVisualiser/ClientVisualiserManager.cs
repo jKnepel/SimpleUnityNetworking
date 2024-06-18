@@ -1,10 +1,8 @@
-using System;
-using System.Collections.Generic;
-using UnityEngine;
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Serialising;
-
+using System.Collections.Generic;
+using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -25,15 +23,15 @@ namespace jKnepel.SimpleUnityNetworking.Samples
 
 		private void OnEnable()
         {
-            _networkManager.Client_OnLocalStateUpdated += OnClientStateUpdated;
-            _networkManager.Client_OnRemoteClientDisconnected += RemoveConnectedClient;
+            _networkManager.Client.OnLocalStateUpdated += OnClientStateUpdated;
+            _networkManager.Client.OnRemoteClientDisconnected += RemoveConnectedClient;
             _networkManager.OnTickStarted += UpdateCameraTick;
         }
 
 		private void OnDisable()
         {
-            _networkManager.Client_OnLocalStateUpdated -= OnClientStateUpdated;
-            _networkManager.Client_OnRemoteClientDisconnected -= RemoveConnectedClient;
+            _networkManager.Client.OnLocalStateUpdated -= OnClientStateUpdated;
+            _networkManager.Client.OnRemoteClientDisconnected -= RemoveConnectedClient;
             _networkManager.OnTickStarted -= UpdateCameraTick;
         }
 
@@ -43,7 +41,6 @@ namespace jKnepel.SimpleUnityNetworking.Samples
 
         private void OnClientStateUpdated(ELocalClientConnectionState state)
         {
-            Debug.Log(state);
             switch (state)
             {
                 case ELocalClientConnectionState.Authenticated:
@@ -71,14 +68,14 @@ namespace jKnepel.SimpleUnityNetworking.Samples
 		{
             _isUpdating = isUpdating;
             if (isUpdating)
-                _networkManager.Client_RegisterByteData("Visualiser", OnReceiveData);
+                _networkManager.Client.RegisterByteData("Visualiser", OnReceiveData);
             else
-                _networkManager.Client_UnregisterByteData("Visualiser", OnReceiveData);
+                _networkManager.Client.UnregisterByteData("Visualiser", OnReceiveData);
         }
 
         private void OnReceiveData(uint sender, byte[] data)
         {
-            if (!_networkManager.Client_ConnectedClients.TryGetValue(sender, out var client))
+            if (!_networkManager.Client.ConnectedClients.TryGetValue(sender, out var client))
                 return;
 
             if (!_visualisers.TryGetValue(sender, out var visualiser))
@@ -116,7 +113,7 @@ namespace jKnepel.SimpleUnityNetworking.Samples
             ClientVisualiserData clientVisualiserData = new(cameraTrf.position, cameraTrf.rotation);
             Writer writer = new();
             ClientVisualiserData.WriteClientVisualiserData(writer, clientVisualiserData);
-            _networkManager.Client_SendByteDataToAll("Visualiser", writer.GetBuffer(), ENetworkChannel.UnreliableOrdered);
+            _networkManager.Client.SendByteDataToAll("Visualiser", writer.GetBuffer(), ENetworkChannel.UnreliableOrdered);
             cameraTrf.hasChanged = false;
         }
 
