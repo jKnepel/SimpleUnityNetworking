@@ -1,6 +1,6 @@
+using jKnepel.SimpleUnityNetworking.Serialising;
 using System.Collections.Generic;
 using UnityEngine;
-using jKnepel.SimpleUnityNetworking.Serialising;
 
 public class RecursiveClassTest : MonoBehaviour
 {

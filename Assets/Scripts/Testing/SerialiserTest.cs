@@ -1,6 +1,6 @@
+using jKnepel.SimpleUnityNetworking.Serialising;
 using System;
 using System.Collections.Generic;
-using jKnepel.SimpleUnityNetworking.Serialising;
 using UnityEngine;
 
 public class SerialiserTest : MonoBehaviour
