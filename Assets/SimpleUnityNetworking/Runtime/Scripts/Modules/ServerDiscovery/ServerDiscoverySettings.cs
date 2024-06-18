@@ -14,14 +14,6 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         /// </summary>
         public uint ProtocolID = 876237843;
         /// <summary>
-        /// Username used when joining a discovered server as client.
-        /// </summary>
-        public string Username = "Username";
-        /// <summary>
-        /// User colour used when joining a discovered server as client.
-        /// </summary>
-        public Color32 UserColour = new(153, 191, 97, 255);
-        /// <summary>
         /// Multicast address on which an active local server will announce itself or where the server discovery will search. 
         /// </summary>
         public string DiscoveryIP = "239.240.240.149";
@@ -52,8 +44,6 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             if (_areSettingsVisible)
             {
                 EditorGUILayout.PropertyField(property.FindPropertyRelative("ProtocolID"), new GUIContent("Protocol ID:", "Value used for identifying the protocol version of the server. Only servers with identical protocol IDs can be discovered."));
-                EditorGUILayout.PropertyField(property.FindPropertyRelative("Username"), new GUIContent("Username:", "Username used when joining a discovered server as client."));
-                EditorGUILayout.PropertyField(property.FindPropertyRelative("UserColour"), new GUIContent("User Colour:", "User colour used when joining a discovered server as client."));
                 EditorGUILayout.PropertyField(property.FindPropertyRelative("DiscoveryIP"), new GUIContent("Discovery IP:", "Multicast address on which an active local server will announce itself or where the server discovery will search."));
                 EditorGUILayout.PropertyField(property.FindPropertyRelative("DiscoveryPort"), new GUIContent("Discovery Port:", "Multicast port on which an active local server will announce itself or where the server discovery will search."));
                 EditorGUILayout.PropertyField(property.FindPropertyRelative("ServerDiscoveryTimeout"), new GUIContent("Discovery Timeout:", "The time after which discovered servers will be removed when no new announcement was received."));

@@ -4,15 +4,14 @@ using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using System;
 using UnityEngine;
-
 using Logger = jKnepel.SimpleUnityNetworking.Logging.Logger;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
-    public partial class NetworkManager : INetworkManager, IDisposable
+    public class NetworkManager : INetworkManager, IDisposable
     {
         #region fields
-
+        
         private Transport _transport;
         public Transport Transport
         {
@@ -24,21 +23,17 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 if (_transport is not null)
                 {
                     _transport.Dispose();
-                    _authenticatingClients.Clear();
-                    Client_ConnectedClients.Clear();
-                    Server_ConnectedClients.Clear();
-                    Client_LocalState = ELocalClientConnectionState.Stopped;
-                    Server_LocalState = ELocalServerConnectionState.Stopped;
+                    OnTransportDisposed?.Invoke();
                 }
                 
                 _transport = value;
-                
                 if (_transport is null) return;
-                _transport.OnServerStateUpdated += HandleTransportServerStateUpdate;
-                _transport.OnClientStateUpdated += HandleTransportClientStateUpdate;
-                _transport.OnServerReceivedData += OnServerReceivedData;
-                _transport.OnClientReceivedData += OnClientReceivedData;
-                _transport.OnConnectionUpdated += OnRemoteConnectionStateUpdated;
+                _transport.OnServerReceivedData += ServerReceivedData;
+                _transport.OnClientReceivedData += ClientReceivedData;
+                _transport.OnServerStateUpdated += ServerStateUpdated;
+                _transport.OnClientStateUpdated += ClientStateUpdated;
+                _transport.OnConnectionUpdated += ConnectionUpdated;
+                _transport.OnTransportLogAdded += TransportLogAdded;
                 _transport.OnTickStarted += TickStarted;
                 _transport.OnTickCompleted += TickCompleted;
                 
@@ -92,12 +87,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             private set
             {
                 if (value == _logger) return;
-                if (_logger is not null && Transport is not null)
-                    Transport.OnTransportLogAdded -= Logger.Log;
+                if (_logger is not null)
+                    OnTransportLogAdded -= Logger.Log;
 
                 _logger = value;
-                if (_logger is not null && Transport is not null)
-                    Transport.OnTransportLogAdded += Logger.Log;
+                if (_logger is not null)
+                    OnTransportLogAdded += Logger.Log;
             }
         }
         private LoggerConfiguration _loggerConfiguration;
@@ -136,11 +131,21 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
-        public bool IsServer => Server_LocalState == ELocalServerConnectionState.Started;
-        public bool IsClient => Client_LocalState == ELocalClientConnectionState.Authenticated;
+        public Server Server { get; }
+        public Client Client { get; }
+
+        public bool IsServer => Server.IsActive;
+        public bool IsClient => Client.IsActive;
         public bool IsOnline => IsServer || IsClient;
         public bool IsHost => IsServer && IsClient;
 
+        public event Action OnTransportDisposed;
+        public event Action<ServerReceivedData> OnServerReceivedData;
+        public event Action<ClientReceivedData> OnClientReceivedData;
+        public event Action<ELocalConnectionState> OnServerStateUpdated;
+        public event Action<ELocalConnectionState> OnClientStateUpdated;
+        public event Action<uint, ERemoteConnectionState> OnConnectionUpdated;
+        public event Action<string, EMessageSeverity> OnTransportLogAdded;
         public event Action OnTickStarted;
         public event Action OnTickCompleted;
         
@@ -149,6 +154,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         #endregion
 
         #region lifecycle
+
+        public NetworkManager()
+        {
+            Server = new(this);
+            Client = new(this);
+        }
 
         ~NetworkManager()
         {
@@ -167,9 +178,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
             if (disposing)
             {
-                Module?.Dispose();
                 Transport?.Dispose();
+                Module?.Dispose();
             }
+
+            Transport = null;
+            Logger = null;
         }
 
         public void Tick()
@@ -181,7 +195,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         #region public methods
 
-        public void StartServer(string servername)
+        public void StartServer()
         {
             if (TransportConfiguration == null)
             {
@@ -189,7 +203,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 return;
             }
 
-            _cachedServername = servername;
             Transport?.StartServer();
         }
 
@@ -198,16 +211,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Transport?.StopServer();
         }
 
-        public void StartClient(string username, Color32 userColour)
+        public void StartClient()
         {
             if (TransportConfiguration == null)
             {
                 Debug.LogError("The transport needs to be defined before a client can be started!");
-                return; 
+                return;
             }
             
-            _cachedUsername = username;
-            _cachedUserColour = userColour;
             Transport?.StartClient();
         }
         
@@ -224,30 +235,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         #endregion
         
-        #region utilities
-        
-        private delegate void ByteDataCallback(uint senderID, byte[] data);
-        private delegate void StructDataCallback(uint senderID, byte[] data);
-        
-        private ByteDataCallback CreateByteDataDelegate(Action<uint, byte[]> callback)
-        {
-            return ParseDelegate;
-            void ParseDelegate(uint senderID, byte[] data)
-            {
-                callback?.Invoke(senderID, data);
-            }
-        }
-        
-        private StructDataCallback CreateStructDataDelegate<T>(Action<uint, T> callback)
-        {
-            return ParseDelegate;
-            void ParseDelegate(uint senderID, byte[] data)
-            {
-                Reader reader = new(data, SerialiserSettings);
-                callback?.Invoke(senderID, reader.Read<T>());
-            }
-        }
+        #region transport event handlers
 
+        private void ServerReceivedData(ServerReceivedData data) => OnServerReceivedData?.Invoke(data);
+        private void ClientReceivedData(ClientReceivedData data) => OnClientReceivedData?.Invoke(data);
+        private void ServerStateUpdated(ELocalConnectionState state) => OnServerStateUpdated?.Invoke(state);
+        private void ClientStateUpdated(ELocalConnectionState state) => OnClientStateUpdated?.Invoke(state);
+        private void ConnectionUpdated(uint id, ERemoteConnectionState state) => OnConnectionUpdated?.Invoke(id, state);
+        public void TransportLogAdded(string log, EMessageSeverity sev) => OnTransportLogAdded?.Invoke(log, sev);
         private void TickStarted() => OnTickStarted?.Invoke();
         private void TickCompleted() => OnTickCompleted?.Invoke();
 

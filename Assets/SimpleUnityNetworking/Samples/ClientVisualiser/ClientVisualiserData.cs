@@ -1,5 +1,5 @@
-using UnityEngine;
 using jKnepel.SimpleUnityNetworking.Serialising;
+using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Samples
 {
