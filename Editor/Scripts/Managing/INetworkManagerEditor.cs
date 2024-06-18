@@ -101,7 +101,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 }
                 else
                 {
-                    EditorGUILayout.TextField("Servername:", _manager.Server.Servername);
+                    _manager.Server.Servername = EditorGUILayout.TextField("Servername:", _manager.Server.Servername);
                     EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server.NumberOfConnectedClients}/{_manager.Server.MaxNumberOfClients}");
                     if (GUILayout.Button(new GUIContent("Stop Server")))
                         _manager.StopServer();
@@ -149,15 +149,15 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 else
                 {
                     EditorGUILayout.TextField("ID:", $"{_manager.Client.ClientID}");
-                    EditorGUILayout.TextField("Username:", _manager.Client.Username);
-                    EditorGUILayout.ColorField("User colour:", _manager.Client.UserColour);
+                    _manager.Client.Username = EditorGUILayout.TextField("Username:", _manager.Client.Username);
+                    _manager.Client.UserColour = EditorGUILayout.ColorField("User colour:", _manager.Client.UserColour);
                     EditorGUILayout.TextField("Servername:", _manager.Client.Servername);
                     EditorGUILayout.TextField("Connected Clients:", $"{_manager.Client.NumberOfConnectedClients}/{_manager.Client.MaxNumberOfClients}");
                     if (GUILayout.Button(new GUIContent("Stop Client")))
                         _manager.StopClient();
 
                     _clientClientsViewPos = EditorGUILayout.BeginScrollView(_clientClientsViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(150));
-                    if (_manager.Client.NumberOfConnectedClients == 0)
+                    if (_manager.Client.ConnectedClients.Count == 0)
                     {
                         GUILayout.Label($"There are no other clients connected to the server!");
                     }
@@ -165,7 +165,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     {
                         var defaultColour = _style.normal.textColor;
                         _style.alignment = TextAnchor.MiddleLeft;
-                        for (var i = 0; i < _manager.Client.NumberOfConnectedClients; i++)
+                        for (var i = 0; i < _manager.Client.ConnectedClients.Count; i++)
                         {
                             var client = _manager.Client.ConnectedClients.Values.ElementAt(i);
                             EditorGUILayout.BeginHorizontal();
