@@ -1,4 +1,3 @@
-using jKnepel.SimpleUnityNetworking;
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
 using UnityEngine;
@@ -17,7 +16,7 @@ public class StructTest : MonoBehaviour
 
     public void StartServer()
     {
-        _manager.StartServer("server");
+        _manager.StartServer();
     }
 
     public void StopServer()
@@ -27,7 +26,7 @@ public class StructTest : MonoBehaviour
 
     public void StartClient()
     {
-        _manager.StartClient("user", new());
+        _manager.StartClient();
     }
 
     public void StopClient()
@@ -37,22 +36,22 @@ public class StructTest : MonoBehaviour
     
     public void RegisterServer()
     {
-        _manager.Server_RegisterStructData<MessageStruct>(ReceiveStruct);
+        _manager.Server.RegisterStructData<MessageStruct>(ReceiveStruct);
     }
 
     public void UnregisterServer()
     {
-        _manager.Server_UnregisterStructData<MessageStruct>(ReceiveStruct);
+        _manager.Server.UnregisterStructData<MessageStruct>(ReceiveStruct);
     }
 
     public void RegisterClient()
     {
-        _manager.Client_RegisterStructData<MessageStruct>(ReceiveStruct);
+        _manager.Client.RegisterStructData<MessageStruct>(ReceiveStruct);
     }
 
     public void UnregisterClient()
     {
-        _manager.Client_UnregisterStructData<MessageStruct>(ReceiveStruct);
+        _manager.Client.UnregisterStructData<MessageStruct>(ReceiveStruct);
     }
     
     public void SendToClientFromServer(uint client, string message, ENetworkChannel channel = ENetworkChannel.ReliableOrdered)
@@ -69,7 +68,7 @@ public class StructTest : MonoBehaviour
             ULong = 123123,
             Ints = new [] { 1, 2, 3 }
         };
-        _manager.Server_SendStructDataToClient(client, str, channel);
+        _manager.Server.SendStructDataToClient(client, str, channel);
     }
 
     public void SendToClient(uint client, string message, ENetworkChannel channel = ENetworkChannel.ReliableOrdered)
@@ -86,7 +85,7 @@ public class StructTest : MonoBehaviour
             ULong = 123123,
             Ints = new [] { 1, 2, 3 }
         };
-        _manager.Client_SendStructDataToClient(client, str, channel);
+        _manager.Client.SendStructDataToClient(client, str, channel);
     }
 
     public void SendToServer(string message, ENetworkChannel channel = ENetworkChannel.ReliableOrdered)
@@ -103,7 +102,7 @@ public class StructTest : MonoBehaviour
             ULong = 123123,
             Ints = new [] { 1, 2, 3 }
         };
-        _manager.Client_SendStructDataToServer(str, channel);
+        _manager.Client.SendStructDataToServer(str, channel);
     }
 
     private void ReceiveStruct(uint clientID, MessageStruct message)

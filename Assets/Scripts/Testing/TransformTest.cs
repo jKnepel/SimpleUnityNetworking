@@ -1,4 +1,3 @@
-using jKnepel.SimpleUnityNetworking;
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Serialising;
@@ -32,7 +31,7 @@ public class TransformTest : MonoBehaviour
 
     public void StartServer()
     {
-        _manager.StartServer("server");
+        _manager.StartServer();
     }
 
     public void StopServer()
@@ -42,7 +41,7 @@ public class TransformTest : MonoBehaviour
 
     public void StartClient()
     {
-        _manager.StartClient("user", new());
+        _manager.StartClient();
     }
 
     public void StopClient()
@@ -52,12 +51,12 @@ public class TransformTest : MonoBehaviour
 
     public void Register()
     {
-        _manager.Client_RegisterByteData("transform", ReceiveTransformStruct);
+        _manager.Client.RegisterByteData("transform", ReceiveTransformStruct);
     }
 
     public void Unregister()
     {
-        _manager.Client_UnregisterByteData("transform", ReceiveTransformStruct);
+        _manager.Client.UnregisterByteData("transform", ReceiveTransformStruct);
     }
 
     public void SendTransformToClient(ENetworkChannel channel)
@@ -70,7 +69,7 @@ public class TransformTest : MonoBehaviour
         
         Writer writer = new(_serialiserConfiguration.Settings);
         writer.Write(data);
-        _manager.Client_SendByteDataToClient(_targetClientID, "transform", writer.GetBuffer(), channel);
+        _manager.Client.SendByteDataToClient(_targetClientID, "transform", writer.GetBuffer(), channel);
     }
 
     private void ReceiveTransformStruct(uint clientID, byte[] data)
