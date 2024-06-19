@@ -244,7 +244,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private void ServerStateUpdated(ELocalConnectionState state) => OnServerStateUpdated?.Invoke(state);
         private void ClientStateUpdated(ELocalConnectionState state) => OnClientStateUpdated?.Invoke(state);
         private void ConnectionUpdated(uint id, ERemoteConnectionState state) => OnConnectionUpdated?.Invoke(id, state);
-        public void TransportLogAdded(string log, EMessageSeverity sev) => OnTransportLogAdded?.Invoke(log, sev);
+        private void TransportLogAdded(string log, EMessageSeverity sev) => OnTransportLogAdded?.Invoke(log, sev);
         private void TickStarted() => OnTickStarted?.Invoke();
         private void TickCompleted() => OnTickCompleted?.Invoke();
 

@@ -320,7 +320,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public void SendByteDataToClient(uint clientID, string byteID, byte[] byteData, 
             ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
         {
-            SendByteData(new [] { clientID }, byteID, byteData, channel);
+            SendByteDataToClients(new [] { clientID }, byteID, byteData, channel);
         }
 
         /// <summary>
@@ -333,7 +333,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public void SendByteDataToAll(string byteID, byte[] byteData, 
             ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
         {
-            SendByteData(ConnectedClients.Keys.ToArray(), byteID, byteData, channel);
+            SendByteDataToClients(ConnectedClients.Keys.ToArray(), byteID, byteData, channel);
         }
 
         /// <summary>
@@ -345,12 +345,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="byteData"></param>
         /// <param name="channel"></param>
         public void SendByteDataToClients(uint[] clientIDs, string byteID, byte[] byteData, 
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
-        {
-            SendByteData(clientIDs, byteID, byteData, channel);
-        }
-        
-        private void SendByteData(uint[] clientIDs, string byteID, byte[] byteData,
             ENetworkChannel channel = ENetworkChannel.UnreliableUnordered)
         {
             if (!IsActive)
@@ -466,7 +460,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		public void SendStructDataToClient<T>(uint clientID, T structData, 
 			ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct 
         {
-            SendStructData(new [] { clientID }, structData, channel); 
+            SendStructDataToClients(new [] { clientID }, structData, channel); 
         }
 
         /// <summary>
@@ -478,7 +472,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		public void SendStructDataToAll<T>(T structData, 
 			ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct 
         {
-            SendStructData(ConnectedClients.Keys.ToArray(), structData, channel); 
+            SendStructDataToClients(ConnectedClients.Keys.ToArray(), structData, channel); 
         }
 
         /// <summary>
@@ -490,12 +484,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <param name="channel"></param>
 		public void SendStructDataToClients<T>(uint[] clientIDs, T structData, 
 			ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct 
-        {
-            SendStructData(clientIDs, structData, channel); 
-        }
-        
-        private void SendStructData<T>(uint[] clientIDs, T structData, 
-            ENetworkChannel channel = ENetworkChannel.UnreliableUnordered) where T : struct
         {
             if (!IsActive)
             {
@@ -518,7 +506,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             writer.WriteByte(DataPacket.PacketType);
             DataPacket dataPacket = new(clientIDs, true, Hashing.GetFNV1Hash32(typeof(T).Name), structBuffer);
             DataPacket.Write(writer, dataPacket);
-            _networkManager.Transport?.SendDataToServer(writer.GetBuffer(), channel);
+            _networkManager.Transport?.SendDataToServer(writer.GetBuffer(), channel); 
         }
 		
 		private void ReceiveStructData(uint structHash, uint clientID, byte[] data)

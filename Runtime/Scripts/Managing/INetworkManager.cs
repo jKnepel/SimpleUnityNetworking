@@ -79,42 +79,42 @@ namespace jKnepel.SimpleUnityNetworking
         /// <summary>
         /// Called when the local server received new data from the transport layer
         /// </summary>
-        /// /// <remarks>
+        /// <remarks>
         /// Should be ignored unless you specifically want to use transport layer data
         /// </remarks>
         public event Action<ServerReceivedData> OnServerReceivedData;
         /// <summary>
         /// Called when the local client received new data from the transport layer
         /// </summary>
-        /// /// <remarks>
+        /// <remarks>
         /// Should be ignored unless you specifically want to use transport layer data
         /// </remarks>
         public event Action<ClientReceivedData> OnClientReceivedData;
         /// <summary>
         /// Called when the local server's transport state was updated
         /// </summary>
-        /// /// <remarks>
+        /// <remarks>
         /// Should be ignored unless you specifically want to use transport layer data
         /// </remarks>
         public event Action<ELocalConnectionState> OnServerStateUpdated;
         /// <summary>
         /// Called when the local client's transport state was updated
         /// </summary>
-        /// /// <remarks>
+        /// <remarks>
         /// Should be ignored unless you specifically want to use transport layer data
         /// </remarks>
         public event Action<ELocalConnectionState> OnClientStateUpdated;
         /// <summary>
         /// Called when a remote client's transport state was updated
         /// </summary>
-        /// /// <remarks>
+        /// <remarks>
         /// Should be ignored unless you specifically want to use transport layer data
         /// </remarks>
         public event Action<uint, ERemoteConnectionState> OnConnectionUpdated;
         /// <summary>
         /// Called when a new log was added by the transport
         /// </summary>
-        /// /// <remarks>
+        /// <remarks>
         /// Should be ignored unless you specifically want to use transport layer data
         /// </remarks>
         public event Action<string, EMessageSeverity> OnTransportLogAdded;

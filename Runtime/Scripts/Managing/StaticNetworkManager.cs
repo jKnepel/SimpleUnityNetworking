@@ -88,7 +88,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// Called when the local server received new data from the transport layer
         /// </summary>
-        /// /// <remarks>
+        /// <remarks>
         /// Should be ignored unless you specifically want to use transport layer data
         /// </remarks>
         public static event Action<ServerReceivedData> OnServerReceivedData
@@ -99,7 +99,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// Called when the local client received new data from the transport layer
         /// </summary>
-        /// /// <remarks>
+        /// <remarks>
         /// Should be ignored unless you specifically want to use transport layer data
         /// </remarks>
         public static event Action<ClientReceivedData> OnClientReceivedData
@@ -110,7 +110,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// Called when the local server's transport state was updated
         /// </summary>
-        /// /// <remarks>
+        /// <remarks>
         /// Should be ignored unless you specifically want to use transport layer data
         /// </remarks>
         public static event Action<ELocalConnectionState> OnServerStateUpdated
@@ -121,7 +121,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// Called when the local client's transport state was updated
         /// </summary>
-        /// /// <remarks>
+        /// <remarks>
         /// Should be ignored unless you specifically want to use transport layer data
         /// </remarks>
         public static event Action<ELocalConnectionState> OnClientStateUpdated
@@ -132,7 +132,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// Called when a remote client's transport state was updated
         /// </summary>
-        /// /// <remarks>
+        /// <remarks>
         /// Should be ignored unless you specifically want to use transport layer data
         /// </remarks>
         public static event Action<uint, ERemoteConnectionState> OnConnectionUpdated
@@ -143,7 +143,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// Called when a new log was added by the transport
         /// </summary>
-        /// /// <remarks>
+        /// <remarks>
         /// Should be ignored unless you specifically want to use transport layer data
         /// </remarks>
         public static event Action<string, EMessageSeverity> OnTransportLogAdded
