@@ -36,9 +36,6 @@ namespace jKnepel.SimpleUnityNetworking
         /// </summary>
         LoggerConfiguration LoggerConfiguration { get; set; }
         
-        Module Module { get; }
-        ModuleConfiguration ModuleConfiguration { get; set; }
-        
         /// <summary>
         /// The instance of the local server, which provides access to the server's API, values and events
         /// </summary>

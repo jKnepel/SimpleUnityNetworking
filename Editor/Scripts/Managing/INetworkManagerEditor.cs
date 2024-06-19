@@ -22,8 +22,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private readonly GUIStyle _style = new();
         
-        private bool _isModuleVisible = true;
-
         private bool _showServerWindow = true;
         private Vector2 _serverClientsViewPos;
 
@@ -38,23 +36,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             _manager = manager;
             _allowStart = allowStart;
-        }
-
-        public void ModuleGUI()
-        {
-            EditorGUILayout.Space();
-            GUILayout.Label("Modules:", EditorStyles.boldLabel);
-            {
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
-                UnityUtilities.DrawToggleFoldout("Module", ref _isModuleVisible);
-                if (_isModuleVisible)
-                {
-                    _manager.ModuleConfiguration = (ModuleConfiguration)EditorGUILayout.ObjectField(new GUIContent("Asset:"), _manager.ModuleConfiguration, typeof(ModuleConfiguration), false);
-                    if (_manager.ModuleConfiguration)
-                        Editor.CreateEditor(_manager.ModuleConfiguration).OnInspectorGUI();
-                }
-                EditorGUILayout.EndVertical();
-            }
         }
         
         public void ManagerGUIs()

@@ -126,7 +126,6 @@ namespace jKnepel.SimpleUnityNetworking
                 LoggerGUI();
             }
 
-            NetworkManagerEditor.ModuleGUI();
             NetworkManagerEditor.ManagerGUIs();
             GUILayout.EndArea();
         }
