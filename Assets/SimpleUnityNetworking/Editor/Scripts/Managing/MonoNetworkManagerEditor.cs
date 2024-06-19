@@ -111,7 +111,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 LoggerGUI();
             }
 
-            NetworkManagerEditor.ModuleGUI();
             NetworkManagerEditor.ManagerGUIs();
 
             serializedObject.ApplyModifiedProperties();

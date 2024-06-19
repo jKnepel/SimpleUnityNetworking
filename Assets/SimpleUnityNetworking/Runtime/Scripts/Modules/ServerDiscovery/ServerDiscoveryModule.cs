@@ -20,6 +20,8 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
     public class ServerDiscoveryModule : Module
     {
         #region fields
+        
+        public override string Name => "ServerDiscovery";
 
         private bool _isServerAnnounceActive;
 
@@ -45,7 +47,6 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         public event Action OnServerDiscoveryDeactivated;
         public event Action OnActiveServerListUpdated;
 
-        private INetworkManager _networkManager;
         private ServerDiscoverySettings _settings;
         
         private byte[] _discoveryProtocolBytes;
@@ -65,9 +66,9 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
 
 		#region public methods
 
-        public ServerDiscoveryModule(INetworkManager networkManager, ServerDiscoverySettings settings)
+        public ServerDiscoveryModule(INetworkManager networkManager, ServerDiscoveryConfiguration discoveryConfig,
+            ServerDiscoverySettings settings) : base(networkManager, discoveryConfig)
         {
-            _networkManager = networkManager;
             _settings = settings;
             _networkManager.Server.OnLocalStateUpdated += OnServerStateUpdated;
         }
@@ -368,10 +369,12 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         }
         
         #endregion
+    }
 
-		#region utilities
-        
 #if UNITY_EDITOR
+    [CustomPropertyDrawer(typeof(ServerDiscoveryModule))]
+    public class ServerDiscoveryModuleDrawer : PropertyDrawer
+    {
         private Texture2D _texture;
         private Texture2D Texture
         {
@@ -386,16 +389,20 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         private Vector2 _scrollPos;
         private readonly Color[] _scrollViewColors = { new(0.25f, 0.25f, 0.25f), new(0.23f, 0.23f, 0.23f) };
         private const float ROW_HEIGHT = 20;
-        
-        public override void ModuleGUI()
+
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
         {
+            EditorGUI.BeginProperty(position, label, property);
+
+            var target = (ServerDiscoveryModule)property.managedReferenceValue;
+            
             using(new GUILayout.HorizontalScope())
             {
                 GUILayout.Space(EditorGUI.indentLevel * 15);
-                if (!IsServerDiscoveryActive && GUILayout.Button("Start Server Discovery"))
-                    StartServerDiscovery();
-                if (IsServerDiscoveryActive && GUILayout.Button("Stop Server Discovery"))
-                    EndServerDiscovery();
+                if (!target.IsServerDiscoveryActive && GUILayout.Button("Start Server Discovery"))
+                    target.StartServerDiscovery();
+                if (target.IsServerDiscoveryActive && GUILayout.Button("Stop Server Discovery"))
+                    target.EndServerDiscovery();
             }
             
             EditorGUILayout.Space();
@@ -405,7 +412,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 GUILayout.Space(EditorGUI.indentLevel * 15);
                 GUILayout.Label("Discovered Servers", EditorStyles.boldLabel);
                 GUILayout.FlexibleSpace();
-                GUILayout.Label($"Count: {DiscoveredServers?.Count}");
+                GUILayout.Label($"Count: {target.DiscoveredServers?.Count}");
             }
 
             using (new GUILayout.HorizontalScope())
@@ -414,15 +421,15 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, EditorStyles.helpBox, GUILayout.MinHeight(128.0f));
                 using (new GUILayout.VerticalScope())
                 {
-                    for (var i = 0; i < DiscoveredServers?.Count; i++)
+                    for (var i = 0; i < target.DiscoveredServers?.Count; i++)
                     {
-                        var server = DiscoveredServers[i];
+                        var server = target.DiscoveredServers[i];
                         EditorGUILayout.BeginHorizontal(GetScrollviewRowStyle(_scrollViewColors[i % 2]));
                         {
                             GUILayout.Label(server.Servername);
                             GUILayout.Label($"#{server.NumberConnectedClients}/{server.MaxNumberConnectedClients}");
                             if (GUILayout.Button(new GUIContent("Join Server"), GUILayout.ExpandWidth(false)))
-                                StartClientOnDiscoveredServer(server);
+                                target.StartClientOnDiscoveredServer(server);
                         }
                         EditorGUILayout.EndHorizontal();
                     }
@@ -431,6 +438,8 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             }
 
             EditorGUILayout.Space();
+            
+            EditorGUI.EndProperty();
         }
         
         private GUIStyle GetScrollviewRowStyle(Color color)
@@ -442,8 +451,6 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             style.fixedHeight = ROW_HEIGHT;
             return style;
         }
-#endif
-        
-        #endregion
     }
+#endif
 }
