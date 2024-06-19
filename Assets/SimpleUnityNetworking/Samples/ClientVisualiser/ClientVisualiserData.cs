@@ -1,9 +1,9 @@
-using UnityEngine;
 using jKnepel.SimpleUnityNetworking.Serialising;
+using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Samples
 {
-    public struct ClientVisualiserData : IStructData
+    public struct ClientVisualiserData
     {
         public Vector3 Position;
         public Quaternion Rotation;

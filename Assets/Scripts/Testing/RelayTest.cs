@@ -1,4 +1,3 @@
-using jKnepel.SimpleUnityNetworking;
 using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
@@ -55,7 +54,7 @@ public class RelayTest : MonoBehaviour
         var hostAllocation = await RelayService.Instance.CreateAllocationAsync(maxPlayers, allocationRegion);
         JoinCode = await RelayService.Instance.GetJoinCodeAsync(hostAllocation.AllocationId);
         ((UnityTransport)_manager.Transport).SetRelayServerData(new(hostAllocation, "dtls"));
-        _manager.StartServer("server");
+        _manager.StartServer();
     }
 
     public void StopServer()
@@ -69,13 +68,13 @@ public class RelayTest : MonoBehaviour
         
         if (IsServer)
         {
-            _manager.StartClient("user", new());
+            _manager.StartClient();
             return;
         }
         
         var joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
         ((UnityTransport)_manager.Transport).SetRelayServerData(new(joinAllocation, "udp"));
-        _manager.StartClient("user", new());
+        _manager.StartClient();
     }
 
     public void StopClient()
@@ -85,12 +84,12 @@ public class RelayTest : MonoBehaviour
 
     public void Register()
     {
-        _manager.Client_RegisterStructData<MessageStruct>(ReceiveStruct);
+        _manager.Client.RegisterStructData<MessageStruct>(ReceiveStruct);
     }
 
     public void Unregister()
     {
-        _manager.Client_UnregisterStructData<MessageStruct>(ReceiveStruct);
+        _manager.Client.UnregisterStructData<MessageStruct>(ReceiveStruct);
     }
 
     public void SendToClient(ENetworkChannel channel = ENetworkChannel.ReliableOrdered)
@@ -107,7 +106,7 @@ public class RelayTest : MonoBehaviour
             ULong = 123123,
             Ints = new [] { 1, 2, 3 }
         };
-        _manager.Client_SendStructDataToClient(_targetClientID, message, channel);
+        _manager.Client.SendStructDataToClient(_targetClientID, message, channel);
     }
 
     private void ReceiveStruct(uint clientID, MessageStruct message)

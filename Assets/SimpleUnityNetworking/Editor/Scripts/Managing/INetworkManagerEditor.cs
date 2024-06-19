@@ -25,12 +25,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private bool _isModuleVisible = true;
 
         private bool _showServerWindow = true;
-        private string _servername = "New Server";
         private Vector2 _serverClientsViewPos;
 
         private bool _showClientWindow = true;
-        private string _username = "Username";
-        private Color32 _userColour = new(153, 191, 97, 255);
         private Vector2 _clientClientsViewPos;
 
         #endregion
@@ -98,19 +95,19 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             {
                 if (!_manager.IsServer)
                 {
-                    _servername = EditorGUILayout.TextField(new GUIContent("Servername:"), _servername);
+                    _manager.Server.Servername = EditorGUILayout.TextField(new GUIContent("Servername:"), _manager.Server.Servername);
                     if (GUILayout.Button(new GUIContent("Start Server")) && AllowStart())
-                        _manager.StartServer(_servername);
+                        _manager.StartServer();
                 }
                 else
                 {
-                    EditorGUILayout.TextField("Servername:", _manager.Server_Servername);
-                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server_ConnectedClients.Count}/{_manager.Server_MaxNumberOfClients}");
+                    _manager.Server.Servername = EditorGUILayout.TextField("Servername:", _manager.Server.Servername);
+                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server.NumberOfConnectedClients}/{_manager.Server.MaxNumberOfClients}");
                     if (GUILayout.Button(new GUIContent("Stop Server")))
                         _manager.StopServer();
 
                     _serverClientsViewPos = EditorGUILayout.BeginScrollView(_serverClientsViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(150));
-                    if (_manager.Server_ConnectedClients.Count == 0)
+                    if (_manager.Server.NumberOfConnectedClients == 0)
                     {
                         GUILayout.Label($"There are no clients connected to the local server!");
                     }
@@ -118,9 +115,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     {
                         var defaultColour = _style.normal.textColor;
                         _style.alignment = TextAnchor.MiddleLeft;
-                        for (var i = 0; i < _manager.Server_ConnectedClients.Count; i++)
+                        for (var i = 0; i < _manager.Server.NumberOfConnectedClients; i++)
                         {
-                            var client = _manager.Server_ConnectedClients.Values.ElementAt(i);
+                            var client = _manager.Server.ConnectedClients.Values.ElementAt(i);
                             EditorGUILayout.BeginHorizontal();
                             {
                                 _style.normal.textColor = client.UserColour;
@@ -144,23 +141,23 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             {
                 if (!_manager.IsClient)
                 {
-                    _username = EditorGUILayout.TextField(new GUIContent("Username:"), _username);
-                    _userColour = EditorGUILayout.ColorField(new GUIContent("User colour:"), _userColour);
+                    _manager.Client.Username = EditorGUILayout.TextField(new GUIContent("Username:"), _manager.Client.Username);
+                    _manager.Client.UserColour = EditorGUILayout.ColorField(new GUIContent("User colour:"), _manager.Client.UserColour);
                     if (GUILayout.Button(new GUIContent("Start Client")) && AllowStart())
-                        _manager.StartClient(_username, _userColour);
+                        _manager.StartClient();
                 }
                 else
                 {
-                    EditorGUILayout.TextField("ID:", $"{_manager.Client_ClientID}");
-                    EditorGUILayout.TextField("Username:", _manager.Client_Username);
-                    EditorGUILayout.ColorField("User colour:", _manager.Client_UserColour);
-                    EditorGUILayout.TextField("Servername:", _manager.Client_Servername);
-                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Client_ConnectedClients.Count}/{_manager.Client_MaxNumberOfClients}");
+                    EditorGUILayout.TextField("ID:", $"{_manager.Client.ClientID}");
+                    _manager.Client.Username = EditorGUILayout.TextField("Username:", _manager.Client.Username);
+                    _manager.Client.UserColour = EditorGUILayout.ColorField("User colour:", _manager.Client.UserColour);
+                    EditorGUILayout.TextField("Servername:", _manager.Client.Servername);
+                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Client.NumberOfConnectedClients}/{_manager.Client.MaxNumberOfClients}");
                     if (GUILayout.Button(new GUIContent("Stop Client")))
                         _manager.StopClient();
 
                     _clientClientsViewPos = EditorGUILayout.BeginScrollView(_clientClientsViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(150));
-                    if (_manager.Client_ConnectedClients.Count == 0)
+                    if (_manager.Client.ConnectedClients.Count == 0)
                     {
                         GUILayout.Label($"There are no other clients connected to the server!");
                     }
@@ -168,9 +165,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     {
                         var defaultColour = _style.normal.textColor;
                         _style.alignment = TextAnchor.MiddleLeft;
-                        for (var i = 0; i < _manager.Client_ConnectedClients.Count; i++)
+                        for (var i = 0; i < _manager.Client.ConnectedClients.Count; i++)
                         {
-                            var client = _manager.Client_ConnectedClients.Values.ElementAt(i);
+                            var client = _manager.Client.ConnectedClients.Values.ElementAt(i);
                             EditorGUILayout.BeginHorizontal();
                             {
                                 _style.normal.textColor = client.UserColour;
