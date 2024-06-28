@@ -1,21 +1,22 @@
 using System;
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
+#endif
 
 namespace jKnepel.SimpleUnityNetworking.Modules
 {
-    [Serializable]
     public abstract class Module : IDisposable
     {
         public abstract string Name { get; }
+        public ModuleConfiguration ModuleConfiguration { get; }
 
         protected readonly INetworkManager _networkManager;
-        protected readonly ModuleConfiguration _moduleConfiguration;
 
         protected Module(INetworkManager networkManager, ModuleConfiguration moduleConfig)
         {
             _networkManager = networkManager;
-            _moduleConfiguration = moduleConfig;
+            ModuleConfiguration = moduleConfig;
         }
         
         ~Module()
@@ -30,22 +31,30 @@ namespace jKnepel.SimpleUnityNetworking.Modules
         }
 
         protected abstract void Dispose(bool disposing);
-    }
-
+        
 #if UNITY_EDITOR
-    [CustomPropertyDrawer(typeof(Module))]
-    public class ModuleDrawer : PropertyDrawer
-    {
-        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        private bool _showModule;
+        
+        public void RenderModuleGUI(Action onRemoveModule)
         {
-            GUI.enabled = false;
-            EditorGUILayout.PropertyField(property.FindPropertyRelative("Name"));
-            GUI.enabled = true;
+            EditorGUI.indentLevel++;
+
+            EditorGUILayout.BeginHorizontal();
+            _showModule = EditorGUILayout.Foldout(_showModule, Name, true);
+            EditorGUILayout.Space();
+            EditorGUILayout.Space();
+            EditorGUILayout.Space();
+            if (GUILayout.Button("Remove Module"))
+                onRemoveModule?.Invoke();
+            EditorGUILayout.EndHorizontal();
             
-            EditorGUILayout.PropertyField(property.FindPropertyRelative("_moduleConfiguration"));
+            if (_showModule)
+                ModuleGUI();
+            
+            EditorGUI.indentLevel--;
         }
 
-        public override float GetPropertyHeight(SerializedProperty property, GUIContent label) => 0;
-    }
+        protected abstract void ModuleGUI();
 #endif
+    }
 }

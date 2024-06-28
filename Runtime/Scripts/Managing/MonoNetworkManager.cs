@@ -3,6 +3,7 @@ using jKnepel.SimpleUnityNetworking.Modules;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -26,8 +27,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 NetworkManager.TransportConfiguration = _cachedTransportConfiguration = value;
 			    
 #if UNITY_EDITOR
-				if (value != null)
-				    EditorUtility.SetDirty(_cachedTransportConfiguration);
 			    if (!EditorApplication.isPlaying)
 					EditorSceneManager.MarkSceneDirty(gameObject.scene);
 #endif
@@ -44,8 +43,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 			    NetworkManager.SerialiserConfiguration = _cachedSerialiserConfiguration = value;
 
 #if UNITY_EDITOR
-                if (value != null)
-                    EditorUtility.SetDirty(_cachedSerialiserConfiguration);
                 if (!EditorApplication.isPlaying)
 				    EditorSceneManager.MarkSceneDirty(gameObject.scene);
 #endif
@@ -63,13 +60,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 			    NetworkManager.LoggerConfiguration = _cachedLoggerConfiguration = value;
 
 #if UNITY_EDITOR
-                if (value != null)
-                    EditorUtility.SetDirty(_cachedLoggerConfiguration);
                 if (!EditorApplication.isPlaying)
 				    EditorSceneManager.MarkSceneDirty(gameObject.scene);
 #endif
 		    }
 	    }
+
+	    [SerializeField] private List<ModuleConfiguration> _cachedModuleConfigs = new();
+	    public ModuleList Modules => NetworkManager.Modules;
 
 	    public Server Server => NetworkManager.Server;
 	    public Client Client => NetworkManager.Client;
@@ -138,6 +136,17 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 			    _networkManager.TransportConfiguration = _cachedTransportConfiguration;
 			    _networkManager.SerialiserConfiguration = _cachedSerialiserConfiguration;
 			    _networkManager.LoggerConfiguration = _cachedLoggerConfiguration;
+			    
+			    foreach (var config in _cachedModuleConfigs)
+				    Modules.Add(config.GetModule(this));
+			    
+#if UNITY_EDITOR
+			    NetworkManager.Modules.OnModuleAdded += OnModuleAdded;
+			    NetworkManager.Modules.OnModuleRemoved += OnModuleRemoved;
+			    NetworkManager.Modules.OnModuleInserted += OnModuleInserted;
+			    NetworkManager.Modules.OnModuleRemovedAt += OnModuleRemovedAt;
+#endif
+			    
 			    return _networkManager;
 		    }
 		    private set => _networkManager = value;
@@ -184,5 +193,39 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    {
 		    NetworkManager.StopNetwork();
 	    }
+	    
+	    #region private methods
+
+#if UNITY_EDITOR
+	    private void OnModuleAdded(ModuleConfiguration config)
+	    {
+		    _cachedModuleConfigs.Add(config);
+		    if (!EditorApplication.isPlaying)
+			    EditorSceneManager.MarkSceneDirty(gameObject.scene);
+	    }
+
+	    private void OnModuleRemoved(ModuleConfiguration config)
+	    {
+		    _cachedModuleConfigs.Remove(config);
+		    if (!EditorApplication.isPlaying)
+			    EditorSceneManager.MarkSceneDirty(gameObject.scene);
+	    }
+
+	    private void OnModuleInserted(int index, ModuleConfiguration config)
+	    {
+		    _cachedModuleConfigs.Insert(index, config);
+		    if (!EditorApplication.isPlaying)
+			    EditorSceneManager.MarkSceneDirty(gameObject.scene);
+	    }
+
+	    private void OnModuleRemovedAt(int index)
+	    {
+		    _cachedModuleConfigs.RemoveAt(index);
+		    if (!EditorApplication.isPlaying)
+			    EditorSceneManager.MarkSceneDirty(gameObject.scene);
+	    }
+#endif
+	    
+	    #endregion
     }
 }
