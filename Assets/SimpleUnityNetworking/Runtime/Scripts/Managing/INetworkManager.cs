@@ -4,6 +4,7 @@ using jKnepel.SimpleUnityNetworking.Modules;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using System;
+using System.Collections.Generic;
 using Logger = jKnepel.SimpleUnityNetworking.Logging.Logger;
 
 namespace jKnepel.SimpleUnityNetworking
@@ -35,6 +36,8 @@ namespace jKnepel.SimpleUnityNetworking
         /// The configuration that will create the instance of the <see cref="Logger"/>
         /// </summary>
         LoggerConfiguration LoggerConfiguration { get; set; }
+        
+        ModuleList Modules { get; }
         
         /// <summary>
         /// The instance of the local server, which provides access to the server's API, values and events

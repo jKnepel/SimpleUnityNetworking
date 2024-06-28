@@ -17,6 +17,7 @@ using UnityEditor;
 
 namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
 {
+    [Serializable]
     public class ServerDiscoveryModule : Module
     {
         #region fields
@@ -369,12 +370,10 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         }
         
         #endregion
-    }
-
+        
+        #region gui
+        
 #if UNITY_EDITOR
-    [CustomPropertyDrawer(typeof(ServerDiscoveryModule))]
-    public class ServerDiscoveryModuleDrawer : PropertyDrawer
-    {
         private Texture2D _texture;
         private Texture2D Texture
         {
@@ -389,20 +388,16 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         private Vector2 _scrollPos;
         private readonly Color[] _scrollViewColors = { new(0.25f, 0.25f, 0.25f), new(0.23f, 0.23f, 0.23f) };
         private const float ROW_HEIGHT = 20;
-
-        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
+        
+        protected override void ModuleGUI()
         {
-            EditorGUI.BeginProperty(position, label, property);
-
-            var target = (ServerDiscoveryModule)property.managedReferenceValue;
-            
             using(new GUILayout.HorizontalScope())
             {
                 GUILayout.Space(EditorGUI.indentLevel * 15);
-                if (!target.IsServerDiscoveryActive && GUILayout.Button("Start Server Discovery"))
-                    target.StartServerDiscovery();
-                if (target.IsServerDiscoveryActive && GUILayout.Button("Stop Server Discovery"))
-                    target.EndServerDiscovery();
+                if (!IsServerDiscoveryActive && GUILayout.Button("Start Server Discovery"))
+                    StartServerDiscovery();
+                if (IsServerDiscoveryActive && GUILayout.Button("Stop Server Discovery"))
+                    EndServerDiscovery();
             }
             
             EditorGUILayout.Space();
@@ -412,7 +407,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 GUILayout.Space(EditorGUI.indentLevel * 15);
                 GUILayout.Label("Discovered Servers", EditorStyles.boldLabel);
                 GUILayout.FlexibleSpace();
-                GUILayout.Label($"Count: {target.DiscoveredServers?.Count}");
+                GUILayout.Label($"Count: {DiscoveredServers?.Count}");
             }
 
             using (new GUILayout.HorizontalScope())
@@ -421,25 +416,21 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos, EditorStyles.helpBox, GUILayout.MinHeight(128.0f));
                 using (new GUILayout.VerticalScope())
                 {
-                    for (var i = 0; i < target.DiscoveredServers?.Count; i++)
+                    for (var i = 0; i < DiscoveredServers?.Count; i++)
                     {
-                        var server = target.DiscoveredServers[i];
+                        var server = DiscoveredServers[i];
                         EditorGUILayout.BeginHorizontal(GetScrollviewRowStyle(_scrollViewColors[i % 2]));
                         {
                             GUILayout.Label(server.Servername);
                             GUILayout.Label($"#{server.NumberConnectedClients}/{server.MaxNumberConnectedClients}");
                             if (GUILayout.Button(new GUIContent("Join Server"), GUILayout.ExpandWidth(false)))
-                                target.StartClientOnDiscoveredServer(server);
+                                StartClientOnDiscoveredServer(server);
                         }
                         EditorGUILayout.EndHorizontal();
                     }
                 }
                 EditorGUILayout.EndScrollView();
             }
-
-            EditorGUILayout.Space();
-            
-            EditorGUI.EndProperty();
         }
         
         private GUIStyle GetScrollviewRowStyle(Color color)
@@ -451,6 +442,8 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             style.fixedHeight = ROW_HEIGHT;
             return style;
         }
-    }
 #endif
+        
+        #endregion
+    }
 }

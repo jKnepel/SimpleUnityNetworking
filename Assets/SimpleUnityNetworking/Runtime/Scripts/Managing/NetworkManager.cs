@@ -114,6 +114,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
+        public ModuleList Modules { get; } = new();
+
         public Server Server { get; private set; }
         public Client Client { get; private set; }
 
