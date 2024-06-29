@@ -27,6 +27,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 NetworkManager.TransportConfiguration = _cachedTransportConfiguration = value;
 			    
 #if UNITY_EDITOR
+			    if (value != null)
+				    EditorUtility.SetDirty(_cachedTransportConfiguration);
 			    if (!EditorApplication.isPlaying)
 					EditorSceneManager.MarkSceneDirty(gameObject.scene);
 #endif
@@ -43,6 +45,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 			    NetworkManager.SerialiserConfiguration = _cachedSerialiserConfiguration = value;
 
 #if UNITY_EDITOR
+			    if (value != null)
+				    EditorUtility.SetDirty(_cachedSerialiserConfiguration);
                 if (!EditorApplication.isPlaying)
 				    EditorSceneManager.MarkSceneDirty(gameObject.scene);
 #endif
@@ -60,6 +64,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 			    NetworkManager.LoggerConfiguration = _cachedLoggerConfiguration = value;
 
 #if UNITY_EDITOR
+			    if (value != null)
+				    EditorUtility.SetDirty(_cachedLoggerConfiguration);
                 if (!EditorApplication.isPlaying)
 				    EditorSceneManager.MarkSceneDirty(gameObject.scene);
 #endif

@@ -1,3 +1,4 @@
+using jKnepel.SimpleUnityNetworking.Managing;
 using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Modules

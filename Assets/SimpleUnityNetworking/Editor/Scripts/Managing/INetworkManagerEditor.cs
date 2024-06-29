@@ -41,6 +41,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             _allowStart = allowStart;
         }
 
+        #endregion
+
+        #region guis
+        
         public T ConfigurationGUI<T>(ScriptableObject configuration, string title, ref bool showSection) where T : ScriptableObject
         {
             GUILayout.BeginVertical(EditorStyles.helpBox);
@@ -59,9 +63,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         
         public void ModuleGUI()
         {
-            EditorGUILayout.Space();
-            GUILayout.Label("Modules:", EditorStyles.boldLabel);
-
             using (new GUILayout.VerticalScope(EditorStyles.helpBox))
             {
                 DrawToggleFoldout("Modules", ref _showModuleWindow);
@@ -69,18 +70,17 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 
                 using (new GUILayout.ScrollViewScope(_modulePos))
                 {
-                    EditorGUILayout.Space();
                     GUILayout.BeginHorizontal();
                     _moduleConfig = (ModuleConfiguration)EditorGUILayout.ObjectField(_moduleConfig, typeof(ModuleConfiguration), false);
                     if (GUILayout.Button("Add Module") && _moduleConfig is not null)
                         _manager.Modules.Add(_moduleConfig.GetModule(_manager));
                     GUILayout.EndHorizontal();
-                    EditorGUILayout.Space();
+                    EditorGUILayout.Space(3);
                             
                     foreach (var module in _manager.Modules.ToList())
                         module.RenderModuleGUI(() => RemoveModule(module));
                     if (_manager.Modules.Count > 0)
-                        EditorGUILayout.Space();
+                        EditorGUILayout.Space(3);
                 }
             }
 
@@ -92,19 +92,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
         
-        public void ManagerGUIs()
-        {
-            EditorGUILayout.Space();
-            GUILayout.Label("Managers:", EditorStyles.boldLabel);
-            ServerGUI();
-            ClientGUI();
-        }
-
-        #endregion
-
-        #region guis
-        
-        private void ServerGUI()
+        public void ServerGUI()
         {
             GUILayout.BeginVertical(EditorStyles.helpBox);
             DrawToggleFoldout("Server", ref _showServerWindow, _manager.IsServer, "Is Server:");
@@ -150,7 +138,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             GUILayout.EndVertical();
         }
 
-        private void ClientGUI()
+        public void ClientGUI()
         {
             GUILayout.BeginVertical(EditorStyles.helpBox);
             DrawToggleFoldout("Client", ref _showClientWindow, _manager.IsClient, "Is Client:");

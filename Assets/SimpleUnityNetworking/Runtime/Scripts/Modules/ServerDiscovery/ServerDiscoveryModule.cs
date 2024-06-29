@@ -71,7 +71,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             ServerDiscoverySettings settings) : base(networkManager, discoveryConfig)
         {
             _settings = settings;
-            _networkManager.Server.OnLocalStateUpdated += OnServerStateUpdated;
+            NetworkManager.Server.OnLocalStateUpdated += OnServerStateUpdated;
         }
 
         protected override void Dispose(bool disposing)
@@ -232,15 +232,15 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         
         public void StartClientOnDiscoveredServer(DiscoveredServer server)
         {
-            if (_networkManager.TransportConfiguration == null)
+            if (NetworkManager.TransportConfiguration == null)
             {
                 Debug.LogError("The transport needs to be defined before a client can be started!");
                 return;
             }
 
-            _networkManager.TransportConfiguration.Settings.Address = server.Endpoint.Address.ToString();
-            _networkManager.TransportConfiguration.Settings.Port = (ushort)server.Endpoint.Port;
-            _networkManager.StartClient();
+            NetworkManager.TransportConfiguration.Settings.Address = server.Endpoint.Address.ToString();
+            NetworkManager.TransportConfiguration.Settings.Port = (ushort)server.Endpoint.Port;
+            NetworkManager.StartClient();
         }
         
         #endregion
@@ -274,7 +274,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, false);
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastLoopback, true);
-                _announceClient.Client.Bind(new IPEndPoint(_networkManager.Server.ServerEndpoint.Address, _settings.DiscoveryPort));
+                _announceClient.Client.Bind(new IPEndPoint(NetworkManager.Server.ServerEndpoint.Address, _settings.DiscoveryPort));
                 _announceClient.Connect(new(_announceIP, _settings.DiscoveryPort));
 
                 _announceThread = new(AnnounceThread) { IsBackground = true };
@@ -337,10 +337,10 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                     Writer writer = new(_serialiserSettings);
                     writer.Skip(4);
                     ServerAnnouncePacket.Write(writer, new(
-                        (ushort)_networkManager.Server.ServerEndpoint.Port,
-                        _networkManager.Server.Servername,
-                        _networkManager.Server.MaxNumberOfClients, 
-                        (uint)_networkManager.Server.ConnectedClients.Count
+                        (ushort)NetworkManager.Server.ServerEndpoint.Port,
+                        NetworkManager.Server.Servername,
+                        NetworkManager.Server.MaxNumberOfClients, 
+                        (uint)NetworkManager.Server.ConnectedClients.Count
                     ));
 
                     var bytesToHash = new byte[writer.Length];

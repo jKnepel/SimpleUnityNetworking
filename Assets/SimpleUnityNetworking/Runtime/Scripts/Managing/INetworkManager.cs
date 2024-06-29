@@ -1,13 +1,11 @@
 using jKnepel.SimpleUnityNetworking.Logging;
-using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Modules;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using System;
-using System.Collections.Generic;
 using Logger = jKnepel.SimpleUnityNetworking.Logging.Logger;
 
-namespace jKnepel.SimpleUnityNetworking
+namespace jKnepel.SimpleUnityNetworking.Managing
 {
     public interface INetworkManager
     {
