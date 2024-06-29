@@ -1,3 +1,4 @@
+using jKnepel.SimpleUnityNetworking.Managing;
 using System;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -11,11 +12,11 @@ namespace jKnepel.SimpleUnityNetworking.Modules
         public abstract string Name { get; }
         public ModuleConfiguration ModuleConfiguration { get; }
 
-        protected readonly INetworkManager _networkManager;
+        protected INetworkManager NetworkManager { get; }
 
         protected Module(INetworkManager networkManager, ModuleConfiguration moduleConfig)
         {
-            _networkManager = networkManager;
+            NetworkManager = networkManager;
             ModuleConfiguration = moduleConfig;
         }
         

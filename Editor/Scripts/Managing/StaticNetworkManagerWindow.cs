@@ -1,17 +1,16 @@
 using jKnepel.SimpleUnityNetworking.Logging;
-using jKnepel.SimpleUnityNetworking.Managing;
+using jKnepel.SimpleUnityNetworking.Modules;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-namespace jKnepel.SimpleUnityNetworking
+namespace jKnepel.SimpleUnityNetworking.Managing
 {
     public class StaticNetworkManagerWindow : EditorWindow
     {
         private const int PADDING = 10;
-
-        private NetworkManager NetworkManager => StaticNetworkManager.NetworkManager;
 
         private INetworkManagerEditor _networkManagerEditor;
         private INetworkManagerEditor NetworkManagerEditor
@@ -33,13 +32,11 @@ namespace jKnepel.SimpleUnityNetworking
             get => _cachedTransportConfiguration;
             set
             {
-                if (NetworkManager.TransportConfiguration == value) return;
-                NetworkManager.TransportConfiguration = _cachedTransportConfiguration = value;
-
-#if UNITY_EDITOR
+                if (StaticNetworkManager.TransportConfiguration == value) return;
+                StaticNetworkManager.TransportConfiguration = _cachedTransportConfiguration = value;
+                
                 if (value != null)
                     EditorUtility.SetDirty(_cachedTransportConfiguration);
-#endif
             }
         }
         [SerializeField] private SerialiserConfiguration _cachedSerialiserConfiguration;
@@ -48,13 +45,11 @@ namespace jKnepel.SimpleUnityNetworking
             get => _cachedSerialiserConfiguration;
             set
             {
-                if (NetworkManager.SerialiserConfiguration == value) return;
-                NetworkManager.SerialiserConfiguration = _cachedSerialiserConfiguration = value;
+                if (StaticNetworkManager.SerialiserConfiguration == value) return;
+                StaticNetworkManager.SerialiserConfiguration = _cachedSerialiserConfiguration = value;
 
-#if UNITY_EDITOR
                 if (value != null)
                     EditorUtility.SetDirty(_cachedSerialiserConfiguration);
-#endif
             }
         }
         [SerializeField] private LoggerConfiguration _cachedLoggerConfiguration;
@@ -63,15 +58,15 @@ namespace jKnepel.SimpleUnityNetworking
             get => _cachedLoggerConfiguration;
             set
             {
-                if (NetworkManager.LoggerConfiguration == value) return;
-                NetworkManager.LoggerConfiguration = _cachedLoggerConfiguration = value;
+                if (StaticNetworkManager.LoggerConfiguration == value) return;
+                StaticNetworkManager.LoggerConfiguration = _cachedLoggerConfiguration = value;
 
-#if UNITY_EDITOR
                 if (value != null)
                     EditorUtility.SetDirty(_cachedLoggerConfiguration);
-#endif
             }
         }
+        
+        [SerializeField] private List<ModuleConfiguration> _cachedModuleConfigs = new();
 
         [SerializeField] private bool _showTransportWindow = true;
         [SerializeField] private bool _showSerialiserWindow = true;
@@ -85,26 +80,39 @@ namespace jKnepel.SimpleUnityNetworking
         
         private void Awake()
         {
-            NetworkManager.Client.OnRemoteClientConnected += RepaintOnUpdate;
-            NetworkManager.Client.OnRemoteClientDisconnected += RepaintOnUpdate;
-            NetworkManager.Client.OnRemoteClientUpdated += RepaintOnUpdate;
-            NetworkManager.Client.OnLocalStateUpdated += RepaintOnUpdate;
-            NetworkManager.Server.OnRemoteClientConnected += RepaintOnUpdate;
-            NetworkManager.Server.OnRemoteClientDisconnected += RepaintOnUpdate;
-            NetworkManager.Server.OnRemoteClientUpdated += RepaintOnUpdate;
-            NetworkManager.Server.OnLocalStateUpdated += RepaintOnUpdate;
+            foreach (var config in _cachedModuleConfigs)
+                StaticNetworkManager.Modules.Add(config.GetModule(StaticNetworkManager.NetworkManager));
+			    
+            StaticNetworkManager.Modules.OnModuleAdded += OnModuleAdded;
+            StaticNetworkManager.Modules.OnModuleRemoved += OnModuleRemoved;
+            StaticNetworkManager.Modules.OnModuleInserted += OnModuleInserted;
+            StaticNetworkManager.Modules.OnModuleRemovedAt += OnModuleRemovedAt;
+
+            StaticNetworkManager.Client.OnRemoteClientConnected += RepaintOnUpdate;
+            StaticNetworkManager.Client.OnRemoteClientDisconnected += RepaintOnUpdate;
+            StaticNetworkManager.Client.OnRemoteClientUpdated += RepaintOnUpdate;
+            StaticNetworkManager.Client.OnLocalStateUpdated += RepaintOnUpdate;
+            StaticNetworkManager.Server.OnRemoteClientConnected += RepaintOnUpdate;
+            StaticNetworkManager.Server.OnRemoteClientDisconnected += RepaintOnUpdate;
+            StaticNetworkManager.Server.OnRemoteClientUpdated += RepaintOnUpdate;
+            StaticNetworkManager.Server.OnLocalStateUpdated += RepaintOnUpdate;
         }
 
         private void OnDestroy()
         {
-            NetworkManager.Client.OnRemoteClientConnected -= RepaintOnUpdate;
-            NetworkManager.Client.OnRemoteClientDisconnected -= RepaintOnUpdate;
-            NetworkManager.Client.OnRemoteClientUpdated -= RepaintOnUpdate;
-            NetworkManager.Client.OnLocalStateUpdated -= RepaintOnUpdate;
-            NetworkManager.Server.OnRemoteClientConnected -= RepaintOnUpdate;
-            NetworkManager.Server.OnRemoteClientDisconnected -= RepaintOnUpdate;
-            NetworkManager.Server.OnRemoteClientUpdated -= RepaintOnUpdate;
-            NetworkManager.Server.OnLocalStateUpdated -= RepaintOnUpdate;
+            StaticNetworkManager.Modules.OnModuleAdded -= OnModuleAdded;
+            StaticNetworkManager.Modules.OnModuleRemoved -= OnModuleRemoved;
+            StaticNetworkManager.Modules.OnModuleInserted -= OnModuleInserted;
+            StaticNetworkManager.Modules.OnModuleRemovedAt -= OnModuleRemovedAt;
+            
+            StaticNetworkManager.Client.OnRemoteClientConnected -= RepaintOnUpdate;
+            StaticNetworkManager.Client.OnRemoteClientDisconnected -= RepaintOnUpdate;
+            StaticNetworkManager.Client.OnRemoteClientUpdated -= RepaintOnUpdate;
+            StaticNetworkManager.Client.OnLocalStateUpdated -= RepaintOnUpdate;
+            StaticNetworkManager.Server.OnRemoteClientConnected -= RepaintOnUpdate;
+            StaticNetworkManager.Server.OnRemoteClientDisconnected -= RepaintOnUpdate;
+            StaticNetworkManager.Server.OnRemoteClientUpdated -= RepaintOnUpdate;
+            StaticNetworkManager.Server.OnLocalStateUpdated -= RepaintOnUpdate;
         }
 
         private void RepaintOnUpdate(uint _) => Repaint();
@@ -120,13 +128,19 @@ namespace jKnepel.SimpleUnityNetworking
 
             EditorGUILayout.Space();
             GUILayout.Label("Configurations:", EditorStyles.boldLabel);
-            {
-                TransportGUI();
-                SerialiserGUI();
-                LoggerGUI();
-            }
+            TransportGUI();
+            SerialiserGUI();
+            LoggerGUI();
+            
+            EditorGUILayout.Space();
+            GUILayout.Label("Modules:", EditorStyles.boldLabel);
+            NetworkManagerEditor.ModuleGUI();
 
-            NetworkManagerEditor.ManagerGUIs();
+            EditorGUILayout.Space();
+            GUILayout.Label("Managers:", EditorStyles.boldLabel);
+            NetworkManagerEditor.ServerGUI();
+            NetworkManagerEditor.ClientGUI();
+            
             GUILayout.EndArea();
         }
 
@@ -143,6 +157,26 @@ namespace jKnepel.SimpleUnityNetworking
         private void LoggerGUI()
         {
             LoggerConfiguration = NetworkManagerEditor.ConfigurationGUI<LoggerConfiguration>(_cachedLoggerConfiguration, "Logger", ref _showLoggerWindow);
+        }
+        
+        private void OnModuleAdded(ModuleConfiguration config)
+        {
+            _cachedModuleConfigs.Add(config);
+        }
+
+        private void OnModuleRemoved(ModuleConfiguration config)
+        {
+            _cachedModuleConfigs.Remove(config);
+        }
+
+        private void OnModuleInserted(int index, ModuleConfiguration config)
+        {
+            _cachedModuleConfigs.Insert(index, config);
+        }
+
+        private void OnModuleRemovedAt(int index)
+        {
+            _cachedModuleConfigs.RemoveAt(index);
         }
     }
 }

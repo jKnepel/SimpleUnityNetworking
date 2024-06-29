@@ -59,15 +59,18 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             EditorGUILayout.Space();
             GUILayout.Label("Configurations:", EditorStyles.boldLabel);
-            {
-                TransportGUI();
-                SerialiserGUI();
-                LoggerGUI();
-            }
-
+            TransportGUI();
+            SerialiserGUI();
+            LoggerGUI();
+            
+            EditorGUILayout.Space();
+            GUILayout.Label("Modules:", EditorStyles.boldLabel);
             NetworkManagerEditor.ModuleGUI();
 
-            NetworkManagerEditor.ManagerGUIs();
+            EditorGUILayout.Space();
+            GUILayout.Label("Managers:", EditorStyles.boldLabel);
+            NetworkManagerEditor.ServerGUI();
+            NetworkManagerEditor.ClientGUI();
 
             serializedObject.ApplyModifiedProperties();
         }
