@@ -2,7 +2,6 @@ using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
@@ -19,59 +18,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             {
                 if (_networkManagerEditor != null)
                     return _networkManagerEditor;
-                return _networkManagerEditor = new(
-                    (MonoNetworkManager)target,
-                    INetworkManagerEditor.EAllowStart.OnlyPlaymode
-                );
+                return _networkManagerEditor = new(NetworkManager, INetworkManagerEditor.EAllowStart.OnlyPlaymode);
             }
         }
-
-        public TransportConfiguration TransportConfiguration
-        {
-            get => NetworkManager.TransportConfiguration;
-            set
-            {
-                if (NetworkManager.TransportConfiguration == value) return;
-                NetworkManager.TransportConfiguration = value;
-
-#if UNITY_EDITOR
-                if (!EditorApplication.isPlaying)
-                    EditorSceneManager.MarkSceneDirty(NetworkManager.gameObject.scene);
-#endif
-            }
-        }
-        public SerialiserConfiguration SerialiserConfiguration
-        {
-            get => NetworkManager.SerialiserConfiguration;
-            set
-            {
-                if (NetworkManager.SerialiserConfiguration == value) return;
-                NetworkManager.SerialiserConfiguration = value;
-
-#if UNITY_EDITOR
-                if (!EditorApplication.isPlaying)
-                    EditorSceneManager.MarkSceneDirty(NetworkManager.gameObject.scene);
-#endif
-            }
-        }
-        public LoggerConfiguration LoggerConfiguration
-        {
-            get => NetworkManager.LoggerConfiguration;
-            set
-            {
-                if (NetworkManager.LoggerConfiguration == value) return;
-                NetworkManager.LoggerConfiguration = value;
-
-#if UNITY_EDITOR
-                if (!EditorApplication.isPlaying)
-                    EditorSceneManager.MarkSceneDirty(NetworkManager.gameObject.scene);
-#endif
-            }
-        }
-
+        
         [SerializeField] private bool _showTransportWindow = true;
         [SerializeField] private bool _showSerialiserWindow = true;
         [SerializeField] private bool _showLoggerWindow = true;
+
 
         private void Awake()
         {
@@ -105,31 +59,35 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         {
             EditorGUILayout.Space();
             GUILayout.Label("Configurations:", EditorStyles.boldLabel);
-            {
-                TransportGUI();
-                SerialiserGUI();
-                LoggerGUI();
-            }
-
+            TransportGUI();
+            SerialiserGUI();
+            LoggerGUI();
+            
+            EditorGUILayout.Space();
+            GUILayout.Label("Modules:", EditorStyles.boldLabel);
             NetworkManagerEditor.ModuleGUI();
-            NetworkManagerEditor.ManagerGUIs();
+
+            EditorGUILayout.Space();
+            GUILayout.Label("Managers:", EditorStyles.boldLabel);
+            NetworkManagerEditor.ServerGUI();
+            NetworkManagerEditor.ClientGUI();
 
             serializedObject.ApplyModifiedProperties();
         }
 
         private void TransportGUI()
         {
-            TransportConfiguration = NetworkManagerEditor.ConfigurationGUI<TransportConfiguration>(TransportConfiguration, "Transport", ref _showTransportWindow);
+            NetworkManager.TransportConfiguration = NetworkManagerEditor.ConfigurationGUI<TransportConfiguration>(NetworkManager.TransportConfiguration, "Transport", ref _showTransportWindow);
         }
 
         private void SerialiserGUI()
         {
-            SerialiserConfiguration = NetworkManagerEditor.ConfigurationGUI<SerialiserConfiguration>(SerialiserConfiguration, "Serialiser", ref _showSerialiserWindow);
+            NetworkManager.SerialiserConfiguration = NetworkManagerEditor.ConfigurationGUI<SerialiserConfiguration>(NetworkManager.SerialiserConfiguration, "Serialiser", ref _showSerialiserWindow);
         }
 
         private void LoggerGUI()
         {
-            LoggerConfiguration = NetworkManagerEditor.ConfigurationGUI<LoggerConfiguration>(LoggerConfiguration, "Logger", ref _showLoggerWindow);
+            NetworkManager.LoggerConfiguration = NetworkManagerEditor.ConfigurationGUI<LoggerConfiguration>(NetworkManager.LoggerConfiguration, "Logger", ref _showLoggerWindow);
         }
     }
 }

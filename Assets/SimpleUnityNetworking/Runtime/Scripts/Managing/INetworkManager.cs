@@ -1,12 +1,11 @@
 using jKnepel.SimpleUnityNetworking.Logging;
-using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Modules;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using System;
 using Logger = jKnepel.SimpleUnityNetworking.Logging.Logger;
 
-namespace jKnepel.SimpleUnityNetworking
+namespace jKnepel.SimpleUnityNetworking.Managing
 {
     public interface INetworkManager
     {
@@ -36,8 +35,7 @@ namespace jKnepel.SimpleUnityNetworking
         /// </summary>
         LoggerConfiguration LoggerConfiguration { get; set; }
         
-        Module Module { get; }
-        ModuleConfiguration ModuleConfiguration { get; set; }
+        ModuleList Modules { get; }
         
         /// <summary>
         /// The instance of the local server, which provides access to the server's API, values and events

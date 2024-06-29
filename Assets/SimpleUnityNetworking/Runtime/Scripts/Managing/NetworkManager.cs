@@ -114,22 +114,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
-        public Module Module => _moduleConfiguration == null ? null : _moduleConfiguration.GetModule();
-        private ModuleConfiguration _moduleConfiguration;
-        public ModuleConfiguration ModuleConfiguration
-        {
-            get => _moduleConfiguration;
-            set
-            {
-                if (_moduleConfiguration == value) return;
-                if (value is null && Module is not null)
-                    Module.Dispose();
-
-                _moduleConfiguration = value;
-                if (_moduleConfiguration is not null)
-                    _moduleConfiguration.SetModule(this);
-            }
-        }
+        public ModuleList Modules { get; } = new();
 
         public Server Server { get; private set; }
         public Client Client { get; private set; }
@@ -179,7 +164,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             if (disposing)
             {
                 Transport?.Dispose();
-                Module?.Dispose();
             }
 
             Transport = null;

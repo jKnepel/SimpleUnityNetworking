@@ -17,9 +17,12 @@ using UnityEditor;
 
 namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
 {
+    [Serializable]
     public class ServerDiscoveryModule : Module
     {
         #region fields
+        
+        public override string Name => "ServerDiscovery";
 
         private bool _isServerAnnounceActive;
 
@@ -45,7 +48,6 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         public event Action OnServerDiscoveryDeactivated;
         public event Action OnActiveServerListUpdated;
 
-        private INetworkManager _networkManager;
         private ServerDiscoverySettings _settings;
         
         private byte[] _discoveryProtocolBytes;
@@ -65,11 +67,13 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
 
 		#region public methods
 
-        public ServerDiscoveryModule(INetworkManager networkManager, ServerDiscoverySettings settings)
+        public ServerDiscoveryModule(INetworkManager networkManager, ServerDiscoveryConfiguration discoveryConfig,
+            ServerDiscoverySettings settings) : base(networkManager, discoveryConfig)
         {
-            _networkManager = networkManager;
             _settings = settings;
-            _networkManager.Server.OnLocalStateUpdated += OnServerStateUpdated;
+            NetworkManager.Server.OnLocalStateUpdated += OnServerStateUpdated;
+            if (NetworkManager.Server.LocalState == ELocalServerConnectionState.Started)
+                StartServerAnnouncement();
         }
 
         protected override void Dispose(bool disposing)
@@ -77,7 +81,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             EndServerDiscovery();
             EndServerAnnouncement();
         }
-        
+
         #endregion
         
         #region server discovery
@@ -214,7 +218,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
 
         private async Task TimeoutServer(IPEndPoint serverEndpoint)
         {
-            await Task.Delay(_settings.ServerDiscoveryTimeout);
+            await Task.Delay((int)_settings.ServerDiscoveryTimeout);
             if (_openServers.TryGetValue(serverEndpoint, out var server))
             {   // timeout and remove servers that haven't been updated for longer than the timeout value
                 if ((DateTime.Now - server.LastHeartbeat).TotalMilliseconds > _settings.ServerDiscoveryTimeout)
@@ -230,15 +234,15 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         
         public void StartClientOnDiscoveredServer(DiscoveredServer server)
         {
-            if (_networkManager.TransportConfiguration == null)
+            if (NetworkManager.TransportConfiguration == null)
             {
                 Debug.LogError("The transport needs to be defined before a client can be started!");
                 return;
             }
 
-            _networkManager.TransportConfiguration.Settings.Address = server.Endpoint.Address.ToString();
-            _networkManager.TransportConfiguration.Settings.Port = (ushort)server.Endpoint.Port;
-            _networkManager.StartClient();
+            NetworkManager.TransportConfiguration.Settings.Address = server.Endpoint.Address.ToString();
+            NetworkManager.TransportConfiguration.Settings.Port = (ushort)server.Endpoint.Port;
+            NetworkManager.StartClient();
         }
         
         #endregion
@@ -272,7 +276,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, false);
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
                 _announceClient.Client.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.MulticastLoopback, true);
-                _announceClient.Client.Bind(new IPEndPoint(_networkManager.Server.ServerEndpoint.Address, _settings.DiscoveryPort));
+                _announceClient.Client.Bind(new IPEndPoint(NetworkManager.Server.ServerEndpoint.Address, _settings.DiscoveryPort));
                 _announceClient.Connect(new(_announceIP, _settings.DiscoveryPort));
 
                 _announceThread = new(AnnounceThread) { IsBackground = true };
@@ -335,10 +339,10 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                     Writer writer = new(_serialiserSettings);
                     writer.Skip(4);
                     ServerAnnouncePacket.Write(writer, new(
-                        (ushort)_networkManager.Server.ServerEndpoint.Port,
-                        _networkManager.Server.Servername,
-                        _networkManager.Server.MaxNumberOfClients, 
-                        (uint)_networkManager.Server.ConnectedClients.Count
+                        (ushort)NetworkManager.Server.ServerEndpoint.Port,
+                        NetworkManager.Server.Servername,
+                        NetworkManager.Server.MaxNumberOfClients, 
+                        (uint)NetworkManager.Server.ConnectedClients.Count
                     ));
 
                     var bytesToHash = new byte[writer.Length];
@@ -348,7 +352,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                     writer.WriteUInt32(Hashing.GetCRC32Hash(bytesToHash));
 
                     _announceClient.Send(writer.GetBuffer(), writer.Length);
-                    Thread.Sleep(_settings.ServerHeartbeatDelay);
+                    Thread.Sleep((int)_settings.ServerHeartbeatDelay);
                 }
                 catch (Exception ex)
                 {
@@ -368,10 +372,11 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         }
         
         #endregion
-
-		#region utilities
         
 #if UNITY_EDITOR
+        
+        public override bool HasGUI => true;
+        
         private Texture2D _texture;
         private Texture2D Texture
         {
@@ -383,12 +388,26 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             }
         }
 
+        private bool _areSettingsVisible = true;
         private Vector2 _scrollPos;
         private readonly Color[] _scrollViewColors = { new(0.25f, 0.25f, 0.25f), new(0.23f, 0.23f, 0.23f) };
         private const float ROW_HEIGHT = 20;
         
-        public override void ModuleGUI()
+        protected override void ModuleGUI()
         {
+            EditorGUI.indentLevel++;
+            _areSettingsVisible = EditorGUILayout.Foldout(_areSettingsVisible, "Settings:", true);
+            if (_areSettingsVisible)
+            {
+                _settings.ProtocolID = (uint)EditorGUILayout.IntField(new GUIContent("Protocol ID:", "Value used for identifying the protocol version of the server. Only servers with identical protocol IDs can be discovered."), (int)_settings.ProtocolID);
+                _settings.DiscoveryIP = EditorGUILayout.TextField(new GUIContent("Discovery IP:", "Multicast address on which an active local server will announce itself or where the server discovery will search."), _settings.DiscoveryIP);
+                _settings.DiscoveryPort = (ushort)EditorGUILayout.IntField(new GUIContent("Discovery Port:", "Multicast port on which an active local server will announce itself or where the server discovery will search."), _settings.DiscoveryPort);
+                _settings.ServerDiscoveryTimeout = (uint)EditorGUILayout.IntField(new GUIContent("Discovery Timeout:", "The time after which discovered servers will be removed when no new announcement was received."), (int)_settings.ServerDiscoveryTimeout);
+                _settings.ServerHeartbeatDelay = (uint)EditorGUILayout.IntField(new GUIContent("Heartbeat Delay:", "The interval in which an active local server will announce itself on the LAN."), (int)_settings.ServerHeartbeatDelay);
+                EditorUtility.SetDirty(ModuleConfiguration);
+            }
+            EditorGUI.indentLevel--;
+            
             using(new GUILayout.HorizontalScope())
             {
                 GUILayout.Space(EditorGUI.indentLevel * 15);
@@ -417,7 +436,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                     for (var i = 0; i < DiscoveredServers?.Count; i++)
                     {
                         var server = DiscoveredServers[i];
-                        EditorGUILayout.BeginHorizontal(GetScrollviewRowStyle(_scrollViewColors[i % 2]));
+                        EditorGUILayout.BeginHorizontal(GetScrollViewRowStyle(_scrollViewColors[i % 2]));
                         {
                             GUILayout.Label(server.Servername);
                             GUILayout.Label($"#{server.NumberConnectedClients}/{server.MaxNumberConnectedClients}");
@@ -429,21 +448,20 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                 }
                 EditorGUILayout.EndScrollView();
             }
-
-            EditorGUILayout.Space();
         }
         
-        private GUIStyle GetScrollviewRowStyle(Color color)
+        private GUIStyle GetScrollViewRowStyle(Color color)
         {
             Texture.SetPixel(0, 0, color);
             Texture.Apply();
-            GUIStyle style = new();
-            style.normal.background = Texture;
-            style.fixedHeight = ROW_HEIGHT;
+            GUIStyle style = new()
+            {
+                normal = { background = Texture },
+                fixedHeight = ROW_HEIGHT
+            };
             return style;
         }
-#endif
         
-        #endregion
+#endif
     }
 }
