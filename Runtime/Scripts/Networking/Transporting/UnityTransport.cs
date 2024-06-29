@@ -29,8 +29,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         private uint _tickrate;
         
         private readonly Timer _tickrateTimer = new();
-        private bool _serverIsTicking;
-        private bool _clientIsTicking;
         
         private NetworkDriver _driver;
         private NetworkSettings _networkSettings;
@@ -175,7 +173,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             _clientIDToConnection = new();
             _connectionToClientID = new();
             _driver.Listen();
-            AutomaticTicks(true, true);
+            AutomaticTicks(true);
             SetLocalServerState(ELocalConnectionState.Started);
         }
 
@@ -206,7 +204,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             _clientIDToConnection = null;
             _connectionToClientID = null;
             _clientIDs = 1;
-            AutomaticTicks(false, true);
+            AutomaticTicks(false);
             DisposeInternals();
 
             SetLocalServerState(ELocalConnectionState.Stopped);
@@ -278,7 +276,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             _tickrate = _settings.Tickrate;
 
             _serverConnection = _driver.Connect(serverEndpoint);
-            AutomaticTicks(true, false);
+            AutomaticTicks(true);
         }
 
         public override void StopClient()
@@ -307,7 +305,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             _serverConnection = default;
             _clientIDToConnection = null;
             _connectionToClientID = null;
-            AutomaticTicks(false, false);
+            AutomaticTicks(false);
             DisposeInternals();
 
             SetLocalClientState(ELocalConnectionState.Stopped);
@@ -332,7 +330,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             }
             
             _hostClientID = _clientIDs++;
-            AutomaticTicks(true, false);
             SetLocalClientState(ELocalConnectionState.Started);
             OnConnectionUpdated?.Invoke(_hostClientID, ERemoteConnectionState.Connected);
         }
@@ -340,7 +337,6 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         private void StopHostClient()
         {
             SetLocalClientState(ELocalConnectionState.Stopping);
-            AutomaticTicks(false, false);
             SetLocalClientState(ELocalConnectionState.Stopped);
             OnConnectionUpdated?.Invoke(_hostClientID, ERemoteConnectionState.Disconnected);
             _hostClientID = 0;
@@ -413,13 +409,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             OnTickCompleted?.Invoke();
         }
         
-        private void AutomaticTicks(bool start, bool asServer)
+        private void AutomaticTicks(bool start)
         {
-            if (asServer)
-                _serverIsTicking = start;
-            else
-                _clientIsTicking = start;
-            
             switch (start)
             {
                 case true when _tickrateTimer.Enabled:
@@ -429,10 +420,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                     _tickrateTimer.Interval = 1000f / _tickrate;
                     _tickrateTimer.Start();
                     return;
-                case false when !_serverIsTicking && !_clientIsTicking:
-                    _tickrateTimer.Stop();
-                    return;
                 case false:
+                    _tickrateTimer.Stop();
                     return;
             }
         }
@@ -490,7 +479,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                         // TODO : flush send queues
                         CleanOutgoingMessages(_serverConnection);
                         DisposeInternals();
-                        AutomaticTicks(false, false);
+                        AutomaticTicks(false);
                         SetLocalClientState(ELocalConnectionState.Stopped);
                     }
                     else if (LocalServerState is ELocalConnectionState.Starting or ELocalConnectionState.Started)
