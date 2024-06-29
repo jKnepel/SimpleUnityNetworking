@@ -49,6 +49,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             set => NetworkManager.LoggerConfiguration = value;
         }
         
+        /// <summary>
+        /// List of modules currently registered with the network manager
+        /// </summary>
         public static ModuleList Modules => NetworkManager.Modules;
 
         /// <summary>

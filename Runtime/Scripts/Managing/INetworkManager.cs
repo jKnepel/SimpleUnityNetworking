@@ -35,6 +35,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         LoggerConfiguration LoggerConfiguration { get; set; }
         
+        /// <summary>
+        /// List of modules currently registered with the network manager
+        /// </summary>
         ModuleList Modules { get; }
         
         /// <summary>

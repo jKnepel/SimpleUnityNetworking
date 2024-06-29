@@ -16,8 +16,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 {
     public class MonoNetworkManager : MonoBehaviour, INetworkManager
     {
-	    public Transport Transport => NetworkManager.Transport;
 	    [SerializeField] private TransportConfiguration _cachedTransportConfiguration;
+	    public Transport Transport => NetworkManager.Transport;
 	    public TransportConfiguration TransportConfiguration
 	    {
 		    get => NetworkManager.TransportConfiguration;
@@ -53,8 +53,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    }
 	    }
 
-	    public Logger Logger => NetworkManager.Logger;
 	    [SerializeField] private LoggerConfiguration _cachedLoggerConfiguration;
+	    public Logger Logger => NetworkManager.Logger;
 	    public LoggerConfiguration LoggerConfiguration
 	    {
 		    get => NetworkManager.LoggerConfiguration;
