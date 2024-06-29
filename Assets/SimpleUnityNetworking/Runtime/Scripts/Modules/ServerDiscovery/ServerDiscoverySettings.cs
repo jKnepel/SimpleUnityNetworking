@@ -24,11 +24,11 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         /// <summary>
         /// The time after which discovered servers will be removed when no new announcement was received.
         /// </summary>
-        public int ServerDiscoveryTimeout = 3000;
+        public uint ServerDiscoveryTimeout = 3000;
         /// <summary>
         /// The interval in which an active local server will announce itself on the LAN.
         /// </summary>
-        public int ServerHeartbeatDelay = 500;
+        public uint ServerHeartbeatDelay = 500;
     }
     
 #if UNITY_EDITOR

@@ -22,6 +22,7 @@ MonoBehaviour:
     MaxConnectAttempts: 60
     DisconnectTimeoutMS: 30000
     HeartbeatTimeoutMS: 500
+    ReconnectionTimeoutMS: 2000
     PayloadCapacity: 4096
     WindowSize: 32
     MinimumResendTime: 64

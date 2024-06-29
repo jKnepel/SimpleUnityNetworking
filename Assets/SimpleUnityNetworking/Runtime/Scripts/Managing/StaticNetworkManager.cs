@@ -1,4 +1,5 @@
 using jKnepel.SimpleUnityNetworking.Logging;
+using jKnepel.SimpleUnityNetworking.Modules;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using System;
@@ -16,14 +17,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// The transport instance defined by the configuration
         /// </summary>
-        public static Transport Transport => _networkManager.Transport;
+        public static Transport Transport => NetworkManager.Transport;
         /// <summary>
         /// The configuration that will create the instance of the <see cref="Transport"/>
         /// </summary>
         public static TransportConfiguration TransportConfiguration
         {
-            get => _networkManager.TransportConfiguration;
-            set => _networkManager.TransportConfiguration = value;
+            get => NetworkManager.TransportConfiguration;
+            set => NetworkManager.TransportConfiguration = value;
         }
 
         /// <summary>
@@ -31,48 +32,53 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public static SerialiserConfiguration SerialiserConfiguration
         {
-            get => _networkManager.SerialiserConfiguration;
-            set => _networkManager.SerialiserConfiguration = value;
+            get => NetworkManager.SerialiserConfiguration;
+            set => NetworkManager.SerialiserConfiguration = value;
         }
 
         /// <summary>
         /// The logger instance defined by the configuration
         /// </summary>
-        public static Logger Logger => _networkManager.Logger;
+        public static Logger Logger => NetworkManager.Logger;
         /// <summary>
         /// The configuration that will create the instance of the <see cref="Logger"/>
         /// </summary>
         public static LoggerConfiguration LoggerConfiguration
         {
-            get => _networkManager.LoggerConfiguration;
-            set => _networkManager.LoggerConfiguration = value;
+            get => NetworkManager.LoggerConfiguration;
+            set => NetworkManager.LoggerConfiguration = value;
         }
+        
+        /// <summary>
+        /// List of modules currently registered with the network manager
+        /// </summary>
+        public static ModuleList Modules => NetworkManager.Modules;
 
         /// <summary>
         /// The instance of the local server, which provides access to the server's API, values and events
         /// </summary>
-        public static Server Server => _networkManager.Server;
+        public static Server Server => NetworkManager.Server;
         /// <summary>
         /// The instance of the local client, which provides access to the client's API, values and events
         /// </summary>
-        public static Client Client => _networkManager.Client;
+        public static Client Client => NetworkManager.Client;
 
         /// <summary>
         /// Whether a local server is started
         /// </summary>
-        public static bool IsServer => _networkManager.IsServer;
+        public static bool IsServer => NetworkManager.IsServer;
         /// <summary>
         /// Whether a local client is started and authenticated
         /// </summary>
-        public static bool IsClient => _networkManager.IsClient;
+        public static bool IsClient => NetworkManager.IsClient;
         /// <summary>
         /// Whether a local server is started or local client is authenticated
         /// </summary>
-        public static bool IsOnline => _networkManager.IsOnline;
+        public static bool IsOnline => NetworkManager.IsOnline;
         /// <summary>
         /// Whether a local server is started and local client is authenticated
         /// </summary>
-        public static bool IsHost => _networkManager.IsHost;
+        public static bool IsHost => NetworkManager.IsHost;
 
         /// <summary>
         /// Called when <see cref="Transport"/> was disposed
@@ -188,7 +194,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         static StaticNetworkManager()
         {
 #if UNITY_EDITOR
-            EditorApplication.playModeStateChanged += PreventPlayMode;
+            EditorApplication.playModeStateChanged += state =>
+            {
+                if (state != PlayModeStateChange.ExitingEditMode || !IsOnline) return;
+                EditorApplication.isPlaying = false;
+                Debug.LogWarning("Play mode is not possible while the static network manager is online!");
+            };
 #endif
         }
 
@@ -202,7 +213,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </remarks>
         public static void Tick()
         {
-            _networkManager.Tick();
+            NetworkManager.Tick();
         }
 
         /// <summary>
@@ -213,7 +224,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 #if UNITY_EDITOR
             if (EditorApplication.isPlaying) return;
 #endif
-            _networkManager.StartServer();
+            NetworkManager.StartServer();
         }
 
         /// <summary>
@@ -221,7 +232,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public static void StopServer()
         {
-            _networkManager.StopServer();
+            NetworkManager.StopServer();
         }
 
         /// <summary>
@@ -232,7 +243,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 #if UNITY_EDITOR
             if (EditorApplication.isPlaying) return;
 #endif
-            _networkManager.StartClient();
+            NetworkManager.StartClient();
         }
 
         /// <summary>
@@ -240,7 +251,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public static void StopClient()
         {
-            _networkManager.StopClient();
+            NetworkManager.StopClient();
         }
 
         /// <summary>
@@ -248,16 +259,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </summary>
         public static void StopNetwork()
         {
-            _networkManager.StopNetwork();
+            NetworkManager.StopNetwork();
         }
-
-#if UNITY_EDITOR
-        private static void PreventPlayMode(PlayModeStateChange state)
-        {
-            if (state != PlayModeStateChange.ExitingEditMode || !IsOnline) return;
-            EditorApplication.isPlaying = false;
-            Debug.LogWarning("Playmode is not possible while the static network manager is online!");
-        }
-#endif
     }
 }
