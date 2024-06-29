@@ -709,7 +709,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                 connectTimeoutMS: (int)_settings.ConnectTimeoutMS,
                 maxConnectAttempts: (int)_settings.MaxConnectAttempts,
                 disconnectTimeoutMS: (int)_settings.DisconnectTimeoutMS,
-                heartbeatTimeoutMS: (int)_settings.HeartbeatTimeoutMS
+                heartbeatTimeoutMS: (int)_settings.HeartbeatTimeoutMS,
+                reconnectionTimeoutMS: (int)_settings.ReconnectionTimeoutMS
             );
             _networkSettings.WithFragmentationStageParameters(
                 payloadCapacity: (int)_settings.PayloadCapacity
