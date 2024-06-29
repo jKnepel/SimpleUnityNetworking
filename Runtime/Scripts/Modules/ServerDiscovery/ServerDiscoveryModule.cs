@@ -72,6 +72,8 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         {
             _settings = settings;
             NetworkManager.Server.OnLocalStateUpdated += OnServerStateUpdated;
+            if (NetworkManager.Server.LocalState == ELocalServerConnectionState.Started)
+                StartServerAnnouncement();
         }
 
         protected override void Dispose(bool disposing)
@@ -79,7 +81,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             EndServerDiscovery();
             EndServerAnnouncement();
         }
-        
+
         #endregion
         
         #region server discovery
@@ -371,9 +373,10 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         
         #endregion
         
-        #region gui
-        
 #if UNITY_EDITOR
+        
+        public override bool HasGUI => true;
+        
         private Texture2D _texture;
         private Texture2D Texture
         {
@@ -419,7 +422,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                     for (var i = 0; i < DiscoveredServers?.Count; i++)
                     {
                         var server = DiscoveredServers[i];
-                        EditorGUILayout.BeginHorizontal(GetScrollviewRowStyle(_scrollViewColors[i % 2]));
+                        EditorGUILayout.BeginHorizontal(GetScrollViewRowStyle(_scrollViewColors[i % 2]));
                         {
                             GUILayout.Label(server.Servername);
                             GUILayout.Label($"#{server.NumberConnectedClients}/{server.MaxNumberConnectedClients}");
@@ -433,17 +436,18 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             }
         }
         
-        private GUIStyle GetScrollviewRowStyle(Color color)
+        private GUIStyle GetScrollViewRowStyle(Color color)
         {
             Texture.SetPixel(0, 0, color);
             Texture.Apply();
-            GUIStyle style = new();
-            style.normal.background = Texture;
-            style.fixedHeight = ROW_HEIGHT;
+            GUIStyle style = new()
+            {
+                normal = { background = Texture },
+                fixedHeight = ROW_HEIGHT
+            };
             return style;
         }
-#endif
         
-        #endregion
+#endif
     }
 }

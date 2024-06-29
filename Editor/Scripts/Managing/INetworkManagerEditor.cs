@@ -68,20 +68,17 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 DrawToggleFoldout("Modules", ref _showModuleWindow);
                 if (!_showModuleWindow || _manager.Modules == null) return;
                 
-                using (new GUILayout.ScrollViewScope(_modulePos))
-                {
-                    GUILayout.BeginHorizontal();
-                    _moduleConfig = (ModuleConfiguration)EditorGUILayout.ObjectField(_moduleConfig, typeof(ModuleConfiguration), false);
-                    if (GUILayout.Button("Add Module") && _moduleConfig is not null)
-                        _manager.Modules.Add(_moduleConfig.GetModule(_manager));
-                    GUILayout.EndHorizontal();
-                    EditorGUILayout.Space(3);
+                GUILayout.BeginHorizontal();
+                _moduleConfig = (ModuleConfiguration)EditorGUILayout.ObjectField(_moduleConfig, typeof(ModuleConfiguration), false);
+                if (GUILayout.Button("Add Module") && _moduleConfig is not null)
+                    _manager.Modules.Add(_moduleConfig.GetModule(_manager));
+                GUILayout.EndHorizontal();
+                EditorGUILayout.Space(3);
                             
-                    foreach (var module in _manager.Modules.ToList())
-                        module.RenderModuleGUI(() => RemoveModule(module));
-                    if (_manager.Modules.Count > 0)
-                        EditorGUILayout.Space(3);
-                }
+                foreach (var module in _manager.Modules.ToList())
+                    module.RenderModuleGUI(() => RemoveModule(module));
+                if (_manager.Modules.Count > 0)
+                    EditorGUILayout.Space(3);
             }
 
             return;
@@ -94,98 +91,93 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         
         public void ServerGUI()
         {
-            GUILayout.BeginVertical(EditorStyles.helpBox);
-            DrawToggleFoldout("Server", ref _showServerWindow, _manager.IsServer, "Is Server:");
-            if (_showServerWindow)
+            using (new GUILayout.VerticalScope(EditorStyles.helpBox))
             {
+                DrawToggleFoldout("Server", ref _showServerWindow, _manager.IsServer, "Is Server:");
+                if (!_showServerWindow) return;
+                
                 if (!_manager.IsServer)
                 {
                     _manager.Server.Servername = EditorGUILayout.TextField(new GUIContent("Servername:"), _manager.Server.Servername);
                     if (GUILayout.Button(new GUIContent("Start Server")) && AllowStart())
                         _manager.StartServer();
+                    return;
                 }
-                else
-                {
-                    _manager.Server.Servername = EditorGUILayout.TextField("Servername:", _manager.Server.Servername);
-                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server.NumberOfConnectedClients}/{_manager.Server.MaxNumberOfClients}");
-                    if (GUILayout.Button(new GUIContent("Stop Server")))
-                        _manager.StopServer();
+                
+                _manager.Server.Servername = EditorGUILayout.TextField("Servername:", _manager.Server.Servername);
+                EditorGUILayout.TextField("Connected Clients:", $"{_manager.Server.NumberOfConnectedClients}/{_manager.Server.MaxNumberOfClients}");
+                if (GUILayout.Button(new GUIContent("Stop Server")))
+                    _manager.StopServer();
 
-                    _serverClientsViewPos = EditorGUILayout.BeginScrollView(_serverClientsViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(150));
+                using (new GUILayout.ScrollViewScope(_serverClientsViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(150)))
+                {
                     if (_manager.Server.NumberOfConnectedClients == 0)
                     {
                         GUILayout.Label($"There are no clients connected to the local server!");
+                        return;
                     }
-                    else
+                    
+                    var defaultColour = _style.normal.textColor;
+                    _style.alignment = TextAnchor.MiddleLeft;
+                    for (var i = 0; i < _manager.Server.NumberOfConnectedClients; i++)
                     {
-                        var defaultColour = _style.normal.textColor;
-                        _style.alignment = TextAnchor.MiddleLeft;
-                        for (var i = 0; i < _manager.Server.NumberOfConnectedClients; i++)
-                        {
-                            var client = _manager.Server.ConnectedClients.Values.ElementAt(i);
-                            EditorGUILayout.BeginHorizontal();
-                            {
-                                _style.normal.textColor = client.UserColour;
-                                GUILayout.Label($"#{client.ID} {client.Username}", _style);
-                            }
-                            EditorGUILayout.EndHorizontal();
-                        }
-                        _style.normal.textColor = defaultColour;
+                        var client = _manager.Server.ConnectedClients.Values.ElementAt(i);
+                        EditorGUILayout.BeginHorizontal();
+                        _style.normal.textColor = client.UserColour;
+                        GUILayout.Label($"#{client.ID} {client.Username}", _style);
+                        EditorGUILayout.EndHorizontal();
                     }
-                    EditorGUILayout.EndScrollView();
+
+                    _style.normal.textColor = defaultColour;
                 }
             }
-            GUILayout.EndVertical();
         }
 
         public void ClientGUI()
         {
-            GUILayout.BeginVertical(EditorStyles.helpBox);
-            DrawToggleFoldout("Client", ref _showClientWindow, _manager.IsClient, "Is Client:");
-            if (_showClientWindow)
+            using (new GUILayout.VerticalScope(EditorStyles.helpBox))
             {
+                DrawToggleFoldout("Client", ref _showClientWindow, _manager.IsClient, "Is Client:");
+                if (!_showClientWindow) return;
+                
                 if (!_manager.IsClient)
                 {
                     _manager.Client.Username = EditorGUILayout.TextField(new GUIContent("Username:"), _manager.Client.Username);
                     _manager.Client.UserColour = EditorGUILayout.ColorField(new GUIContent("User colour:"), _manager.Client.UserColour);
                     if (GUILayout.Button(new GUIContent("Start Client")) && AllowStart())
                         _manager.StartClient();
+                    return;
                 }
-                else
-                {
-                    EditorGUILayout.TextField("ID:", $"{_manager.Client.ClientID}");
-                    _manager.Client.Username = EditorGUILayout.TextField("Username:", _manager.Client.Username);
-                    _manager.Client.UserColour = EditorGUILayout.ColorField("User colour:", _manager.Client.UserColour);
-                    EditorGUILayout.TextField("Servername:", _manager.Client.Servername);
-                    EditorGUILayout.TextField("Connected Clients:", $"{_manager.Client.NumberOfConnectedClients}/{_manager.Client.MaxNumberOfClients}");
-                    if (GUILayout.Button(new GUIContent("Stop Client")))
-                        _manager.StopClient();
+                
+                EditorGUILayout.TextField("ID:", $"{_manager.Client.ClientID}");
+                _manager.Client.Username = EditorGUILayout.TextField("Username:", _manager.Client.Username);
+                _manager.Client.UserColour = EditorGUILayout.ColorField("User colour:", _manager.Client.UserColour);
+                EditorGUILayout.TextField("Servername:", _manager.Client.Servername);
+                EditorGUILayout.TextField("Connected Clients:", $"{_manager.Client.NumberOfConnectedClients}/{_manager.Client.MaxNumberOfClients}");
+                if (GUILayout.Button(new GUIContent("Stop Client")))
+                    _manager.StopClient();
 
-                    _clientClientsViewPos = EditorGUILayout.BeginScrollView(_clientClientsViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(150));
+                using (new GUILayout.ScrollViewScope(_clientClientsViewPos, EditorStyles.helpBox, GUILayout.ExpandWidth(true), GUILayout.MaxHeight(150)))
+                {
                     if (_manager.Client.ConnectedClients.Count == 0)
                     {
                         GUILayout.Label($"There are no other clients connected to the server!");
+                        return;
                     }
-                    else
+                    
+                    var defaultColour = _style.normal.textColor;
+                    _style.alignment = TextAnchor.MiddleLeft;
+                    for (var i = 0; i < _manager.Client.ConnectedClients.Count; i++)
                     {
-                        var defaultColour = _style.normal.textColor;
-                        _style.alignment = TextAnchor.MiddleLeft;
-                        for (var i = 0; i < _manager.Client.ConnectedClients.Count; i++)
-                        {
-                            var client = _manager.Client.ConnectedClients.Values.ElementAt(i);
-                            EditorGUILayout.BeginHorizontal();
-                            {
-                                _style.normal.textColor = client.UserColour;
-                                GUILayout.Label($"#{client.ID} {client.Username}", _style);
-                            }
-                            EditorGUILayout.EndHorizontal();
-                        }
-                        _style.normal.textColor = defaultColour;
+                        var client = _manager.Client.ConnectedClients.Values.ElementAt(i);
+                        EditorGUILayout.BeginHorizontal();
+                        _style.normal.textColor = client.UserColour;
+                        GUILayout.Label($"#{client.ID} {client.Username}", _style);
+                        EditorGUILayout.EndHorizontal();
                     }
-                    EditorGUILayout.EndScrollView();
+                    _style.normal.textColor = defaultColour;
                 }
             }
-            GUILayout.EndVertical();
         }
 
         #endregion
@@ -203,7 +195,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             };
         }
         
-        public static void DrawToggleFoldout(string title, ref bool isExpanded,
+        private static void DrawToggleFoldout(string title, ref bool isExpanded,
             bool? checkbox = null, string checkboxLabel = null)
         {
             Color normalColour = new(0.24f, 0.24f, 0.24f);
