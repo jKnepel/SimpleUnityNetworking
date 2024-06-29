@@ -218,7 +218,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
 
         private async Task TimeoutServer(IPEndPoint serverEndpoint)
         {
-            await Task.Delay(_settings.ServerDiscoveryTimeout);
+            await Task.Delay((int)_settings.ServerDiscoveryTimeout);
             if (_openServers.TryGetValue(serverEndpoint, out var server))
             {   // timeout and remove servers that haven't been updated for longer than the timeout value
                 if ((DateTime.Now - server.LastHeartbeat).TotalMilliseconds > _settings.ServerDiscoveryTimeout)
@@ -352,7 +352,7 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
                     writer.WriteUInt32(Hashing.GetCRC32Hash(bytesToHash));
 
                     _announceClient.Send(writer.GetBuffer(), writer.Length);
-                    Thread.Sleep(_settings.ServerHeartbeatDelay);
+                    Thread.Sleep((int)_settings.ServerHeartbeatDelay);
                 }
                 catch (Exception ex)
                 {
@@ -388,12 +388,26 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
             }
         }
 
+        private bool _areSettingsVisible = true;
         private Vector2 _scrollPos;
         private readonly Color[] _scrollViewColors = { new(0.25f, 0.25f, 0.25f), new(0.23f, 0.23f, 0.23f) };
         private const float ROW_HEIGHT = 20;
         
         protected override void ModuleGUI()
         {
+            EditorGUI.indentLevel++;
+            _areSettingsVisible = EditorGUILayout.Foldout(_areSettingsVisible, "Settings:", true);
+            if (_areSettingsVisible)
+            {
+                _settings.ProtocolID = (uint)EditorGUILayout.IntField(new GUIContent("Protocol ID:", "Value used for identifying the protocol version of the server. Only servers with identical protocol IDs can be discovered."), (int)_settings.ProtocolID);
+                _settings.DiscoveryIP = EditorGUILayout.TextField(new GUIContent("Discovery IP:", "Multicast address on which an active local server will announce itself or where the server discovery will search."), _settings.DiscoveryIP);
+                _settings.DiscoveryPort = (ushort)EditorGUILayout.IntField(new GUIContent("Discovery Port:", "Multicast port on which an active local server will announce itself or where the server discovery will search."), _settings.DiscoveryPort);
+                _settings.ServerDiscoveryTimeout = (uint)EditorGUILayout.IntField(new GUIContent("Discovery Timeout:", "The time after which discovered servers will be removed when no new announcement was received."), (int)_settings.ServerDiscoveryTimeout);
+                _settings.ServerHeartbeatDelay = (uint)EditorGUILayout.IntField(new GUIContent("Heartbeat Delay:", "The interval in which an active local server will announce itself on the LAN."), (int)_settings.ServerHeartbeatDelay);
+                EditorUtility.SetDirty(ModuleConfiguration);
+            }
+            EditorGUI.indentLevel--;
+            
             using(new GUILayout.HorizontalScope())
             {
                 GUILayout.Space(EditorGUI.indentLevel * 15);

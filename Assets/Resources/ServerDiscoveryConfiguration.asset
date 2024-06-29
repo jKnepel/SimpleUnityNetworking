@@ -12,13 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3daee4b837178c04babd4451723f88df, type: 3}
   m_Name: ServerDiscoveryConfiguration
   m_EditorClassIdentifier: 
-  IsModuleGUIVisible: 0
   Settings:
     ProtocolID: 876237843
-    Username: Username
-    UserColour:
-      serializedVersion: 2
-      rgba: 4284596121
     DiscoveryIP: 239.240.240.149
     DiscoveryPort: 24857
     ServerDiscoveryTimeout: 3000
