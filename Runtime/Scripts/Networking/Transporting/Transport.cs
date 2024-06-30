@@ -68,13 +68,13 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         public abstract event Action<string, EMessageSeverity> OnTransportLogAdded;
 
         /// <summary>
-        /// Called when a tick was started
+        /// Called when a tick was started. Contains the tick number as parameter
         /// </summary>
-        public abstract event Action OnTickStarted;
+        public abstract event Action<uint> OnTickStarted;
         /// <summary>
-        /// Called when a tick was completed
+        /// Called when a tick was completed. Contains the tick number as parameter
         /// </summary>
-        public abstract event Action OnTickCompleted;
+        public abstract event Action<uint> OnTickCompleted;
         
         ~Transport()
         {
