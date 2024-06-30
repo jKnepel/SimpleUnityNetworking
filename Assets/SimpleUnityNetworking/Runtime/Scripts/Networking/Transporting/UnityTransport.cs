@@ -26,9 +26,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         private IPEndPoint _serverEndpoint;
         private uint _maxNumberOfClients;
         private bool _automaticTicks;
-        private uint _tickrate;
+        private uint _tickRate;
+        private uint _tickNumber;
         
-        private readonly Timer _tickrateTimer = new();
+        private readonly Timer _tickRateTimer = new();
         
         private NetworkDriver _driver;
         private NetworkSettings _networkSettings;
@@ -71,8 +72,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
 
         public override event Action<string, EMessageSeverity> OnTransportLogAdded;
 
-        public override event Action OnTickStarted;
-        public override event Action OnTickCompleted;
+        public override event Action<uint> OnTickStarted;
+        public override event Action<uint> OnTickCompleted;
 
         #endregion
         
@@ -81,7 +82,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         public UnityTransport(TransportSettings settings)
         {
             _settings = settings;
-            _tickrateTimer.Elapsed += (_, _) => MainThreadQueue.Enqueue(TickInternal);
+            _tickRateTimer.Elapsed += (_, _) => MainThreadQueue.Enqueue(TickInternal);
         }
         
         protected override void Dispose(bool disposing)
@@ -90,7 +91,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             
             if (disposing)
             {
-                _tickrateTimer.Dispose();
+                _tickRateTimer.Dispose();
                 _serverState = ELocalConnectionState.Stopped;
                 _clientState = ELocalConnectionState.Stopped;
                 _clientIDToConnection = null;
@@ -169,9 +170,12 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             _serverEndpoint = ParseNetworkEndpoint(endpoint);
             _maxNumberOfClients = _settings.MaxNumberOfClients;
             _automaticTicks = _settings.AutomaticTicks;
-            _tickrate = _settings.Tickrate;
+            _tickRate = _settings.Tickrate;
+            _tickNumber = 0;
+            _clientIDs = 1;
             _clientIDToConnection = new();
             _connectionToClientID = new();
+            
             _driver.Listen();
             AutomaticTicks(true);
             SetLocalServerState(ELocalConnectionState.Started);
@@ -198,12 +202,11 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             _serverEndpoint = null;
             _maxNumberOfClients = 0;
             _automaticTicks = true;
-            _tickrate = 0;
-
-            _driver.ScheduleUpdate().Complete();
+            _tickRate = 0;
             _clientIDToConnection = null;
             _connectionToClientID = null;
-            _clientIDs = 1;
+            
+            _driver.ScheduleUpdate().Complete();
             AutomaticTicks(false);
             DisposeInternals();
 
@@ -273,7 +276,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             _serverEndpoint = ParseNetworkEndpoint(serverEndpoint);
             _maxNumberOfClients = _settings.MaxNumberOfClients;
             _automaticTicks = _settings.AutomaticTicks;
-            _tickrate = _settings.Tickrate;
+            _tickRate = _settings.Tickrate;
+            _tickNumber = 0;
 
             _serverConnection = _driver.Connect(serverEndpoint);
             AutomaticTicks(true);
@@ -299,12 +303,12 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             _serverEndpoint = null;
             _maxNumberOfClients = 0;
             _automaticTicks = true;
-            _tickrate = 0;
-            
-            _driver.ScheduleUpdate().Complete();
+            _tickRate = 0;
             _serverConnection = default;
             _clientIDToConnection = null;
             _connectionToClientID = null;
+            
+            _driver.ScheduleUpdate().Complete();
             AutomaticTicks(false);
             DisposeInternals();
 
@@ -393,7 +397,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
             if (_automaticTicks)
             {
                 _automaticTicks = false;
-                _tickrateTimer.Enabled = false;
+                _tickRateTimer.Enabled = false;
             }
             
             TickInternal();
@@ -403,25 +407,27 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
         {
             if (!_driver.IsCreated) return;
 
-            OnTickStarted?.Invoke();
+            OnTickStarted?.Invoke(_tickNumber);
             IterateIncoming();
             IterateOutgoing();
-            OnTickCompleted?.Invoke();
+            OnTickCompleted?.Invoke(_tickNumber);
+            
+            _tickNumber++;
         }
         
         private void AutomaticTicks(bool start)
         {
             switch (start)
             {
-                case true when _tickrateTimer.Enabled:
+                case true when _tickRateTimer.Enabled:
                 case true when !_automaticTicks:
                     return;
                 case true:
-                    _tickrateTimer.Interval = 1000f / _tickrate;
-                    _tickrateTimer.Start();
+                    _tickRateTimer.Interval = 1000f / _tickRate;
+                    _tickRateTimer.Start();
                     return;
                 case false:
-                    _tickrateTimer.Stop();
+                    _tickRateTimer.Stop();
                     return;
             }
         }

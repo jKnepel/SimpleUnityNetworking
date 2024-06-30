@@ -124,13 +124,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </remarks>
         public event Action<string, EMessageSeverity> OnTransportLogAdded;
         /// <summary>
-        /// Called when a tick was started
+        /// Called when a tick was started. Contains the tick number as parameter
         /// </summary>
-        event Action OnTickStarted;
+        event Action<uint> OnTickStarted;
         /// <summary>
-        /// Called when a tick was completed
+        /// Called when a tick was completed. Contains the tick number as parameter
         /// </summary>
-        event Action OnTickCompleted;
+        event Action<uint> OnTickCompleted;
         
         #endregion
         

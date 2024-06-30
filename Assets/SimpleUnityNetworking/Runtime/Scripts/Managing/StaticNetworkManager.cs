@@ -162,17 +162,17 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             remove => NetworkManager.OnTransportLogAdded -= value;
         }
         /// <summary>
-        /// Called when a tick was started
+        /// Called when a tick was started. Contains the tick number as parameter
         /// </summary>
-        public static event Action OnTickStarted
+        public static event Action<uint> OnTickStarted
         {
             add => NetworkManager.OnTickStarted += value;
             remove => NetworkManager.OnTickStarted -= value;
         }
         /// <summary>
-        /// Called when a tick was completed
+        /// Called when a tick was completed. Contains the tick number as parameter
         /// </summary>
-        public static event Action OnTickCompleted
+        public static event Action<uint> OnTickCompleted
         {
             add => NetworkManager.OnTickCompleted += value;
             remove => NetworkManager.OnTickCompleted -= value;

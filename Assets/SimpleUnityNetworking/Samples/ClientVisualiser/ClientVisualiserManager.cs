@@ -94,7 +94,7 @@ namespace jKnepel.SimpleUnityNetworking.Samples
                 visualiser.gameObject.SetActive(true);
         }
 
-        private void UpdateCameraTick()
+        private void UpdateCameraTick(uint _)
         {
             if (!_isUpdating)
                 return;
