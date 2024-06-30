@@ -36,6 +36,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    }
 
 	    [SerializeField] private SerialiserConfiguration _cachedSerialiserConfiguration;
+	    public SerialiserSettings SerialiserSettings => NetworkManager.SerialiserSettings;
 	    public SerialiserConfiguration SerialiserConfiguration
 	    {
 		    get => NetworkManager.SerialiserConfiguration;

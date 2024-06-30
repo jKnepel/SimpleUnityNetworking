@@ -28,7 +28,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         }
 
         /// <summary>
-        /// The configuration for the serialiser used by the network manager.
+        /// Settings for the serialiser used when sending byte and struct data
+        /// </summary>
+        public static SerialiserSettings SerialiserSettings => NetworkManager.SerialiserSettings;
+        /// <summary>
+        /// The configuration that will create the instance of the <see cref="SerialiserSettings"/>
         /// </summary>
         public static SerialiserConfiguration SerialiserConfiguration
         {
