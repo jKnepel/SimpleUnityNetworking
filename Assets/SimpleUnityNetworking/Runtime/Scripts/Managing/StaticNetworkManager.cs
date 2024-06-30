@@ -28,7 +28,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         }
 
         /// <summary>
-        /// The configuration for the serialiser used by the network manager.
+        /// Settings for the serialiser used when sending byte and struct data
+        /// </summary>
+        public static SerialiserSettings SerialiserSettings => NetworkManager.SerialiserSettings;
+        /// <summary>
+        /// The configuration that will create the instance of the <see cref="SerialiserSettings"/>
         /// </summary>
         public static SerialiserConfiguration SerialiserConfiguration
         {
@@ -158,17 +162,17 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             remove => NetworkManager.OnTransportLogAdded -= value;
         }
         /// <summary>
-        /// Called when a tick was started
+        /// Called when a tick was started. Contains the tick number as parameter
         /// </summary>
-        public static event Action OnTickStarted
+        public static event Action<uint> OnTickStarted
         {
             add => NetworkManager.OnTickStarted += value;
             remove => NetworkManager.OnTickStarted -= value;
         }
         /// <summary>
-        /// Called when a tick was completed
+        /// Called when a tick was completed. Contains the tick number as parameter
         /// </summary>
-        public static event Action OnTickCompleted
+        public static event Action<uint> OnTickCompleted
         {
             add => NetworkManager.OnTickCompleted += value;
             remove => NetworkManager.OnTickCompleted -= value;

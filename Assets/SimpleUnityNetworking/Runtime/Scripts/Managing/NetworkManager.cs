@@ -60,7 +60,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
-        public SerialiserSettings SerialiserSettings { get; private set; }
+        public SerialiserSettings SerialiserSettings
+        {
+            get; 
+            private set;
+        }
         private SerialiserConfiguration _serialiserConfiguration;
         public SerialiserConfiguration SerialiserConfiguration
         {
@@ -131,8 +135,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         public event Action<ELocalConnectionState> OnClientStateUpdated;
         public event Action<uint, ERemoteConnectionState> OnConnectionUpdated;
         public event Action<string, EMessageSeverity> OnTransportLogAdded;
-        public event Action OnTickStarted;
-        public event Action OnTickCompleted;
+        public event Action<uint> OnTickStarted;
+        public event Action<uint> OnTickCompleted;
         
         private bool _disposed;
 
@@ -229,8 +233,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         private void ClientStateUpdated(ELocalConnectionState state) => OnClientStateUpdated?.Invoke(state);
         private void ConnectionUpdated(uint id, ERemoteConnectionState state) => OnConnectionUpdated?.Invoke(id, state);
         private void TransportLogAdded(string log, EMessageSeverity sev) => OnTransportLogAdded?.Invoke(log, sev);
-        private void TickStarted() => OnTickStarted?.Invoke();
-        private void TickCompleted() => OnTickCompleted?.Invoke();
+        private void TickStarted(uint tickNumber) => OnTickStarted?.Invoke(tickNumber);
+        private void TickCompleted(uint tickNumber) => OnTickCompleted?.Invoke(tickNumber);
 
         #endregion
     }

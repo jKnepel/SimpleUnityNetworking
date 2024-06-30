@@ -22,7 +22,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         TransportConfiguration TransportConfiguration { get; set; }
         
         /// <summary>
-        /// The configuration for the serialiser used by the network manager
+        /// Settings for the serialiser used when sending byte and struct data
+        /// </summary>
+        SerialiserSettings SerialiserSettings { get; }
+        /// <summary>
+        /// The configuration that will create the instance of the <see cref="SerialiserSettings"/>
         /// </summary>
         SerialiserConfiguration SerialiserConfiguration { get; set; }
         
@@ -120,13 +124,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// </remarks>
         public event Action<string, EMessageSeverity> OnTransportLogAdded;
         /// <summary>
-        /// Called when a tick was started
+        /// Called when a tick was started. Contains the tick number as parameter
         /// </summary>
-        event Action OnTickStarted;
+        event Action<uint> OnTickStarted;
         /// <summary>
-        /// Called when a tick was completed
+        /// Called when a tick was completed. Contains the tick number as parameter
         /// </summary>
-        event Action OnTickCompleted;
+        event Action<uint> OnTickCompleted;
         
         #endregion
         

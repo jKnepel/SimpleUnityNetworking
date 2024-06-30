@@ -36,6 +36,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 	    }
 
 	    [SerializeField] private SerialiserConfiguration _cachedSerialiserConfiguration;
+	    public SerialiserSettings SerialiserSettings => NetworkManager.SerialiserSettings;
 	    public SerialiserConfiguration SerialiserConfiguration
 	    {
 		    get => NetworkManager.SerialiserConfiguration;
@@ -118,12 +119,12 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    add => NetworkManager.OnTransportLogAdded += value;
 		    remove => NetworkManager.OnTransportLogAdded -= value;
 	    }
-	    public event Action OnTickStarted
+	    public event Action<uint> OnTickStarted
 	    {
 		    add => NetworkManager.OnTickStarted += value;
 		    remove => NetworkManager.OnTickStarted -= value;
 	    }
-	    public event Action OnTickCompleted
+	    public event Action<uint> OnTickCompleted
 	    {
 		    add => NetworkManager.OnTickCompleted += value;
 		    remove => NetworkManager.OnTickCompleted -= value;
