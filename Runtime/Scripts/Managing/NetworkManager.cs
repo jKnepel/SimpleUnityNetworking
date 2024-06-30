@@ -60,7 +60,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
-        public SerialiserSettings SerialiserSettings { get; private set; }
+        public SerialiserSettings SerialiserSettings
+        {
+            get; 
+            private set;
+        }
         private SerialiserConfiguration _serialiserConfiguration;
         public SerialiserConfiguration SerialiserConfiguration
         {

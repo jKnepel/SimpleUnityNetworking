@@ -22,7 +22,11 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         TransportConfiguration TransportConfiguration { get; set; }
         
         /// <summary>
-        /// The configuration for the serialiser used by the network manager
+        /// Settings for the serialiser used when sending byte and struct data
+        /// </summary>
+        SerialiserSettings SerialiserSettings { get; }
+        /// <summary>
+        /// The configuration that will create the instance of the <see cref="SerialiserSettings"/>
         /// </summary>
         SerialiserConfiguration SerialiserConfiguration { get; set; }
         
