@@ -4,9 +4,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
     {   
         ConnectionChallenge = 1,
         ChallengeAnswer = 2,
-        ConnectionAuthenticated = 3,
+        ServerUpdate = 3,
         ClientUpdate = 4,
-        ServerUpdate = 5,
-        Data = 6,
+        Data = 5,
     }
 }

@@ -238,9 +238,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             
             // inform client of authentication
             Writer writer = new(_networkManager.SerialiserSettings);
-            writer.WriteByte(ConnectionAuthenticatedPacket.PacketType);
-            ConnectionAuthenticatedPacket authentication = new(clientID, Servername, MaxNumberOfClients);
-            ConnectionAuthenticatedPacket.Write(writer, authentication);
+            writer.WriteByte(ServerUpdatePacket.PacketType);
+            ServerUpdatePacket authentication = new(clientID, Servername, MaxNumberOfClients);
+            ServerUpdatePacket.Write(writer, authentication);
             _networkManager.Transport?.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
             writer.Clear();
             
