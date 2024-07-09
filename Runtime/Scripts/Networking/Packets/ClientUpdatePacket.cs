@@ -13,12 +13,12 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 		}
 		
 		public static byte PacketType => (byte)EPacketType.ClientUpdate;
-		public uint ClientID;
-		public UpdateType Type;
-		public string Username;
-		public Color32 Colour;
+		public readonly uint ClientID;
+		public readonly UpdateType Type;
+		public readonly string Username;
+		public readonly Color32? Colour;
 
-		public ClientUpdatePacket(uint clientID, UpdateType type, string username, Color32 colour)
+		public ClientUpdatePacket(uint clientID, UpdateType type, string username, Color32? colour)
 		{
 			ClientID = clientID;
 			Type = type;
@@ -36,10 +36,18 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 
 		public static ClientUpdatePacket Read(Reader reader)
 		{
-			uint clientID = reader.ReadUInt32();
-			UpdateType type = (UpdateType)reader.ReadByte();
-			string username = reader.ReadString();
-			Color32 colour = reader.ReadColor32WithoutAlpha();
+			var clientID = reader.ReadUInt32();
+			var type = (UpdateType)reader.ReadByte();
+			
+			var hasUsername = reader.ReadBoolean();
+			string username = null;
+			if (hasUsername)
+				username = reader.ReadString();
+			var hasColour = reader.ReadBoolean();
+			Color32? colour = null;
+			if (hasColour)
+				colour = reader.ReadColor32WithoutAlpha();
+			
 			return new(clientID, type, username, colour);
 		}
 
@@ -47,8 +55,13 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
 		{
 			writer.WriteUInt32(packet.ClientID);
 			writer.WriteByte((byte)packet.Type);
-			writer.WriteString(packet.Username);
-			writer.WriteColor32WithoutAlpha(packet.Colour);
+			
+			writer.WriteBoolean(packet.Username is not null);
+			if (packet.Username is not null)
+				writer.WriteString(packet.Username);
+			writer.WriteBoolean(packet.Colour is not null);
+			if (packet.Colour is not null)
+				writer.WriteColor32WithoutAlpha((Color32)packet.Colour);
 		}
 	}
 }

@@ -6,6 +6,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Packets
         ChallengeAnswer = 2,
         ConnectionAuthenticated = 3,
         ClientUpdate = 4,
-        Data = 5,
+        ServerUpdate = 5,
+        Data = 6,
     }
 }
