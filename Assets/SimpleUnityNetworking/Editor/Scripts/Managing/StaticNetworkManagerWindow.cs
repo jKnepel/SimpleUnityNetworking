@@ -72,10 +72,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         [SerializeField] private bool _showSerialiserWindow = true;
         [SerializeField] private bool _showLoggerWindow = true;
 
-        [MenuItem("Window/SimpleUnityNetworking/Static Network Manager")]
+        [MenuItem("Window/SimpleUnityNetworking/Network Manager (Static)")]
         public static void ShowWindow()
         {
-            GetWindow(typeof(StaticNetworkManagerWindow), false, "Network Manager");
+            GetWindow(typeof(StaticNetworkManagerWindow), false, "Network Manager (Static)");
         }
         
         private void Awake()
@@ -124,7 +124,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             var area = new Rect(PADDING, PADDING, position.width - PADDING * 2f, position.height - PADDING * 2f);
 
             GUILayout.BeginArea(area);
-            GUILayout.Label("Static Network Manager", EditorStyles.largeLabel);
+            GUILayout.Label("Network Manager (Static)", EditorStyles.largeLabel);
 
             EditorGUILayout.Space();
             GUILayout.Label("Configurations:", EditorStyles.boldLabel);
