@@ -1,6 +1,7 @@
 using jKnepel.SimpleUnityNetworking.Managing;
 using System;
 #if UNITY_EDITOR
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 #endif
@@ -18,29 +19,38 @@ namespace jKnepel.SimpleUnityNetworking.Modules
         {
             NetworkManager = networkManager;
             ModuleConfiguration = moduleConfig;
+#if UNITY_EDITOR
+            AssemblyReloadEvents.afterAssemblyReload += SearchForModuleGUI;
+            SearchForModuleGUI();
+#endif
         }
         
         ~Module()
         {
+#if UNITY_EDITOR
+            AssemblyReloadEvents.afterAssemblyReload -= SearchForModuleGUI;
+#endif
             Dispose(false);
         }
         
         public void Dispose()
         {
+#if UNITY_EDITOR
+            AssemblyReloadEvents.afterAssemblyReload -= SearchForModuleGUI;
+#endif
             Dispose(true);
             GC.SuppressFinalize(this);
         }
 
-        protected abstract void Dispose(bool disposing);
-        
+        protected virtual void Dispose(bool disposing) { }
+
 #if UNITY_EDITOR
-        public abstract bool HasGUI { get; }
-        
+        private bool _hasGUI;
         private bool _showModule;
         
         public void RenderModuleGUI(Action onRemoveModule)
         {
-            if (HasGUI)
+            if (_hasGUI)
             {
                 EditorGUI.indentLevel++;
                 
@@ -72,6 +82,12 @@ namespace jKnepel.SimpleUnityNetworking.Modules
         }
 
         protected virtual void ModuleGUI() {}
+
+        private void SearchForModuleGUI()
+        {
+            var t = GetType().GetMethod("ModuleGUI", BindingFlags.Instance | BindingFlags.NonPublic);
+            _hasGUI = t is not null && t.GetBaseDefinition().DeclaringType != t.DeclaringType;
+        }
 #endif
     }
 }
