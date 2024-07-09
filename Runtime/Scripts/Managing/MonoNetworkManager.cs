@@ -14,6 +14,7 @@ using Logger = jKnepel.SimpleUnityNetworking.Logging.Logger;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
+	[AddComponentMenu("SimpleUnityNetworking/Component/Network Manager (Mono)")]
     public class MonoNetworkManager : MonoBehaviour, INetworkManager
     {
 	    [SerializeField] private TransportConfiguration _cachedTransportConfiguration;
