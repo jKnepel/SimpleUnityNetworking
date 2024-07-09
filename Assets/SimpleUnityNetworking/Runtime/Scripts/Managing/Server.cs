@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
+using UnityEngine;
+using Random = System.Random;
 
 namespace jKnepel.SimpleUnityNetworking.Managing
 {
@@ -26,13 +28,19 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// Listen endpoint of the local server
         /// </summary>
         public IPEndPoint ServerEndpoint { get; private set; }
+
         /// <summary>
         /// Name of the local server
         /// </summary>
-        /// <remarks>
-        /// TODO : synchronise updated set
-        /// </remarks>
-        public string Servername { get; set; } = "New Server";
+        public string Servername
+        {
+            get => _servername;
+            set
+            {
+                if (value is null || value.Equals(_servername)) return;
+                HandleServernameUpdated(value);
+            }
+        }
         /// <summary>
         /// Max number of connected clients of the local server
         /// </summary>
@@ -66,10 +74,15 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// Called by the local server when a remote client updated its information
         /// </summary>
         public event Action<uint> OnRemoteClientUpdated;
+        /// <summary>
+        /// Called by the local server when it updated its information
+        /// </summary>
+        public event Action OnServerUpdated;
         
         private readonly ConcurrentDictionary<uint, byte[]> _authenticatingClients = new();
 
         private readonly NetworkManager _networkManager;
+        private string _servername = "New Server";
         
         #endregion
 
@@ -114,6 +127,18 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
             LocalState = (ELocalServerConnectionState)state;
             OnLocalStateUpdated?.Invoke(LocalState);
+        }
+
+        private void HandleServernameUpdated(string servername)
+        {
+            _servername = servername;
+
+            Writer writer = new(_networkManager.SerialiserSettings);
+            writer.WriteByte(ServerUpdatePacket.PacketType);
+            ServerUpdatePacket.Write(writer, new(_servername));
+            foreach (var id in ConnectedClients.Keys)
+                _networkManager.Transport?.SendDataToClient(id, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
+            OnServerUpdated?.Invoke();
         }
         
         private void OnRemoteConnectionUpdated(uint clientID, ERemoteConnectionState state)
@@ -260,8 +285,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 return;
             
             // apply update
-            ConnectedClients[clientID].Username = packet.Username;
-            ConnectedClients[clientID].UserColour = packet.Colour;
+            if (packet.Username is not null)
+                ConnectedClients[clientID].Username = packet.Username;
+            if (packet.Colour is not null)
+                ConnectedClients[clientID].UserColour = (Color32)packet.Colour;
             OnRemoteClientUpdated?.Invoke(clientID);
 
             // inform other clients of update

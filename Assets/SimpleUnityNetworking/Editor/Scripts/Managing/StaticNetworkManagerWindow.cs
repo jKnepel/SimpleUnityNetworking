@@ -88,14 +88,16 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             StaticNetworkManager.Modules.OnModuleInserted += OnModuleInserted;
             StaticNetworkManager.Modules.OnModuleRemovedAt += OnModuleRemovedAt;
 
+            StaticNetworkManager.Client.OnLocalStateUpdated += RepaintOnUpdate;
             StaticNetworkManager.Client.OnRemoteClientConnected += RepaintOnUpdate;
             StaticNetworkManager.Client.OnRemoteClientDisconnected += RepaintOnUpdate;
             StaticNetworkManager.Client.OnRemoteClientUpdated += RepaintOnUpdate;
-            StaticNetworkManager.Client.OnLocalStateUpdated += RepaintOnUpdate;
+            StaticNetworkManager.Client.OnServerUpdated += RepaintOnUpdate;
+            StaticNetworkManager.Server.OnLocalStateUpdated += RepaintOnUpdate;
             StaticNetworkManager.Server.OnRemoteClientConnected += RepaintOnUpdate;
             StaticNetworkManager.Server.OnRemoteClientDisconnected += RepaintOnUpdate;
             StaticNetworkManager.Server.OnRemoteClientUpdated += RepaintOnUpdate;
-            StaticNetworkManager.Server.OnLocalStateUpdated += RepaintOnUpdate;
+            StaticNetworkManager.Server.OnServerUpdated += RepaintOnUpdate;
         }
 
         private void OnDestroy()
@@ -105,16 +107,19 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             StaticNetworkManager.Modules.OnModuleInserted -= OnModuleInserted;
             StaticNetworkManager.Modules.OnModuleRemovedAt -= OnModuleRemovedAt;
             
+            StaticNetworkManager.Client.OnLocalStateUpdated -= RepaintOnUpdate;
             StaticNetworkManager.Client.OnRemoteClientConnected -= RepaintOnUpdate;
             StaticNetworkManager.Client.OnRemoteClientDisconnected -= RepaintOnUpdate;
             StaticNetworkManager.Client.OnRemoteClientUpdated -= RepaintOnUpdate;
-            StaticNetworkManager.Client.OnLocalStateUpdated -= RepaintOnUpdate;
+            StaticNetworkManager.Client.OnServerUpdated -= RepaintOnUpdate;
+            StaticNetworkManager.Server.OnLocalStateUpdated -= RepaintOnUpdate;
             StaticNetworkManager.Server.OnRemoteClientConnected -= RepaintOnUpdate;
             StaticNetworkManager.Server.OnRemoteClientDisconnected -= RepaintOnUpdate;
             StaticNetworkManager.Server.OnRemoteClientUpdated -= RepaintOnUpdate;
-            StaticNetworkManager.Server.OnLocalStateUpdated -= RepaintOnUpdate;
+            StaticNetworkManager.Server.OnServerUpdated -= RepaintOnUpdate;
         }
 
+        private void RepaintOnUpdate() => Repaint();
         private void RepaintOnUpdate(uint _) => Repaint();
         private void RepaintOnUpdate(ELocalClientConnectionState _) => Repaint();
         private void RepaintOnUpdate(ELocalServerConnectionState _) => Repaint();
