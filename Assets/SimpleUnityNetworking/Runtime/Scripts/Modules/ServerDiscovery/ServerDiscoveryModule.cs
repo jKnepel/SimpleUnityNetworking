@@ -374,9 +374,6 @@ namespace jKnepel.SimpleUnityNetworking.Modules.ServerDiscovery
         #endregion
         
 #if UNITY_EDITOR
-        
-        public override bool HasGUI => true;
-        
         private Texture2D _texture;
         private Texture2D Texture
         {
