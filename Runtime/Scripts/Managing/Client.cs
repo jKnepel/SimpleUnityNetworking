@@ -49,7 +49,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             set
             {
                 if (value is null || value.Equals(_username)) return;
-                HandleUsernameUpdate(value);
+                _username = value;
+                if (IsActive)
+                    HandleUsernameUpdate(value);
             }
         }
         /// <summary>
@@ -61,7 +63,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             set
             {
                 if (value.Equals(_userColour)) return;
-                HandleColourUpdate(value);
+                _userColour = value;
+                if (IsActive)
+                    HandleColourUpdate(value);
             }
         }
         /// <summary>
@@ -182,8 +186,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private void HandleUsernameUpdate(string username)
         {
-            _username = username;
-
             Writer writer = new(_networkManager.SerialiserSettings);
             writer.WriteByte(ClientUpdatePacket.PacketType);
             ClientUpdatePacket.Write(writer, new(ClientID, ClientUpdatePacket.UpdateType.Updated, username, null));
@@ -192,8 +194,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private void HandleColourUpdate(Color32 colour)
         {
-            _userColour = colour;
-
             Writer writer = new(_networkManager.SerialiserSettings);
             writer.WriteByte(ClientUpdatePacket.PacketType);
             ClientUpdatePacket.Write(writer, new(ClientID, ClientUpdatePacket.UpdateType.Updated, null, colour));
