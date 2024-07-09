@@ -38,7 +38,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             set
             {
                 if (value is null || value.Equals(_servername)) return;
-                HandleServernameUpdated(value);
+                _servername = value;
+                if (IsActive)
+                    HandleServernameUpdated(value);
             }
         }
         /// <summary>
@@ -131,8 +133,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private void HandleServernameUpdated(string servername)
         {
-            _servername = servername;
-
             Writer writer = new(_networkManager.SerialiserSettings);
             writer.WriteByte(ServerUpdatePacket.PacketType);
             ServerUpdatePacket.Write(writer, new(_servername));
