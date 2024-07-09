@@ -162,17 +162,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     case EPacketType.ConnectionChallenge:
                         HandleConnectionChallengePacket(reader);
                         break;
-                    case EPacketType.ConnectionAuthenticated:
-                        HandleConnectionAuthenticatedPacket(reader);
-                        break;
-                    case EPacketType.Data:
-                        HandleDataPacket(reader);
+                    case EPacketType.ServerUpdate:
+                        HandleServerUpdatePacket(reader);
                         break;
                     case EPacketType.ClientUpdate:
                         HandleClientUpdatePacket(reader);
                         break;
-                    case EPacketType.ServerUpdate:
-                        HandleServerUpdatePacket(reader);
+                    case EPacketType.Data:
+                        HandleDataPacket(reader);
                         break;
                     default:
                         return;
@@ -213,37 +210,39 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             ChallengeAnswerPacket.Write(writer, new(hashedChallenge, Username, UserColour));
             _networkManager.Transport?.SendDataToServer(writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
         }
-
-        private void HandleConnectionAuthenticatedPacket(Reader reader)
+        
+        private void HandleServerUpdatePacket(Reader reader)
         {
-            if (LocalState != ELocalClientConnectionState.Started)
-                return;
-            
-            var packet = ConnectionAuthenticatedPacket.Read(reader);
-            ServerEndpoint = _networkManager.Transport.ServerEndpoint;
-            MaxNumberOfClients = packet.MaxNumberConnectedClients;
-            Servername = packet.Servername;
-            ClientID = packet.ClientID;
-            LocalState = ELocalClientConnectionState.Authenticated;
-            OnLocalStateUpdated?.Invoke(LocalState);
-            _networkManager.Logger?.Log("Client was authenticated", EMessageSeverity.Log);
-        }
+            var packet = ServerUpdatePacket.Read(reader);
 
-        private void HandleDataPacket(Reader reader)
-        {
-            if (LocalState != ELocalClientConnectionState.Authenticated)
-                return;
-
-            var packet = DataPacket.Read(reader);
-            if (packet.DataType != DataPacket.DataPacketType.Forwarded)
-                return;
-            
-            if (packet.IsStructData)
-                // ReSharper disable once PossibleInvalidOperationException
-                ReceiveStructData(packet.DataID, (uint)packet.SenderID, packet.Data);
-            else
-                // ReSharper disable once PossibleInvalidOperationException
-                ReceiveByteData(packet.DataID, (byte)packet.SenderID, packet.Data);
+            switch (packet.Type)
+            {
+                case ServerUpdatePacket.UpdateType.Authenticated:
+                    if (LocalState != ELocalClientConnectionState.Started)
+                        return;
+                    
+                    if (packet.ClientID is null || packet.Servername is null || packet.MaxNumberConnectedClients is null)
+                        throw new NullReferenceException("Invalid server update packet values received");
+                    
+                    ServerEndpoint = _networkManager.Transport.ServerEndpoint;
+                    MaxNumberOfClients = (uint)packet.MaxNumberConnectedClients;
+                    Servername = packet.Servername;
+                    ClientID = (uint)packet.ClientID;
+                    LocalState = ELocalClientConnectionState.Authenticated;
+                    OnLocalStateUpdated?.Invoke(LocalState);
+                    _networkManager.Logger?.Log("Client was authenticated", EMessageSeverity.Log);
+                    break;
+                case ServerUpdatePacket.UpdateType.Updated:
+                    if (LocalState != ELocalClientConnectionState.Authenticated)
+                        return;
+                    
+                    if (packet.Servername is null)
+                        throw new NullReferenceException("Invalid server update packet values received");
+                    
+                    Servername = packet.Servername;
+                    OnServerUpdated?.Invoke();
+                    break;
+            }
         }
 
         private void HandleClientUpdatePacket(Reader reader)
@@ -276,15 +275,22 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     break;
             }
         }
-
-        private void HandleServerUpdatePacket(Reader reader)
+        
+        private void HandleDataPacket(Reader reader)
         {
             if (LocalState != ELocalClientConnectionState.Authenticated)
                 return;
+
+            var packet = DataPacket.Read(reader);
+            if (packet.DataType != DataPacket.DataPacketType.Forwarded)
+                return;
             
-            var packet = ServerUpdatePacket.Read(reader);
-            Servername = packet.Servername;
-            OnServerUpdated?.Invoke();
+            if (packet.IsStructData)
+                // ReSharper disable once PossibleInvalidOperationException
+                ReceiveStructData(packet.DataID, (uint)packet.SenderID, packet.Data);
+            else
+                // ReSharper disable once PossibleInvalidOperationException
+                ReceiveByteData(packet.DataID, (byte)packet.SenderID, packet.Data);
         }
         
         #endregion
