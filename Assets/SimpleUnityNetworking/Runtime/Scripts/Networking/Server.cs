@@ -1,5 +1,5 @@
 using jKnepel.SimpleUnityNetworking.Logging;
-using jKnepel.SimpleUnityNetworking.Networking;
+using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking.Packets;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
@@ -10,8 +10,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
+using UnityEngine;
+using Random = System.Random;
 
-namespace jKnepel.SimpleUnityNetworking.Managing
+namespace jKnepel.SimpleUnityNetworking.Networking
 {
     public class Server
     {
@@ -26,13 +28,21 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// Listen endpoint of the local server
         /// </summary>
         public IPEndPoint ServerEndpoint { get; private set; }
+
         /// <summary>
         /// Name of the local server
         /// </summary>
-        /// <remarks>
-        /// TODO : synchronise updated set
-        /// </remarks>
-        public string Servername { get; set; } = "New Server";
+        public string Servername
+        {
+            get => _servername;
+            set
+            {
+                if (value is null || value.Equals(_servername)) return;
+                _servername = value;
+                if (IsActive)
+                    HandleServernameUpdated();
+            }
+        }
         /// <summary>
         /// Max number of connected clients of the local server
         /// </summary>
@@ -66,10 +76,15 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// Called by the local server when a remote client updated its information
         /// </summary>
         public event Action<uint> OnRemoteClientUpdated;
+        /// <summary>
+        /// Called by the local server when it updated its information
+        /// </summary>
+        public event Action OnServerUpdated;
         
         private readonly ConcurrentDictionary<uint, byte[]> _authenticatingClients = new();
 
         private readonly NetworkManager _networkManager;
+        private string _servername = "New Server";
         
         #endregion
 
@@ -115,6 +130,16 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             LocalState = (ELocalServerConnectionState)state;
             OnLocalStateUpdated?.Invoke(LocalState);
         }
+
+        private void HandleServernameUpdated()
+        {
+            Writer writer = new(_networkManager.SerialiserSettings);
+            writer.WriteByte(ServerUpdatePacket.PacketType);
+            ServerUpdatePacket.Write(writer, new(Servername));
+            foreach (var id in ConnectedClients.Keys)
+                _networkManager.Transport?.SendDataToClient(id, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
+            OnServerUpdated?.Invoke();
+        }
         
         private void OnRemoteConnectionUpdated(uint clientID, ERemoteConnectionState state)
         {
@@ -156,9 +181,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             // ignore authenticating or missing client IDs
             if (_authenticatingClients.TryRemove(clientID, out _)) return;
             if (!ConnectedClients.TryRemove(clientID, out _)) return;
-            
-            OnRemoteClientDisconnected?.Invoke(clientID);
-            _networkManager.Logger?.Log($"Server: Remote client {clientID} was disconnected", EMessageSeverity.Log);
 
             // inform other clients of disconnected client
             Writer writer = new(_networkManager.SerialiserSettings);
@@ -166,7 +188,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             ClientUpdatePacket.Write(writer, new(clientID));
             foreach (var id in ConnectedClients.Keys)
                 _networkManager.Transport?.SendDataToClient(id, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
-
+            
+            _networkManager.Logger?.Log($"Server: Remote client {clientID} was disconnected", EMessageSeverity.Log);
+            OnRemoteClientDisconnected?.Invoke(clientID);
         }
         
         private void OnServerReceivedData(ServerReceivedData data)
@@ -213,9 +237,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             
             // inform client of authentication
             Writer writer = new(_networkManager.SerialiserSettings);
-            writer.WriteByte(ConnectionAuthenticatedPacket.PacketType);
-            ConnectionAuthenticatedPacket authentication = new(clientID, Servername, MaxNumberOfClients);
-            ConnectionAuthenticatedPacket.Write(writer, authentication);
+            writer.WriteByte(ServerUpdatePacket.PacketType);
+            ServerUpdatePacket authentication = new(clientID, Servername, MaxNumberOfClients);
+            ServerUpdatePacket.Write(writer, authentication);
             _networkManager.Transport?.SendDataToClient(clientID, writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
             writer.Clear();
             
@@ -246,8 +270,9 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             // authenticate client
             ConnectedClients[clientID] = new(clientID, packet.Username, packet.Colour);
             _authenticatingClients.TryRemove(clientID, out _);
-            OnRemoteClientConnected?.Invoke(clientID);
+            
             _networkManager.Logger?.Log($"Server: Remote client {clientID} was connected", EMessageSeverity.Log);
+            OnRemoteClientConnected?.Invoke(clientID);
         }
 
         private void HandleClientUpdatePacket(uint clientID, Reader reader)
@@ -260,9 +285,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 return;
             
             // apply update
-            ConnectedClients[clientID].Username = packet.Username;
-            ConnectedClients[clientID].UserColour = packet.Colour;
-            OnRemoteClientUpdated?.Invoke(clientID);
+            if (packet.Username is not null)
+                ConnectedClients[clientID].Username = packet.Username;
+            if (packet.Colour is not null)
+                ConnectedClients[clientID].UserColour = (Color32)packet.Colour;
 
             // inform other clients of update
             Writer writer = new(_networkManager.SerialiserSettings);
@@ -274,6 +300,8 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 if (id == clientID) continue;
                 _networkManager.Transport?.SendDataToClient(id, data, ENetworkChannel.ReliableOrdered);
             }
+            
+            OnRemoteClientUpdated?.Invoke(clientID);
         }
 
         private void HandleDataPacket(uint clientID, Reader reader, ENetworkChannel channel)

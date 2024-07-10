@@ -1,5 +1,6 @@
 using jKnepel.SimpleUnityNetworking.Logging;
 using jKnepel.SimpleUnityNetworking.Modules;
+using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using System.Collections.Generic;
@@ -72,10 +73,10 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         [SerializeField] private bool _showSerialiserWindow = true;
         [SerializeField] private bool _showLoggerWindow = true;
 
-        [MenuItem("Window/SimpleUnityNetworking/Static Network Manager")]
+        [MenuItem("Window/SimpleUnityNetworking/Network Manager (Static)")]
         public static void ShowWindow()
         {
-            GetWindow(typeof(StaticNetworkManagerWindow), false, "Network Manager");
+            GetWindow(typeof(StaticNetworkManagerWindow), false, "Network Manager (Static)");
         }
         
         private void Awake()
@@ -88,14 +89,16 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             StaticNetworkManager.Modules.OnModuleInserted += OnModuleInserted;
             StaticNetworkManager.Modules.OnModuleRemovedAt += OnModuleRemovedAt;
 
+            StaticNetworkManager.Client.OnLocalStateUpdated += RepaintOnUpdate;
             StaticNetworkManager.Client.OnRemoteClientConnected += RepaintOnUpdate;
             StaticNetworkManager.Client.OnRemoteClientDisconnected += RepaintOnUpdate;
             StaticNetworkManager.Client.OnRemoteClientUpdated += RepaintOnUpdate;
-            StaticNetworkManager.Client.OnLocalStateUpdated += RepaintOnUpdate;
+            StaticNetworkManager.Client.OnServerUpdated += RepaintOnUpdate;
+            StaticNetworkManager.Server.OnLocalStateUpdated += RepaintOnUpdate;
             StaticNetworkManager.Server.OnRemoteClientConnected += RepaintOnUpdate;
             StaticNetworkManager.Server.OnRemoteClientDisconnected += RepaintOnUpdate;
             StaticNetworkManager.Server.OnRemoteClientUpdated += RepaintOnUpdate;
-            StaticNetworkManager.Server.OnLocalStateUpdated += RepaintOnUpdate;
+            StaticNetworkManager.Server.OnServerUpdated += RepaintOnUpdate;
         }
 
         private void OnDestroy()
@@ -105,16 +108,19 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             StaticNetworkManager.Modules.OnModuleInserted -= OnModuleInserted;
             StaticNetworkManager.Modules.OnModuleRemovedAt -= OnModuleRemovedAt;
             
+            StaticNetworkManager.Client.OnLocalStateUpdated -= RepaintOnUpdate;
             StaticNetworkManager.Client.OnRemoteClientConnected -= RepaintOnUpdate;
             StaticNetworkManager.Client.OnRemoteClientDisconnected -= RepaintOnUpdate;
             StaticNetworkManager.Client.OnRemoteClientUpdated -= RepaintOnUpdate;
-            StaticNetworkManager.Client.OnLocalStateUpdated -= RepaintOnUpdate;
+            StaticNetworkManager.Client.OnServerUpdated -= RepaintOnUpdate;
+            StaticNetworkManager.Server.OnLocalStateUpdated -= RepaintOnUpdate;
             StaticNetworkManager.Server.OnRemoteClientConnected -= RepaintOnUpdate;
             StaticNetworkManager.Server.OnRemoteClientDisconnected -= RepaintOnUpdate;
             StaticNetworkManager.Server.OnRemoteClientUpdated -= RepaintOnUpdate;
-            StaticNetworkManager.Server.OnLocalStateUpdated -= RepaintOnUpdate;
+            StaticNetworkManager.Server.OnServerUpdated -= RepaintOnUpdate;
         }
 
+        private void RepaintOnUpdate() => Repaint();
         private void RepaintOnUpdate(uint _) => Repaint();
         private void RepaintOnUpdate(ELocalClientConnectionState _) => Repaint();
         private void RepaintOnUpdate(ELocalServerConnectionState _) => Repaint();
@@ -124,7 +130,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             var area = new Rect(PADDING, PADDING, position.width - PADDING * 2f, position.height - PADDING * 2f);
 
             GUILayout.BeginArea(area);
-            GUILayout.Label("Static Network Manager", EditorStyles.largeLabel);
+            GUILayout.Label("Network Manager (Static)", EditorStyles.largeLabel);
 
             EditorGUILayout.Space();
             GUILayout.Label("Configurations:", EditorStyles.boldLabel);

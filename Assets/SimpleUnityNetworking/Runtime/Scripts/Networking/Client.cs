@@ -1,5 +1,5 @@
 using jKnepel.SimpleUnityNetworking.Logging;
-using jKnepel.SimpleUnityNetworking.Networking;
+using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking.Packets;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
@@ -12,7 +12,7 @@ using System.Net;
 using System.Security.Cryptography;
 using UnityEngine;
 
-namespace jKnepel.SimpleUnityNetworking.Managing
+namespace jKnepel.SimpleUnityNetworking.Networking
 {
     public class Client
     {
@@ -43,17 +43,31 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// <summary>
         /// Username of the local client
         /// </summary>
-        /// <remarks>
-        /// TODO : synchronise updated set
-        /// </remarks>
-        public string Username { get; set; } = "Username";
+        public string Username
+        {
+            get => _username;
+            set
+            {
+                if (value is null || value.Equals(_username)) return;
+                _username = value;
+                if (IsActive)
+                    HandleUsernameUpdate();
+            }
+        }
         /// <summary>
         /// UserColour of the local client
         /// </summary>
-        /// <remarks>
-        /// TODO : synchronise updated set
-        /// </remarks>
-        public Color32 UserColour { get; set; } = new(153, 191, 97, 255);
+        public Color32 UserColour
+        {
+            get => _userColour;
+            set
+            {
+                if (value.Equals(_userColour)) return;
+                _userColour = value;
+                if (IsActive)
+                    HandleColourUpdate();
+            }
+        }
         /// <summary>
         /// The current connection state of the local client
         /// </summary>
@@ -83,8 +97,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         /// Called by the local client when a remote client updated its information
         /// </summary>
         public event Action<uint> OnRemoteClientUpdated;
+        /// <summary>
+        /// Called by the local client when the remote server updated its information
+        /// </summary>
+        public event Action OnServerUpdated;
 
         private readonly NetworkManager _networkManager;
+        private string _username = "Username";
+        private Color32 _userColour = new(153, 191, 97, 255);
         
         #endregion
 
@@ -142,14 +162,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     case EPacketType.ConnectionChallenge:
                         HandleConnectionChallengePacket(reader);
                         break;
-                    case EPacketType.ConnectionAuthenticated:
-                        HandleConnectionAuthenticatedPacket(reader);
-                        break;
-                    case EPacketType.Data:
-                        HandleDataPacket(reader);
+                    case EPacketType.ServerUpdate:
+                        HandleServerUpdatePacket(reader);
                         break;
                     case EPacketType.ClientUpdate:
                         HandleClientUpdatePacket(reader);
+                        break;
+                    case EPacketType.Data:
+                        HandleDataPacket(reader);
                         break;
                     default:
                         return;
@@ -159,6 +179,22 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             {
                 _networkManager.Logger?.Log(e.Message);
             }
+        }
+
+        private void HandleUsernameUpdate()
+        {
+            Writer writer = new(_networkManager.SerialiserSettings);
+            writer.WriteByte(ClientUpdatePacket.PacketType);
+            ClientUpdatePacket.Write(writer, new(ClientID, ClientUpdatePacket.UpdateType.Updated, Username, null));
+            _networkManager.Transport?.SendDataToServer(writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
+        }
+
+        private void HandleColourUpdate()
+        {
+            Writer writer = new(_networkManager.SerialiserSettings);
+            writer.WriteByte(ClientUpdatePacket.PacketType);
+            ClientUpdatePacket.Write(writer, new(ClientID, ClientUpdatePacket.UpdateType.Updated, null, UserColour));
+            _networkManager.Transport?.SendDataToServer(writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
         }
 
         private void HandleConnectionChallengePacket(Reader reader)
@@ -174,22 +210,72 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             ChallengeAnswerPacket.Write(writer, new(hashedChallenge, Username, UserColour));
             _networkManager.Transport?.SendDataToServer(writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
         }
-
-        private void HandleConnectionAuthenticatedPacket(Reader reader)
+        
+        private void HandleServerUpdatePacket(Reader reader)
         {
-            if (LocalState != ELocalClientConnectionState.Started)
-                return;
-            
-            var packet = ConnectionAuthenticatedPacket.Read(reader);
-            ServerEndpoint = _networkManager.Transport.ServerEndpoint;
-            MaxNumberOfClients = packet.MaxNumberConnectedClients;
-            Servername = packet.Servername;
-            ClientID = packet.ClientID;
-            LocalState = ELocalClientConnectionState.Authenticated;
-            OnLocalStateUpdated?.Invoke(LocalState);
-            _networkManager.Logger?.Log("Client was authenticated", EMessageSeverity.Log);
+            var packet = ServerUpdatePacket.Read(reader);
+
+            switch (packet.Type)
+            {
+                case ServerUpdatePacket.UpdateType.Authenticated:
+                    if (LocalState != ELocalClientConnectionState.Started)
+                        return;
+                    
+                    if (packet.ClientID is null || packet.Servername is null || packet.MaxNumberConnectedClients is null)
+                        throw new NullReferenceException("Invalid server update packet values received");
+                    
+                    ServerEndpoint = _networkManager.Transport.ServerEndpoint;
+                    MaxNumberOfClients = (uint)packet.MaxNumberConnectedClients;
+                    Servername = packet.Servername;
+                    ClientID = (uint)packet.ClientID;
+                    LocalState = ELocalClientConnectionState.Authenticated;
+                    OnLocalStateUpdated?.Invoke(LocalState);
+                    _networkManager.Logger?.Log("Client was authenticated", EMessageSeverity.Log);
+                    break;
+                case ServerUpdatePacket.UpdateType.Updated:
+                    if (LocalState != ELocalClientConnectionState.Authenticated)
+                        return;
+                    
+                    if (packet.Servername is null)
+                        throw new NullReferenceException("Invalid server update packet values received");
+                    
+                    Servername = packet.Servername;
+                    OnServerUpdated?.Invoke();
+                    break;
+            }
         }
 
+        private void HandleClientUpdatePacket(Reader reader)
+        {
+            if (LocalState != ELocalClientConnectionState.Authenticated)
+                return;
+
+            var packet = ClientUpdatePacket.Read(reader);
+            var clientID = packet.ClientID;
+            switch (packet.Type)
+            {
+                case ClientUpdatePacket.UpdateType.Connected:
+                    if (packet.Username is null || packet.Colour is null)
+                        throw new NullReferenceException("Client connection update packet contained invalid values!");
+                    ConnectedClients[clientID] = new(clientID, packet.Username, (Color32)packet.Colour);
+                    _networkManager.Logger?.Log($"Client: Remote client {clientID} was connected", EMessageSeverity.Log);
+                    OnRemoteClientConnected?.Invoke(clientID);
+                    break;
+                case ClientUpdatePacket.UpdateType.Disconnected:
+                    if (!ConnectedClients.TryRemove(clientID, out _)) return;
+                    _networkManager.Logger?.Log($"Client: Remote client {clientID} was disconnected", EMessageSeverity.Log);
+                    OnRemoteClientDisconnected?.Invoke(clientID);
+                    break;
+                case ClientUpdatePacket.UpdateType.Updated:
+                    if (packet.Username is not null)
+                        ConnectedClients[clientID].Username = packet.Username;
+                    if (packet.Colour is not null)
+                        ConnectedClients[clientID].UserColour = (Color32)packet.Colour;
+                    OnRemoteClientUpdated?.Invoke(clientID);
+                    break;
+            }
+        }
+        
         private void HandleDataPacket(Reader reader)
         {
             if (LocalState != ELocalClientConnectionState.Authenticated)
@@ -205,35 +291,6 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             else
                 // ReSharper disable once PossibleInvalidOperationException
                 ReceiveByteData(packet.DataID, (byte)packet.SenderID, packet.Data);
-        }
-
-        private void HandleClientUpdatePacket(Reader reader)
-        {
-            if (LocalState != ELocalClientConnectionState.Authenticated)
-                return;
-
-            var packet = ClientUpdatePacket.Read(reader);
-            var clientID = packet.ClientID;
-            switch (packet.Type)
-            {
-                case ClientUpdatePacket.UpdateType.Connected:
-                    ConnectedClients[clientID] = new(clientID, packet.Username, packet.Colour);
-                    OnRemoteClientConnected?.Invoke(clientID);
-                    _networkManager.Logger?.Log($"Client: Remote client {clientID} was connected", EMessageSeverity.Log);
-                    break;
-                case ClientUpdatePacket.UpdateType.Disconnected:
-                    if (ConnectedClients.TryRemove(clientID, out _))
-                    {
-                        OnRemoteClientDisconnected?.Invoke(clientID);
-                        _networkManager.Logger?.Log($"Client: Remote client {clientID} was disconnected", EMessageSeverity.Log);
-                    }
-                    break;
-                case ClientUpdatePacket.UpdateType.Updated:
-                    ConnectedClients[clientID].Username = packet.Username;
-                    ConnectedClients[clientID].UserColour = packet.Colour;
-                    OnRemoteClientUpdated?.Invoke(clientID);
-                    break;
-            }
         }
         
         #endregion

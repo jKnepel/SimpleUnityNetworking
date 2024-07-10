@@ -1,4 +1,5 @@
 using jKnepel.SimpleUnityNetworking.Logging;
+using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using UnityEditor;
@@ -29,28 +30,33 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 
         private void Awake()
         {
+            NetworkManager.Client.OnLocalStateUpdated += RepaintOnUpdate;
             NetworkManager.Client.OnRemoteClientConnected += RepaintOnUpdate;
             NetworkManager.Client.OnRemoteClientDisconnected += RepaintOnUpdate;
             NetworkManager.Client.OnRemoteClientUpdated += RepaintOnUpdate;
-            NetworkManager.Client.OnLocalStateUpdated += RepaintOnUpdate;
+            NetworkManager.Client.OnServerUpdated += RepaintOnUpdate;
+            NetworkManager.Server.OnLocalStateUpdated += RepaintOnUpdate;
             NetworkManager.Server.OnRemoteClientConnected += RepaintOnUpdate;
             NetworkManager.Server.OnRemoteClientDisconnected += RepaintOnUpdate;
             NetworkManager.Server.OnRemoteClientUpdated += RepaintOnUpdate;
-            NetworkManager.Server.OnLocalStateUpdated += RepaintOnUpdate;
+            NetworkManager.Server.OnServerUpdated += RepaintOnUpdate;
         }
 
         private void OnDestroy()
         {
+            NetworkManager.Client.OnLocalStateUpdated -= RepaintOnUpdate;
             NetworkManager.Client.OnRemoteClientConnected -= RepaintOnUpdate;
             NetworkManager.Client.OnRemoteClientDisconnected -= RepaintOnUpdate;
             NetworkManager.Client.OnRemoteClientUpdated -= RepaintOnUpdate;
-            NetworkManager.Client.OnLocalStateUpdated -= RepaintOnUpdate;
+            NetworkManager.Client.OnServerUpdated -= RepaintOnUpdate;
+            NetworkManager.Server.OnLocalStateUpdated -= RepaintOnUpdate;
             NetworkManager.Server.OnRemoteClientConnected -= RepaintOnUpdate;
             NetworkManager.Server.OnRemoteClientDisconnected -= RepaintOnUpdate;
             NetworkManager.Server.OnRemoteClientUpdated -= RepaintOnUpdate;
-            NetworkManager.Server.OnLocalStateUpdated -= RepaintOnUpdate;
+            NetworkManager.Server.OnServerUpdated -= RepaintOnUpdate;
         }
 
+        private void RepaintOnUpdate() => Repaint();
         private void RepaintOnUpdate(uint _) => Repaint();
         private void RepaintOnUpdate(ELocalClientConnectionState _) => Repaint();
         private void RepaintOnUpdate(ELocalServerConnectionState _) => Repaint();
