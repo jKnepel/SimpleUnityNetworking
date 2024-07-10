@@ -1,4 +1,5 @@
 using jKnepel.SimpleUnityNetworking.Managing;
+using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Utilities;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using System;

@@ -1,4 +1,5 @@
 using jKnepel.SimpleUnityNetworking.Logging;
+using jKnepel.SimpleUnityNetworking.Networking;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
 using UnityEditor;
