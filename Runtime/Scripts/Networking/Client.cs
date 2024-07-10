@@ -1,5 +1,5 @@
 using jKnepel.SimpleUnityNetworking.Logging;
-using jKnepel.SimpleUnityNetworking.Networking;
+using jKnepel.SimpleUnityNetworking.Managing;
 using jKnepel.SimpleUnityNetworking.Networking.Packets;
 using jKnepel.SimpleUnityNetworking.Networking.Transporting;
 using jKnepel.SimpleUnityNetworking.Serialising;
@@ -12,7 +12,7 @@ using System.Net;
 using System.Security.Cryptography;
 using UnityEngine;
 
-namespace jKnepel.SimpleUnityNetworking.Managing
+namespace jKnepel.SimpleUnityNetworking.Networking
 {
     public class Client
     {
@@ -51,7 +51,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 if (value is null || value.Equals(_username)) return;
                 _username = value;
                 if (IsActive)
-                    HandleUsernameUpdate(value);
+                    HandleUsernameUpdate();
             }
         }
         /// <summary>
@@ -65,7 +65,7 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                 if (value.Equals(_userColour)) return;
                 _userColour = value;
                 if (IsActive)
-                    HandleColourUpdate(value);
+                    HandleColourUpdate();
             }
         }
         /// <summary>
@@ -181,19 +181,19 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             }
         }
 
-        private void HandleUsernameUpdate(string username)
+        private void HandleUsernameUpdate()
         {
             Writer writer = new(_networkManager.SerialiserSettings);
             writer.WriteByte(ClientUpdatePacket.PacketType);
-            ClientUpdatePacket.Write(writer, new(ClientID, ClientUpdatePacket.UpdateType.Updated, username, null));
+            ClientUpdatePacket.Write(writer, new(ClientID, ClientUpdatePacket.UpdateType.Updated, Username, null));
             _networkManager.Transport?.SendDataToServer(writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
         }
 
-        private void HandleColourUpdate(Color32 colour)
+        private void HandleColourUpdate()
         {
             Writer writer = new(_networkManager.SerialiserSettings);
             writer.WriteByte(ClientUpdatePacket.PacketType);
-            ClientUpdatePacket.Write(writer, new(ClientID, ClientUpdatePacket.UpdateType.Updated, null, colour));
+            ClientUpdatePacket.Write(writer, new(ClientID, ClientUpdatePacket.UpdateType.Updated, null, UserColour));
             _networkManager.Transport?.SendDataToServer(writer.GetBuffer(), ENetworkChannel.ReliableOrdered);
         }
 
@@ -258,13 +258,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
                     if (packet.Username is null || packet.Colour is null)
                         throw new NullReferenceException("Client connection update packet contained invalid values!");
                     ConnectedClients[clientID] = new(clientID, packet.Username, (Color32)packet.Colour);
-                    OnRemoteClientConnected?.Invoke(clientID);
                     _networkManager.Logger?.Log($"Client: Remote client {clientID} was connected", EMessageSeverity.Log);
+                    OnRemoteClientConnected?.Invoke(clientID);
                     break;
                 case ClientUpdatePacket.UpdateType.Disconnected:
                     if (!ConnectedClients.TryRemove(clientID, out _)) return;
-                    OnRemoteClientDisconnected?.Invoke(clientID);
                     _networkManager.Logger?.Log($"Client: Remote client {clientID} was disconnected", EMessageSeverity.Log);
+                    OnRemoteClientDisconnected?.Invoke(clientID);
                     break;
                 case ClientUpdatePacket.UpdateType.Updated:
                     if (packet.Username is not null)
