@@ -519,6 +519,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                 OnClientReceivedData?.Invoke(new()
                 {
                     Data = data,
+                    Tick = _tickNumber,
                     Timestamp = DateTime.Now,
                     Channel = ParseChannelPipeline(pipe)
                 });
@@ -529,6 +530,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                 {
                     ClientID = _connectionToClientID[conn],
                     Data = data,
+                    Tick = _tickNumber,
                     Timestamp = DateTime.Now,
                     Channel = ParseChannelPipeline(pipe)
                 });
@@ -547,6 +549,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                 {
                     ClientID = _hostClientID,
                     Data = data,
+                    Tick = _tickNumber,
                     Timestamp = DateTime.Now,
                     Channel = channel
                 });
@@ -573,6 +576,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
                 OnClientReceivedData?.Invoke(new()
                 {
                     Data = data,
+                    Tick = _tickNumber,
                     Timestamp = DateTime.Now,
                     Channel = channel
                 });

@@ -65,12 +65,12 @@ public class CompressionTest : MonoBehaviour
         _manager.Client.SendByteDataToClient(_targetClientID, "values", writer.GetBuffer(), channel);
     }
 
-    private void ReceiveValueBytes(uint clientID, byte[] data)
+    private void ReceiveValueBytes(ByteData data)
     {
-        Reader reader = new(data, _serialiserConfiguration.Settings);
+        Reader reader = new(data.Data, _serialiserConfiguration.Settings);
         var message = reader.Read<ValueStruct>();
         
-        Debug.Log($"Received {data.Length} bytes from {clientID}: " +
+        Debug.Log($"Received {data.Data.Length} bytes from {data.SenderID} during tick {data.Tick} at {data.Timestamp}:\n" +
                   $"Byte = {message.Byte},\n" +
                   $"Short = {message.Short},\n" +
                   $"UShort = {message.UShort},\n" +

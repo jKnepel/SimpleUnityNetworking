@@ -73,19 +73,19 @@ namespace jKnepel.SimpleUnityNetworking.Samples
                 _networkManager.Client.UnregisterByteData("Visualiser", OnReceiveData);
         }
 
-        private void OnReceiveData(uint sender, byte[] data)
+        private void OnReceiveData(ByteData data)
         {
-            if (!_networkManager.Client.ConnectedClients.TryGetValue(sender, out var client))
+            if (!_networkManager.Client.ConnectedClients.TryGetValue(data.SenderID, out var client))
                 return;
 
-            if (!_visualisers.TryGetValue(sender, out var visualiser))
+            if (!_visualisers.TryGetValue(data.SenderID, out var visualiser))
             {
                 visualiser = Instantiate(_visualiserPrefab, _visualiserParent);
                 visualiser.UpdateVisualiser(client.ID, client.Username, client.UserColour);
-                _visualisers.Add(sender, visualiser);
+                _visualisers.Add(data.SenderID, visualiser);
             }
 
-            Reader reader = new(data);
+            Reader reader = new(data.Data);
             var visualiserData = ClientVisualiserData.ReadClientVisualiserData(reader);
 
             visualiser.transform.SetPositionAndRotation(visualiserData.Position, visualiserData.Rotation);

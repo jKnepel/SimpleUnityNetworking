@@ -72,12 +72,12 @@ public class TransformTest : MonoBehaviour
         _manager.Client.SendByteDataToClient(_targetClientID, "transform", writer.GetBuffer(), channel);
     }
 
-    private void ReceiveTransformStruct(uint clientID, byte[] data)
+    private void ReceiveTransformStruct(ByteData data)
     {
-        Reader reader = new(data, _serialiserConfiguration.Settings);
+        Reader reader = new(data.Data, _serialiserConfiguration.Settings);
         var message = reader.Read<TransformStruct>();
         
-        Debug.Log(data.Length);
+        Debug.Log(data.Data.Length);
         _receiveObject.SetPositionAndRotation(message.Position, message.Rotation);
     }
 
