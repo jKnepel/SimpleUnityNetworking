@@ -210,7 +210,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking
                         HandleClientUpdatePacket(data.ClientID, reader);
                         break;
                     case EPacketType.Data:
-                        HandleDataPacket(data.ClientID, reader, data.Channel);
+                        HandleDataPacket(data.ClientID, reader, data.Tick, data.Timestamp, data.Channel);
                         break;
                     default:
                         return;
@@ -304,7 +304,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking
             OnRemoteClientUpdated?.Invoke(clientID);
         }
 
-        private void HandleDataPacket(uint clientID, Reader reader, ENetworkChannel channel)
+        private void HandleDataPacket(uint clientID, Reader reader, uint tick, DateTime timestamp, ENetworkChannel channel)
         {
             if (!ConnectedClients.TryGetValue(clientID, out _))
                 return;
@@ -325,10 +325,10 @@ namespace jKnepel.SimpleUnityNetworking.Networking
                 case DataPacket.DataPacketType.ToServer:
                     if (packet.IsStructData)
                         // ReSharper disable once PossibleInvalidOperationException
-                        ReceiveStructData(packet.DataID, clientID, packet.Data);
+                        ReceiveStructData(packet.DataID, packet.Data, clientID, tick, timestamp, channel);
                     else
                         // ReSharper disable once PossibleInvalidOperationException
-                        ReceiveByteData(packet.DataID, clientID, packet.Data);
+                        ReceiveByteData(packet.DataID, packet.Data, clientID, tick, timestamp, channel);
                     break;
             }
             
@@ -355,18 +355,14 @@ namespace jKnepel.SimpleUnityNetworking.Networking
         
         #region byte data
         
-        private readonly ConcurrentDictionary<uint, Dictionary<int, ByteDataCallback>> _registeredServerByteDataCallbacks = new();
+        private readonly ConcurrentDictionary<uint, Dictionary<int, DataPacketCallback>> _registeredServerByteDataCallbacks = new();
 
         /// <summary>
         /// Registers a callback for a sent byte array with the defined id
         /// </summary>
         /// <param name="byteID">Id of the data that should invoke the callback</param>
-        /// <param name="callback">
-        ///     Callback which will be invoked after byte data with the given id has been received
-        ///     <param name="callback arg1">The ID of the sender</param>
-        ///     <param name="callback arg2">The received byte data</param>
-        /// </param>
-        public void RegisterByteData(string byteID, Action<uint, byte[]> callback)
+        /// <param name="callback"> Callback which will be invoked after byte data with the given id has been received</param>
+        public void RegisterByteData(string byteID, Action<ByteData> callback)
         {
             var byteDataHash = Hashing.GetFNV1Hash32(byteID);
 
@@ -386,12 +382,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking
         /// Unregisters a callback for a sent byte array with the defined id
         /// </summary>
         /// <param name="byteID">Id of the data that should invoke the callback</param>
-        /// <param name="callback">
-        ///     Callback which will be invoked after byte data with the given id has been received
-        ///     <param name="callback arg1">The ID of the sender</param>
-        ///     <param name="callback arg2">The received byte data</param>
-        /// </param>
-        public void UnregisterByteData(string byteID, Action<uint, byte[]> callback)
+        /// <param name="callback">Callback which will be invoked after byte data with the given id has been received</param>
+        public void UnregisterByteData(string byteID, Action<ByteData> callback)
         {
             var byteDataHash = Hashing.GetFNV1Hash32(byteID);
 
@@ -464,30 +456,26 @@ namespace jKnepel.SimpleUnityNetworking.Networking
             }
         }
 
-        private void ReceiveByteData(uint byteID, uint clientID, byte[] data)
+        private void ReceiveByteData(uint byteID, byte[] data, uint senderID, uint tick, DateTime timestamp, ENetworkChannel channel)
         {
             if (!_registeredServerByteDataCallbacks.TryGetValue(byteID, out var callbacks))
                 return;
 
             foreach (var callback in callbacks.Values)
-                callback?.Invoke(clientID, data);
+                callback?.Invoke(data, senderID, tick, timestamp, channel);
         }
         
         #endregion
         
         #region struct data
         
-        private readonly ConcurrentDictionary<uint, Dictionary<int, StructDataCallback>> _registeredServerStructDataCallbacks = new();
+        private readonly ConcurrentDictionary<uint, Dictionary<int, DataPacketCallback>> _registeredServerStructDataCallbacks = new();
 
         /// <summary>
         /// Registers a callback for a sent struct
         /// </summary>
-        /// <param name="callback">
-        ///     Callback which will be invoked after a struct of the same type has been received
-        ///     <param name="callback arg1">The ID of the sender</param>
-        ///     <param name="callback arg2">The received struct data</param>
-        /// </param>
-        public void RegisterStructData<T>(Action<uint, T> callback) where T : struct
+        /// <param name="callback">Callback which will be invoked after a struct of the same type has been received</param>
+        public void RegisterStructData<T>(Action<StructData<T>> callback) where T : struct
         {
 	        var structDataHash = Hashing.GetFNV1Hash32(typeof(T).Name);
             
@@ -506,12 +494,8 @@ namespace jKnepel.SimpleUnityNetworking.Networking
         /// <summary>
         /// Unregisters a callback for a sent struct
         /// </summary>
-        /// <param name="callback">
-        ///     Callback which will be invoked after a struct of the same type has been received
-        ///     <param name="callback arg1">The ID of the sender</param>
-        ///     <param name="callback arg2">The received struct data</param>
-        /// </param>
-        public void UnregisterStructData<T>(Action<uint, T> callback) where T : struct
+        /// <param name="callback">Callback which will be invoked after a struct of the same type has been received</param>
+        public void UnregisterStructData<T>(Action<StructData<T>> callback) where T : struct
 		{
 			var structDataHash = Hashing.GetFNV1Hash32(typeof(T).Name);
             
@@ -585,14 +569,14 @@ namespace jKnepel.SimpleUnityNetworking.Networking
             } 
         }
 		
-		private void ReceiveStructData(uint structHash, uint clientID, byte[] data)
+		private void ReceiveStructData(uint structHash, byte[] data, uint senderID, uint tick, DateTime timestamp, ENetworkChannel channel)
 		{
 			if (!_registeredServerStructDataCallbacks.TryGetValue(structHash, out var callbacks))
 				return;
 
 			foreach (var callback in callbacks.Values)
 			{
-				callback?.Invoke(clientID, data);
+				callback?.Invoke(data, senderID, tick, timestamp, channel);
 			}
         }
         
@@ -600,25 +584,38 @@ namespace jKnepel.SimpleUnityNetworking.Networking
         
         #region utilities
         
-        private delegate void ByteDataCallback(uint senderID, byte[] data);
-        private delegate void StructDataCallback(uint senderID, byte[] data);
+        private delegate void DataPacketCallback(byte[] data, uint senderID, uint tick, DateTime timestamp, ENetworkChannel channel);
         
-        private ByteDataCallback CreateByteDataDelegate(Action<uint, byte[]> callback)
+        private DataPacketCallback CreateByteDataDelegate(Action<ByteData> callback)
         {
             return ParseDelegate;
-            void ParseDelegate(uint senderID, byte[] data)
+            void ParseDelegate(byte[] data, uint senderID, uint tick, DateTime timestamp, ENetworkChannel channel)
             {
-                callback?.Invoke(senderID, data);
+                callback?.Invoke(new()
+                {
+                    Data = data,
+                    SenderID = senderID,
+                    Tick = tick,
+                    Timestamp = timestamp,
+                    Channel = channel
+                });
             }
         }
         
-        private StructDataCallback CreateStructDataDelegate<T>(Action<uint, T> callback)
+        private DataPacketCallback CreateStructDataDelegate<T>(Action<StructData<T>> callback)
         {
             return ParseDelegate;
-            void ParseDelegate(uint senderID, byte[] data)
+            void ParseDelegate(byte[] data, uint senderID, uint tick, DateTime timestamp, ENetworkChannel channel)
             {
                 Reader reader = new(data, _networkManager.SerialiserSettings);
-                callback?.Invoke(senderID, reader.Read<T>());
+                callback?.Invoke(new()
+                {
+                    Data = reader.Read<T>(),
+                    SenderID = senderID,
+                    Tick = tick,
+                    Timestamp = timestamp,
+                    Channel = channel
+                });
             }
         }
         

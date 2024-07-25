@@ -106,6 +106,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
     {
         public uint ClientID;
         public byte[] Data;
+        public uint Tick;
         public DateTime Timestamp;
         public ENetworkChannel Channel;
     }
@@ -113,6 +114,7 @@ namespace jKnepel.SimpleUnityNetworking.Networking.Transporting
     public struct ClientReceivedData
     {
         public byte[] Data;
+        public uint Tick;
         public DateTime Timestamp;
         public ENetworkChannel Channel;
     }
