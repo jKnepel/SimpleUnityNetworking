@@ -408,13 +408,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteUInt16(ushort val)
         {
+	        AdjustBufferSize(2);
 	        if (Settings.UseCompression)
 	        {
 				WriteVLQCompression(val);
 	        }
 	        else
 	        {
-	            AdjustBufferSize(2);
 	            _buffer[Position++] = (byte)val;
 	            _buffer[Position++] = (byte)(val >> 8);
 	            Length = Math.Max(Length, Position);
@@ -424,13 +424,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteInt16(short val)
         {
+		    AdjustBufferSize(2);
 	        if (Settings.UseCompression)
 	        {
 		        WriteVLQCompression(ZigZagEncode(val));
 	        }
 	        else
 	        {
-		        AdjustBufferSize(2);
 		        _buffer[Position++] = (byte)val;
 		        _buffer[Position++] = (byte)(val >> 8);
 		        Length = Math.Max(Length, Position);
@@ -440,13 +440,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteUInt32(uint val)
         {
+		    AdjustBufferSize(4);
 	        if (Settings.UseCompression)
 	        {
 		        WriteVLQCompression(val);
 	        }
 	        else
 	        {
-		        AdjustBufferSize(4);
 		        _buffer[Position++] = (byte)val;
 		        _buffer[Position++] = (byte)(val >> 8);
 		        _buffer[Position++] = (byte)(val >> 16);
@@ -458,13 +458,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteInt32(int val)
         {
+		    AdjustBufferSize(4);
 	        if (Settings.UseCompression)
 	        {
 		        WriteVLQCompression(ZigZagEncode(val));
 	        }
 	        else
 	        {
-		        AdjustBufferSize(4);
 		        _buffer[Position++] = (byte)val;
 		        _buffer[Position++] = (byte)(val >> 8);
 		        _buffer[Position++] = (byte)(val >> 16);
@@ -476,13 +476,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteUInt64(ulong val)
         {
+		    AdjustBufferSize(8);
 	        if (Settings.UseCompression)
 	        {
 		        WriteVLQCompression(val);
 	        }
 	        else
 	        {
-		        AdjustBufferSize(8);
 		        _buffer[Position++] = (byte)val;
 		        _buffer[Position++] = (byte)(val >> 8);
 		        _buffer[Position++] = (byte)(val >> 16);
@@ -498,13 +498,13 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteInt64(long val)
         {
+		    AdjustBufferSize(8);
 	        if (Settings.UseCompression)
 	        {
 		        WriteVLQCompression(ZigZagEncode(val));
 	        }
 	        else
 	        {
-		        AdjustBufferSize(8);
 		        _buffer[Position++] = (byte)val;
 		        _buffer[Position++] = (byte)(val >> 8);
 		        _buffer[Position++] = (byte)(val >> 16);
@@ -526,6 +526,7 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteSingle(float val)
         {
+	        AdjustBufferSize(4);
 	        if (Settings.UseCompression)
 	        {
 		        var compressed = val * Mathf.Pow(10, Settings.NumberOfDecimalPlaces);
@@ -534,7 +535,12 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 	        else
 	        {
 	            TypeConverter.UIntToFloat converter = new() { Float = val };
-	            WriteUInt32(converter.UInt);
+	            var uInt = converter.UInt;
+		        _buffer[Position++] = (byte)uInt;
+		        _buffer[Position++] = (byte)(uInt >> 8);
+		        _buffer[Position++] = (byte)(uInt >> 16);
+		        _buffer[Position++] = (byte)(uInt >> 24);
+		        Length = Math.Max(Length, Position);
 	        }
         }
 
@@ -586,6 +592,9 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
         {
 	        if (Settings.UseCompression)
 	        {
+		        var bits = Settings.BitsPerComponent * 3 + 2;
+		        var bytes = bits / 8 + 1;
+		        AdjustBufferSize(bytes);
 		        CompressedQuaternion q = new(val, Settings.BitsPerComponent);
 		        WriteVLQCompression(q.PackedQuaternion);
 	        }
@@ -667,23 +676,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
 
             WriteUInt16((ushort)val.Length);
             var bytes = Encoding.UTF8.GetBytes(val);
-            BlockCopy(ref bytes, 0, bytes.Length);
-            Length = Math.Max(Length, Position);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WriteStringWithoutFlag(string val)
-        {
-            if (string.IsNullOrEmpty(val))
-			{
-                WriteByte(0);
-                return;
-			}
-
-            if (val.Length > ushort.MaxValue)
-                throw new FormatException($"The string can't be longer than {ushort.MaxValue}!");
-
-            var bytes = Encoding.ASCII.GetBytes(val);
             BlockCopy(ref bytes, 0, bytes.Length);
             Length = Math.Max(Length, Position);
         }

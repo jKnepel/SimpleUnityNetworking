@@ -587,12 +587,6 @@ namespace jKnepel.SimpleUnityNetworking.Serialising
             return Encoding.UTF8.GetString(ReadByteArray(ReadUInt16()));
 		}
 
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public string ReadStringWithoutFlag(int length)
-        {
-            return Encoding.ASCII.GetString(ReadByteArray(length));
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public T[] ReadArray<T>()
 		{
