@@ -166,9 +166,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
         void StopClient();
 
         /// <summary>
-        /// Method to stop both the local client and server
+        /// Method to start both the local server and client
         /// </summary>
-        void StopNetwork();
+        void StartHost();
+        /// <summary>
+        /// Method to stop both the local server and client
+        /// </summary>
+        void StopHost();
         
         #endregion
     }

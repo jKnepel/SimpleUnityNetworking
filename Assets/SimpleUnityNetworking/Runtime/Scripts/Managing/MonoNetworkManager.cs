@@ -198,9 +198,14 @@ namespace jKnepel.SimpleUnityNetworking.Managing
 		    NetworkManager.StopClient();
 	    }
 
-	    public void StopNetwork()
+	    public void StartHost()
 	    {
-		    NetworkManager.StopNetwork();
+		    NetworkManager.StartHost();
+	    }
+
+	    public void StopHost()
+	    {
+		    NetworkManager.StopHost();
 	    }
 	    
 	    #region private methods

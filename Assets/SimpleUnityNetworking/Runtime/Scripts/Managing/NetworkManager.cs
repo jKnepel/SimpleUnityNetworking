@@ -218,7 +218,13 @@ namespace jKnepel.SimpleUnityNetworking.Managing
             Transport?.StopClient();
         }
 
-        public void StopNetwork()
+        public void StartHost()
+        {
+            StartServer();
+            StartClient();
+        }
+
+        public void StopHost()
         {
             StopClient();
             StopServer();
